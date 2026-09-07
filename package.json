@@ -1,0 +1,44 @@
+{
+  "name": "erp-afuego",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "setup:env": "node scripts/setup-env.mjs",
+    "dev": "npm run setup:env && npm run db:up && npm run wait-db && npm run db:migrate && npm run db:seed && concurrently -n API,WEB -c blue,green \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "wait-db": "node scripts/wait-for-db.mjs",
+    "db:migrate": "npm run prisma:deploy -w apps/api",
+    "db:seed": "npm run prisma:seed -w apps/api",
+    "build": "npm run build -w packages/shared && npm run build -w apps/api && npm run build -w apps/web",
+    "typecheck": "npm run typecheck -w packages/shared && npm run typecheck -w apps/api && npm run typecheck -w apps/web",
+    "test": "npm run test -w apps/api",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "postinstall": "npm run build -w packages/shared"
+  },
+  "dependencies": {
+    "serverless-http": "^3.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.12.0",
+    "concurrently": "^9.0.1",
+    "eslint": "^9.12.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.37.1",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "globals": "^15.10.0",
+    "pg": "^8.13.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.8.1"
+  }
+}

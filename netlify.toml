@@ -1,0 +1,35 @@
+# Configuración de despliegue en Netlify — frontend estático (Vite) +
+# backend como Netlify Function (envolviendo la misma API Express) +
+# Postgres en Supabase. Ver README.md, sección "Despliegue".
+
+[build]
+  # Incluye "prisma migrate deploy" — así cada despliegue aplica las
+  # migraciones pendientes a Supabase automáticamente. Requiere DATABASE_URL
+  # y DIRECT_URL configuradas como variables de entorno en Netlify (no solo
+  # para las funciones — también se inyectan en el entorno de build).
+  command = "npm run build -w packages/shared && npm -w apps/api run prisma:deploy && npm run build -w apps/web"
+  publish = "apps/web/dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  node_bundler = "esbuild"
+
+# El frontend llama a "/api/..." (mismo origen — ver VITE_API_URL en la
+# guía de despliegue); Netlify reenvía esas rutas a la función. Debe ir
+# ANTES de la regla de fallback del SPA (Netlify usa la primera regla
+# que haga match).
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Fallback de SPA: cualquier otra ruta (ej. /clientes al recargar la
+# página) debe servir index.html para que React Router la resuelva en
+# el navegador, en vez de que Netlify devuelva 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

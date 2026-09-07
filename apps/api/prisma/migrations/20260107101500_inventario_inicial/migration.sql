@@ -1,0 +1,24 @@
+-- CreateTable
+CREATE TABLE "inventario_inicial" (
+    "id" TEXT NOT NULL,
+    "articuloId" TEXT NOT NULL,
+    "fecha" TIMESTAMP(3) NOT NULL,
+    "quantity" DECIMAL(14,3) NOT NULL,
+    "unit" TEXT NOT NULL,
+    "unitCost" DECIMAL(14,2) NOT NULL,
+    "value" DECIMAL(14,2) NOT NULL,
+    "registeredById" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "inventario_inicial_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "inventario_inicial_articuloId_fecha_key" ON "inventario_inicial"("articuloId", "fecha");
+
+-- AddForeignKey
+ALTER TABLE "inventario_inicial" ADD CONSTRAINT "inventario_inicial_articuloId_fkey" FOREIGN KEY ("articuloId") REFERENCES "articulos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventario_inicial" ADD CONSTRAINT "inventario_inicial_registeredById_fkey" FOREIGN KEY ("registeredById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

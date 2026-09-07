@@ -1,0 +1,229 @@
+import type { Prisma } from '@prisma/client';
+import type { EventoConsumoInput, EventoInput } from '@erp-afuego/shared';
+import { prisma } from '../../lib/prisma.js';
+import { HttpError } from '../../middleware/error.middleware.js';
+import {
+  calcularCostoPorcentaje,
+  calcularCostoTotal,
+  calcularSubtotalConsumo,
+  calcularUtilidadOperacional,
+  calcularValorDespuesImpuestos,
+} from './evento.calculations.js';
+
+const includeSummary = {
+  cliente: true,
+  opcionMenu: true,
+  taxRate: true,
+  registeredBy: true,
+  consumos: true,
+} satisfies Prisma.EventoInclude;
+
+type EventoWithSummary = Prisma.EventoGetPayload<{ include: typeof includeSummary }>;
+
+const includeDetail = {
+  ...includeSummary,
+  consumos: { include: { articulo: true }, orderBy: { createdAt: 'asc' as const } },
+} satisfies Prisma.EventoInclude;
+
+type EventoWithDetail = Prisma.EventoGetPayload<{ include: typeof includeDetail }>;
+
+function serializeSummary(evento: EventoWithSummary) {
+  const valorAntesImpuestos = Number(evento.valorAntesImpuestos);
+  const costoTotal = calcularCostoTotal(
+    evento.consumos.map((c) => ({ subtotal: Number(c.subtotal) })),
+  );
+  const utilidad = calcularUtilidadOperacional(valorAntesImpuestos, costoTotal);
+
+  return {
+    id: evento.id,
+    fecha: evento.fecha.toISOString(),
+    clienteId: evento.clienteId,
+    clienteNombre: evento.cliente.name,
+    opcionMenuId: evento.opcionMenuId,
+    opcionMenuNombre: evento.opcionMenu.name,
+    numeroPersonas: evento.numeroPersonas,
+    valorAntesImpuestos,
+    valorDespuesImpuestos: Number(evento.valorDespuesImpuestos),
+    taxRateId: evento.taxRateId,
+    taxRateNombre: evento.taxRate?.name ?? null,
+    costoTotal,
+    costoTotalPorcentaje: calcularCostoPorcentaje(costoTotal, valorAntesImpuestos),
+    utilidadOperacional: utilidad.valor,
+    utilidadOperacionalPorcentaje: utilidad.porcentaje,
+    registeredByName: evento.registeredBy.name,
+    createdAt: evento.createdAt.toISOString(),
+  };
+}
+
+function serializeConsumo(consumo: EventoWithDetail['consumos'][number]) {
+  return {
+    id: consumo.id,
+    eventoId: consumo.eventoId,
+    articuloId: consumo.articuloId,
+    articuloNombre: consumo.articulo.name,
+    articuloCodigo: consumo.articulo.code,
+    quantity: Number(consumo.quantity),
+    unit: consumo.unit,
+    unitCost: Number(consumo.unitCost),
+    subtotal: Number(consumo.subtotal),
+    createdAt: consumo.createdAt.toISOString(),
+  };
+}
+
+function serializeDetail(evento: EventoWithDetail) {
+  return {
+    ...serializeSummary(evento),
+    consumos: evento.consumos.map(serializeConsumo),
+  };
+}
+
+export async function listEventos() {
+  const eventos = await prisma.evento.findMany({
+    include: includeSummary,
+    orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
+  });
+  return eventos.map(serializeSummary);
+}
+
+export async function getEvento(id: string) {
+  const evento = await prisma.evento.findUnique({ where: { id }, include: includeDetail });
+  if (!evento) {
+    throw new HttpError(404, 'Evento no encontrado');
+  }
+  return serializeDetail(evento);
+}
+
+async function resolveValorDespuesImpuestos(
+  valorAntesImpuestos: number,
+  taxRateId: string | null | undefined,
+) {
+  if (!taxRateId) {
+    return { valorDespuesImpuestos: valorAntesImpuestos, taxRateId: null };
+  }
+  const taxRate = await prisma.taxRate.findUnique({ where: { id: taxRateId } });
+  if (!taxRate) {
+    throw new HttpError(404, 'Tarifa de impuesto no encontrada');
+  }
+  return {
+    valorDespuesImpuestos: calcularValorDespuesImpuestos(valorAntesImpuestos, Number(taxRate.rate)),
+    taxRateId,
+  };
+}
+
+export async function createEvento(input: EventoInput, registeredById: string) {
+  const cliente = await prisma.cliente.findUnique({ where: { id: input.clienteId } });
+  if (!cliente) {
+    throw new HttpError(404, 'Cliente no encontrado');
+  }
+  const opcionMenu = await prisma.opcionMenu.findUnique({ where: { id: input.opcionMenuId } });
+  if (!opcionMenu) {
+    throw new HttpError(404, 'Opción de menú no encontrada');
+  }
+
+  const { valorDespuesImpuestos, taxRateId } = await resolveValorDespuesImpuestos(
+    input.valorAntesImpuestos,
+    input.taxRateId,
+  );
+
+  const evento = await prisma.evento.create({
+    data: {
+      fecha: new Date(input.fecha),
+      clienteId: input.clienteId,
+      opcionMenuId: input.opcionMenuId,
+      numeroPersonas: input.numeroPersonas,
+      valorAntesImpuestos: input.valorAntesImpuestos,
+      taxRateId,
+      valorDespuesImpuestos,
+      registeredById,
+    },
+    include: includeSummary,
+  });
+  return serializeSummary(evento);
+}
+
+export async function updateEvento(id: string, input: EventoInput) {
+  await findEventoOrThrow(id);
+
+  const cliente = await prisma.cliente.findUnique({ where: { id: input.clienteId } });
+  if (!cliente) {
+    throw new HttpError(404, 'Cliente no encontrado');
+  }
+  const opcionMenu = await prisma.opcionMenu.findUnique({ where: { id: input.opcionMenuId } });
+  if (!opcionMenu) {
+    throw new HttpError(404, 'Opción de menú no encontrada');
+  }
+
+  const { valorDespuesImpuestos, taxRateId } = await resolveValorDespuesImpuestos(
+    input.valorAntesImpuestos,
+    input.taxRateId,
+  );
+
+  const evento = await prisma.evento.update({
+    where: { id },
+    data: {
+      fecha: new Date(input.fecha),
+      clienteId: input.clienteId,
+      opcionMenuId: input.opcionMenuId,
+      numeroPersonas: input.numeroPersonas,
+      valorAntesImpuestos: input.valorAntesImpuestos,
+      taxRateId,
+      valorDespuesImpuestos,
+    },
+    include: includeSummary,
+  });
+  return serializeSummary(evento);
+}
+
+export async function addConsumo(eventoId: string, input: EventoConsumoInput) {
+  await findEventoOrThrow(eventoId);
+  const articulo = await prisma.articulo.findUnique({ where: { id: input.articuloId } });
+  if (!articulo) {
+    throw new HttpError(404, 'Artículo no encontrado');
+  }
+
+  const unitCost = Number(articulo.lastPurchasePrice);
+  const subtotal = calcularSubtotalConsumo(input.quantity, unitCost);
+
+  const consumo = await prisma.eventoConsumo.create({
+    data: {
+      eventoId,
+      articuloId: input.articuloId,
+      quantity: input.quantity,
+      unit: articulo.unit,
+      unitCost,
+      subtotal,
+    },
+    include: { articulo: true },
+  });
+  return serializeConsumo(consumo);
+}
+
+export async function updateConsumoQuantity(eventoId: string, consumoId: string, quantity: number) {
+  const consumo = await prisma.eventoConsumo.findFirst({ where: { id: consumoId, eventoId } });
+  if (!consumo) {
+    throw new HttpError(404, 'Consumo no encontrado');
+  }
+  const subtotal = calcularSubtotalConsumo(quantity, Number(consumo.unitCost));
+  const updated = await prisma.eventoConsumo.update({
+    where: { id: consumoId },
+    data: { quantity, subtotal },
+    include: { articulo: true },
+  });
+  return serializeConsumo(updated);
+}
+
+export async function removeConsumo(eventoId: string, consumoId: string) {
+  const consumo = await prisma.eventoConsumo.findFirst({ where: { id: consumoId, eventoId } });
+  if (!consumo) {
+    throw new HttpError(404, 'Consumo no encontrado');
+  }
+  await prisma.eventoConsumo.delete({ where: { id: consumoId } });
+}
+
+async function findEventoOrThrow(id: string) {
+  const evento = await prisma.evento.findUnique({ where: { id } });
+  if (!evento) {
+    throw new HttpError(404, 'Evento no encontrado');
+  }
+  return evento;
+}

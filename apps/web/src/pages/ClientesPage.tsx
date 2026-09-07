@@ -1,0 +1,234 @@
+import { useState } from 'react';
+import { clienteSchema, type ClienteDTO, type ClienteInput } from '@erp-afuego/shared';
+import { useResource } from '../hooks/useResource';
+import { Modal } from '../components/Modal';
+import { Field, inputClass } from '../components/Field';
+
+const EMPTY_FORM: ClienteInput = {
+  name: '',
+  identificacion: '',
+  telefono: '',
+  correo: '',
+  direccion: '',
+  ciudad: '',
+};
+
+export function ClientesPage() {
+  const { items, loading, error, create, update, setActive } = useResource<
+    ClienteDTO,
+    ClienteInput
+  >('/clientes');
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<ClienteDTO | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<ClienteInput>(EMPTY_FORM);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const filtered = items.filter((item) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return item.name.toLowerCase().includes(q) || item.identificacion.toLowerCase().includes(q);
+  });
+
+  function openCreate() {
+    setEditing(null);
+    setForm(EMPTY_FORM);
+    setFormError(null);
+    setShowForm(true);
+  }
+
+  function openEdit(item: ClienteDTO) {
+    setEditing(item);
+    setForm({
+      name: item.name,
+      identificacion: item.identificacion,
+      telefono: item.telefono,
+      correo: item.correo,
+      direccion: item.direccion,
+      ciudad: item.ciudad,
+    });
+    setFormError(null);
+    setShowForm(true);
+  }
+
+  async function handleSubmit() {
+    setFormError(null);
+    const parsed = clienteSchema.safeParse(form);
+    if (!parsed.success) {
+      setFormError(parsed.error.issues[0]?.message ?? 'Datos inválidos');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (editing) {
+        await update(editing.id, parsed.data);
+      } else {
+        await create(parsed.data);
+      }
+      setShowForm(false);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-neutral-900">Clientes</h1>
+          <p className="text-sm text-neutral-500">Personas o empresas a quienes se les cotizan eventos.</p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+        >
+          Nuevo cliente
+        </button>
+      </div>
+
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar por nombre o identificación…"
+        className={`${inputClass} mb-4 max-w-sm`}
+      />
+
+      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+      <div className="overflow-hidden rounded-lg border bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-neutral-50 text-neutral-500">
+            <tr>
+              <th className="px-4 py-2">Nombre / Razón social</th>
+              <th className="px-4 py-2">Identificación</th>
+              <th className="px-4 py-2">Teléfono</th>
+              <th className="px-4 py-2">Correo</th>
+              <th className="px-4 py-2">Ciudad</th>
+              <th className="px-4 py-2">Estado</th>
+              <th className="px-4 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-neutral-400">
+                  Cargando…
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-neutral-400">
+                  No hay clientes que coincidan con la búsqueda.
+                </td>
+              </tr>
+            ) : (
+              filtered.map((item) => (
+                <tr key={item.id} className="border-t">
+                  <td className="px-4 py-2">{item.name}</td>
+                  <td className="px-4 py-2">{item.identificacion}</td>
+                  <td className="px-4 py-2">{item.telefono || '—'}</td>
+                  <td className="px-4 py-2">{item.correo || '—'}</td>
+                  <td className="px-4 py-2">{item.ciudad || '—'}</td>
+                  <td className="px-4 py-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        item.active
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-neutral-200 text-neutral-500'
+                      }`}
+                    >
+                      {item.active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="space-x-3 px-4 py-2 text-right">
+                    <button onClick={() => openEdit(item)} className="text-orange-600 hover:underline">
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => setActive(item.id, !item.active)}
+                      className="text-neutral-500 hover:underline"
+                    >
+                      {item.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showForm && (
+        <Modal title={editing ? 'Editar cliente' : 'Nuevo cliente'} onClose={() => setShowForm(false)}>
+          <div className="space-y-3">
+            <Field label="Nombre o razón social">
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Identificación (cédula/NIT)">
+              <input
+                value={form.identificacion}
+                onChange={(e) => setForm({ ...form, identificacion: e.target.value })}
+                className={inputClass}
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Teléfono">
+                <input
+                  value={form.telefono}
+                  onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Correo">
+                <input
+                  value={form.correo}
+                  onChange={(e) => setForm({ ...form, correo: e.target.value })}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+            <Field label="Dirección">
+              <input
+                value={form.direccion}
+                onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Ciudad">
+              <input
+                value={form.ciudad}
+                onChange={(e) => setForm({ ...form, ciudad: e.target.value })}
+                className={inputClass}
+              />
+            </Field>
+
+            {formError && <p className="text-sm text-red-600">{formError}</p>}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowForm(false)}
+                className="rounded-md px-4 py-2 text-sm text-neutral-600"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+              >
+                {submitting ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

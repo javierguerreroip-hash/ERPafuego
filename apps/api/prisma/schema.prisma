@@ -1,0 +1,501 @@
+// Prisma schema — ERP A Fuego Catering
+// Fase 0: modelo de usuarios para autenticación con roles.
+// Fase 1: maestros del Módulo 1 (artículos/servicios, opciones de menú,
+// clientes y proveedores).
+// Fase 2: registro de compras del Módulo 2.
+// Fase 3: ventas y costos por evento del Módulo 3, más tasas de impuesto
+// configurables.
+// Fase 4: inventario en tiempo real del Módulo 4.
+// Fase 5: Dashboard general (sin modelo propio — consulta Evento/Articulo).
+// Fase 6: gastos administrativos mensuales.
+// Fase 7: Juego de Inventarios (CMV teórico vs. real).
+// Fase 8: Estado de Resultados (sin modelo propio — 100% derivado).
+// Fase 9: Nómina de Cocina (turnos, parámetros legales configurables, días
+// festivos).
+// Fase 10: CRM de Ventas (negocios Cotizado/Ganado/Perdido).
+// Fase 11: Agenda de Eventos (extensión logística 1-a-1 de Evento).
+// Fase 12: Cartera — Cuentas por Cobrar (CxC, por Evento) y por Pagar
+// (CxP, por factura de compra a crédito), con abonos. Último módulo del
+// plan de fases (docs/plan_fases.md).
+
+// binaryTargets: Netlify Functions corren sobre AWS Lambda (Amazon
+// Linux) — sin el motor correcto, Prisma falla en producción con un
+// error de "engine not found" que no se ve en local. Se incluyen varios
+// targets a la vez porque no hay forma de confirmar cuál usa Netlify sin
+// desplegar de verdad.
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
+}
+
+// url = conexión "pooled" (pgbouncer, puerto 6543 en Supabase) — la usa
+// la función serverless en cada invocación, para no agotar las
+// conexiones directas a Postgres.
+// directUrl = conexión directa (puerto 5432) — solo la usan los
+// comandos de migración (`prisma migrate deploy`), que necesitan una
+// conexión sin pooler.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  ADMINISTRADOR
+  OPERACION
+  COCINA_NOMINA
+  VENTAS
+}
+
+model User {
+  id                 String   @id @default(uuid())
+  name               String
+  email              String   @unique
+  passwordHash       String
+  role               UserRole
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  comprasRegistradas Compra[]            @relation("CompraRegisteredBy")
+  eventosRegistrados Evento[]            @relation("EventoRegisteredBy")
+  inventarioInicial  InventarioInicial[] @relation("InventarioInicialRegisteredBy")
+  gastosRegistrados  GastoAdministrativo[] @relation("GastoAdministrativoRegisteredBy")
+  inventarioFinalFisico InventarioFinalFisico[] @relation("InventarioFinalFisicoRegisteredBy")
+  turnos                Turno[]                 @relation("TurnoEmpleado")
+  negociosComoVendedor  Negocio[]               @relation("NegocioVendedor")
+  agendaComoVendedor    AgendaEvento[]          @relation("AgendaEventoVendedor")
+  abonosRegistrados    Abono[]                 @relation("AbonoRegisteredBy")
+
+  @@map("users")
+}
+
+// Categorías de costo/compra (docs/spec_erp_afuego.md, sección 1.1). Las
+// letras (c) "Servicio de transporte" y (f) "Transporte" de la especificación
+// original describen la misma categoría — el Dashboard y el Estado de
+// Resultados solo manejan un único indicador de transporte — así que se
+// unificaron en SERVICIO_TRANSPORTE.
+enum ArticuloCategoria {
+  MATERIA_PRIMA
+  MANO_DE_OBRA
+  SERVICIO_TRANSPORTE
+  SERVICIOS_ARTISTICOS
+  ALQUILER_MENAJE_EQUIPOS
+}
+
+// Catálogo de costo/compra: lo que se compra y se consume (materia prima,
+// mano de obra tercerizada, transporte, artístico, menaje). El "último
+// precio de compra" se actualiza automáticamente desde el Módulo 2 — en
+// esta fase queda en 0 porque las compras todavía no existen.
+model Articulo {
+  id                String            @id @default(uuid())
+  code              String            @unique
+  name              String
+  category          ArticuloCategoria
+  unit              String
+  lastPurchasePrice Decimal           @default(0) @db.Decimal(14, 2)
+  active            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  compras           Compra[]
+  consumos          EventoConsumo[]
+  inventarioInicial InventarioInicial[]
+  inventarioFinalFisico InventarioFinalFisico[]
+
+  @@map("articulos")
+}
+
+enum OpcionMenuCategoria {
+  MOMENTOS_FUERTES
+  PARRILLA
+  PAELLAS
+  BOCADOS_SNACKS
+  REFRIGERIOS
+  INFANTIL
+  ADICIONALES
+}
+
+enum PriceType {
+  POR_PERSONA
+  POR_UNIDAD
+}
+
+// Catálogo de venta: las opciones de menú que se le cotizan al cliente
+// (Anexo A "Carta 2026"). Distinto de Articulo (que es del lado del costo).
+model OpcionMenu {
+  id          String              @id @default(uuid())
+  name        String              @unique
+  category    OpcionMenuCategoria
+  description String              @default("")
+  priceType   PriceType
+  price       Decimal             @db.Decimal(14, 2)
+  active      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  eventos     Evento[]
+
+  @@map("opciones_menu")
+}
+
+model Cliente {
+  id             String   @id @default(uuid())
+  name           String
+  identificacion String
+  telefono       String   @default("")
+  correo         String   @default("")
+  direccion      String   @default("")
+  ciudad         String   @default("")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  eventos        Evento[]
+
+  @@map("clientes")
+}
+
+// La categoría reutiliza ArticuloCategoria: "categoría de lo que provee"
+// (materia prima, transporte, artistas, menaje…) es la misma taxonomía.
+model Proveedor {
+  id             String            @id @default(uuid())
+  name           String
+  identificacion String
+  telefono       String            @default("")
+  correo         String            @default("")
+  categoria      ArticuloCategoria
+  active         Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  compras        Compra[]
+  cuentasPorPagar CuentaPorPagar[]
+
+  @@map("proveedores")
+}
+
+enum CondicionPago {
+  CONTADO
+  CREDITO
+}
+
+// Módulo 2 — Registro de compras. Se registra "ítem por ítem": cada fila es
+// un artículo comprado, pero varias filas pueden compartir la misma factura
+// (mismo facturaNumero + proveedorId). No se edita ni se elimina — es un
+// hecho histórico; el "histórico de precios" del Módulo 1 se deriva
+// consultando estas filas por articuloId, en vez de duplicarlas en otra
+// tabla. condicionPago/fechaVencimiento quedan listos para alimentar más
+// adelante las Cuentas por Pagar del módulo de Cartera.
+model Compra {
+  id               String        @id @default(uuid())
+  articuloId       String
+  articulo         Articulo      @relation(fields: [articuloId], references: [id])
+  proveedorId      String
+  proveedor        Proveedor     @relation(fields: [proveedorId], references: [id])
+  fecha            DateTime
+  quantity         Decimal       @db.Decimal(14, 3)
+  unit             String
+  unitPrice        Decimal       @db.Decimal(14, 2)
+  totalValue       Decimal       @db.Decimal(14, 2)
+  facturaNumero    String
+  condicionPago    CondicionPago
+  fechaVencimiento DateTime?
+  registeredById   String
+  registeredBy     User          @relation("CompraRegisteredBy", fields: [registeredById], references: [id])
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([articuloId])
+  @@index([proveedorId])
+  @@index([facturaNumero])
+  @@map("compras")
+}
+
+// Parámetros fiscales configurables (nunca fijos en el código): IVA 19%,
+// IVA 5%, Impuesto al Consumo 8%, u otros que se agreguen a futuro.
+model TaxRate {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  rate      Decimal  @db.Decimal(5, 4)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  eventos   Evento[]
+
+  @@map("tax_rates")
+}
+
+// Módulo 3 — Ventas y costos por evento. "costoTotal" y "utilidadOperacional"
+// NO se guardan en esta tabla: se calculan en el servicio a partir de los
+// EventoConsumo (suma de subtotales), para que nunca queden desactualizados
+// respecto al detalle real cargado por el operador.
+model Evento {
+  id                    String          @id @default(uuid())
+  fecha                 DateTime
+  clienteId             String
+  cliente               Cliente         @relation(fields: [clienteId], references: [id])
+  opcionMenuId          String
+  opcionMenu            OpcionMenu      @relation(fields: [opcionMenuId], references: [id])
+  numeroPersonas        Int
+  valorAntesImpuestos   Decimal         @db.Decimal(14, 2)
+  taxRateId             String?
+  taxRate               TaxRate?        @relation(fields: [taxRateId], references: [id])
+  valorDespuesImpuestos Decimal         @db.Decimal(14, 2)
+  registeredById        String
+  registeredBy          User            @relation("EventoRegisteredBy", fields: [registeredById], references: [id])
+  createdAt             DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  consumos               EventoConsumo[]
+  negocio                 Negocio?
+  agenda                   AgendaEvento?
+  abonos                   Abono[]
+
+  @@map("eventos")
+}
+
+// Detalle de consumos de materia prima/servicios de un evento, cargado
+// "artículo por artículo" (spec Módulo 3). unitCost se toma automáticamente
+// del último precio de compra del artículo al momento de cargarlo — es un
+// snapshot histórico, no se recalcula si el precio cambia después.
+model EventoConsumo {
+  id         String   @id @default(uuid())
+  eventoId   String
+  evento     Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  articuloId String
+  articulo   Articulo @relation(fields: [articuloId], references: [id])
+  quantity   Decimal  @db.Decimal(14, 3)
+  unit       String
+  unitCost   Decimal  @db.Decimal(14, 2)
+  subtotal   Decimal  @db.Decimal(14, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([eventoId])
+  @@index([articuloId])
+  @@map("evento_consumos")
+}
+
+// Módulo 4 — Inventario en tiempo real. "Inventario inicial" es un conteo
+// físico manual, declarado por el operador para una fecha exacta de inicio
+// de período (única por artículo+fecha — @@unique). Se guarda en cantidad Y
+// en valor $ (cantidad × costo unitario, editable) para que el consolidado
+// general y el futuro Módulo 8 (CMV) puedan sumar en pesos entre artículos
+// con unidades distintas. "Compras" y "Costos y consumos" del período NO se
+// guardan aquí: se calculan en el servicio a partir de Compra y
+// EventoConsumo filtrados por fecha, y "Inventario final" siempre se deriva
+// con la fórmula (inicial + compras − consumo).
+model InventarioInicial {
+  id             String   @id @default(uuid())
+  articuloId     String
+  articulo       Articulo @relation(fields: [articuloId], references: [id])
+  fecha          DateTime
+  quantity       Decimal  @db.Decimal(14, 3)
+  unit           String
+  unitCost       Decimal  @db.Decimal(14, 2)
+  value          Decimal  @db.Decimal(14, 2)
+  registeredById String
+  registeredBy   User     @relation("InventarioInicialRegisteredBy", fields: [registeredById], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([articuloId, fecha])
+  @@map("inventario_inicial")
+}
+
+// Módulo de Gastos Administrativos. Un solo registro por (year, month) —
+// los 9 rubros son fijos (los pide la especificación literalmente, no es
+// un catálogo abierto). "total" no se guarda: se suma en el servicio para
+// que nunca quede desactualizado, y así lo consumirá el Estado de
+// Resultados (Fase 8).
+model GastoAdministrativo {
+  id                       String   @id @default(uuid())
+  year                     Int
+  month                    Int
+  arriendo                 Decimal  @default(0) @db.Decimal(14, 2)
+  nomina                   Decimal  @default(0) @db.Decimal(14, 2)
+  serviciosPublicos        Decimal  @default(0) @db.Decimal(14, 2)
+  honorariosContadorSocios Decimal  @default(0) @db.Decimal(14, 2)
+  controlPlagas            Decimal  @default(0) @db.Decimal(14, 2)
+  seguros                  Decimal  @default(0) @db.Decimal(14, 2)
+  internet                 Decimal  @default(0) @db.Decimal(14, 2)
+  adicionales              Decimal  @default(0) @db.Decimal(14, 2)
+  cuotaObligacionFinanciera Decimal @default(0) @db.Decimal(14, 2)
+  registeredById           String
+  registeredBy             User     @relation("GastoAdministrativoRegisteredBy", fields: [registeredById], references: [id])
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@unique([year, month])
+  @@map("gastos_administrativos")
+}
+
+// Módulo — Juego de Inventarios (CMV teórico vs. real). Conteo físico de
+// cierre de período, manual por artículo, independiente del inventario
+// final "de sistema" del Módulo 4 (mismo patrón que InventarioInicial:
+// cantidad + valor $, único por artículo+fecha).
+model InventarioFinalFisico {
+  id             String   @id @default(uuid())
+  articuloId     String
+  articulo       Articulo @relation(fields: [articuloId], references: [id])
+  fecha          DateTime
+  quantity       Decimal  @db.Decimal(14, 3)
+  unit           String
+  unitCost       Decimal  @db.Decimal(14, 2)
+  value          Decimal  @db.Decimal(14, 2)
+  registeredById String
+  registeredBy   User     @relation("InventarioFinalFisicoRegisteredBy", fields: [registeredById], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([articuloId, fecha])
+  @@map("inventario_final_fisico")
+}
+
+// Módulo — Nómina (Cocina). Parámetros legales configurables (nunca fijos
+// en el código, porque el Gobierno los actualiza — SMLV cada año, la
+// jornada laboral está en transición hasta 2026). Fila única (singleton,
+// id fijo "singleton") — se edita, no se versiona por año, igual que
+// TaxRate/GastoAdministrativo. Los 7 recargos se guardan como fracción
+// (0.35 = 35%) "sobre la hora ordinaria", confirmados con el usuario.
+model ParametroNomina {
+  id                             String   @id @default("singleton")
+  smlv                           Decimal  @db.Decimal(14, 2)
+  divisorHoras                   Decimal  @db.Decimal(6, 2)
+  auxilioTransporte              Decimal  @db.Decimal(14, 2)
+  recargoNocturno                Decimal  @db.Decimal(5, 4)
+  recargoExtraDiurna             Decimal  @db.Decimal(5, 4)
+  recargoExtraNocturna           Decimal  @db.Decimal(5, 4)
+  recargoDominicalFestiva        Decimal  @db.Decimal(5, 4)
+  recargoNocturnoDomFestivo      Decimal  @db.Decimal(5, 4)
+  recargoExtraDiurnaDomFestiva   Decimal  @db.Decimal(5, 4)
+  recargoExtraNocturnaDomFestiva Decimal  @db.Decimal(5, 4)
+  updatedAt                      DateTime @updatedAt
+
+  @@map("parametros_nomina")
+}
+
+// Calendario de días festivos colombianos — se maneja manualmente porque
+// cambia cada año (Ley Emiliani incluida) y no existe un solo estándar
+// fijo que se pueda hardcodear de forma confiable.
+model DiaFestivo {
+  id     String   @id @default(uuid())
+  fecha  DateTime @unique
+  nombre String   @default("")
+
+  @@map("dias_festivos")
+}
+
+// Registro de entrada/salida por turno del empleado de cocina. El
+// empleado marca su propia entrada/salida; Administrador puede crear o
+// corregir turnos de cualquier empleado. horaSalida nula = turno abierto.
+model Turno {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation("TurnoEmpleado", fields: [userId], references: [id])
+  horaEntrada DateTime
+  horaSalida  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("turnos")
+}
+
+enum EtapaNegocio {
+  COTIZADO
+  GANADO
+  PERDIDO
+}
+
+// Módulo — CRM de Ventas. "cliente*" son campos de texto libre (no un FK
+// a Cliente): el CRM gestiona prospectos que pueden no existir todavía
+// como Cliente registrado — se busca/crea automáticamente en el Módulo 1
+// al ganar el negocio. eventoId queda vinculado solo cuando etapa=GANADO
+// (se crea el Evento del Módulo 3 en ese momento, ver decisión en el
+// README sobre los campos que el CRM no captura: opción de menú y
+// número de personas).
+model Negocio {
+  id                    String       @id @default(uuid())
+  clienteNombre         String
+  clienteIdentificacion String       @default("")
+  telefono              String       @default("")
+  nombreEvento          String
+  fechaEvento           DateTime
+  valorAntesImpuestos   Decimal      @db.Decimal(14, 2)
+  etapa                 EtapaNegocio @default(COTIZADO)
+  eventoId              String?      @unique
+  evento                Evento?      @relation(fields: [eventoId], references: [id])
+  vendedorId            String
+  vendedor               User         @relation("NegocioVendedor", fields: [vendedorId], references: [id])
+  createdAt              DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  @@map("negocios")
+}
+
+// Módulo — Agenda de Eventos. Extensión 1-a-1 de Evento (eventoId único):
+// fecha, cliente, opción de menú, número de personas y valor antes de
+// impuestos NO se duplican aquí — se leen en vivo del Evento vinculado
+// (ver decisión en el README). Solo se guardan los campos logísticos que
+// el Módulo 3 no tiene. vendedorId es opcional porque no todo evento nace
+// de un negocio del CRM (Operación puede crear la agenda directamente
+// para un Evento ya registrado sin pasar por CRM).
+model AgendaEvento {
+  id               String   @id @default(uuid())
+  eventoId         String   @unique
+  evento           Evento   @relation(fields: [eventoId], references: [id])
+  personaContacto  String   @default("")
+  telefonoContacto String   @default("")
+  direccion        String   @default("")
+  horaServicio     String   @default("")
+  anticipo         Decimal  @default(0) @db.Decimal(14, 2)
+  observaciones    String   @default("")
+  vendedorId       String?
+  vendedor         User?    @relation("AgendaEventoVendedor", fields: [vendedorId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("agenda_eventos")
+}
+
+// Módulo — Cartera. CxP se materializa por factura (proveedor + número de
+// factura, agrupando las líneas de Compra que la componen — ver decisión
+// del README) solo cuando la compra es a crédito. No guarda valor de
+// factura ni fecha de vencimiento: se leen en vivo de las líneas de
+// Compra asociadas (mismo principio de no duplicar que en Agenda/CxC),
+// esta tabla es solo el ancla para que los abonos tengan a qué apuntar.
+model CuentaPorPagar {
+  id            String    @id @default(uuid())
+  proveedorId   String
+  proveedor     Proveedor @relation(fields: [proveedorId], references: [id])
+  facturaNumero String
+  createdAt     DateTime  @default(now())
+  abonos        Abono[]
+
+  @@unique([proveedorId, facturaNumero])
+  @@map("cuentas_por_pagar")
+}
+
+enum TipoAbono {
+  CXC
+  CXP
+}
+
+// Ledger de abonos/pagos parciales — un tipo apunta a un Evento (CxC) y
+// el otro a una CuentaPorPagar (CxP); exactamente uno de los dos FK debe
+// estar presente según `tipo` (se valida en el servicio). El saldo
+// pendiente siempre se calcula sumando estos abonos, nunca se
+// sobrescribe un campo "saldo" directamente.
+model Abono {
+  id               String          @id @default(uuid())
+  tipo             TipoAbono
+  eventoId         String?
+  evento           Evento?         @relation(fields: [eventoId], references: [id])
+  cuentaPorPagarId String?
+  cuentaPorPagar   CuentaPorPagar? @relation(fields: [cuentaPorPagarId], references: [id])
+  valor            Decimal         @db.Decimal(14, 2)
+  fecha            DateTime
+  registeredById   String
+  registeredBy     User            @relation("AbonoRegisteredBy", fields: [registeredById], references: [id])
+  createdAt        DateTime        @default(now())
+
+  @@index([eventoId])
+  @@index([cuentaPorPagarId])
+  @@map("abonos")
+}
