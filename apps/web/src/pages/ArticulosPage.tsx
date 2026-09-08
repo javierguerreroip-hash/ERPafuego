@@ -10,6 +10,7 @@ import {
 import { useResource } from '../hooks/useResource';
 import { Modal } from '../components/Modal';
 import { ArticuloPriceHistoryModal } from '../components/ArticuloPriceHistoryModal';
+import { BulkImportModal, type ImportColumn } from '../components/BulkImportModal';
 import { Field, FilterChip, inputClass } from '../components/Field';
 import { formatCOP } from '../lib/format';
 
@@ -20,14 +21,34 @@ const EMPTY_FORM: ArticuloInput = {
   unit: '',
 };
 
+// Acepta tanto el valor exacto del enum ("MATERIA_PRIMA") como su etiqueta
+// en español ("Materia prima") para que la plantilla de Excel sea legible
+// para el usuario sin dejar de coincidir con lo que espera el backend.
+function resolveArticuloCategoria(raw: string): string {
+  const normalized = raw.trim().toUpperCase().replace(/\s+/g, '_');
+  if ((ARTICULO_CATEGORIAS as readonly string[]).includes(normalized)) return normalized;
+  const byLabel = Object.entries(ARTICULO_CATEGORIA_LABELS).find(
+    ([, label]) => label.toLowerCase() === raw.trim().toLowerCase(),
+  );
+  return byLabel ? byLabel[0] : raw;
+}
+
+const IMPORT_COLUMNS: ImportColumn[] = [
+  { header: 'Código', field: 'code' },
+  { header: 'Nombre', field: 'name' },
+  { header: 'Categoría', field: 'category', parse: resolveArticuloCategoria },
+  { header: 'Unidad', field: 'unit' },
+];
+
 export function ArticulosPage() {
-  const { items, loading, error, create, update, setActive } = useResource<
+  const { items, loading, error, create, update, setActive, refresh } = useResource<
     ArticuloDTO,
     ArticuloInput
   >('/articulos');
   const [categoryFilter, setCategoryFilter] = useState<ArticuloCategoria | 'TODAS'>('TODAS');
   const [editing, setEditing] = useState<ArticuloDTO | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [historyFor, setHistoryFor] = useState<ArticuloDTO | null>(null);
   const [form, setForm] = useState<ArticuloInput>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
@@ -82,12 +103,20 @@ export function ArticulosPage() {
             Materia prima, mano de obra, transporte, servicios artísticos y alquiler de menaje.
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          Nuevo artículo
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-md border border-orange-600 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
+          >
+            Cargar desde Excel
+          </button>
+          <button
+            onClick={openCreate}
+            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          >
+            Nuevo artículo
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -245,6 +274,20 @@ export function ArticulosPage() {
 
       {historyFor && (
         <ArticuloPriceHistoryModal articulo={historyFor} onClose={() => setHistoryFor(null)} />
+      )}
+
+      {showImport && (
+        <BulkImportModal<ArticuloInput>
+          title="Cargar artículos desde Excel"
+          columns={IMPORT_COLUMNS}
+          schema={articuloSchema}
+          onCreateOne={create}
+          onClose={() => setShowImport(false)}
+          onDone={() => {
+            setShowImport(false);
+            refresh();
+          }}
+        />
       )}
     </div>
   );

@@ -58,6 +58,20 @@ export function DashboardPage() {
       .filter((item) => item.valor > 0)
       .map((item) => ({ name: ARTICULO_CATEGORIA_LABELS[item.categoria], value: item.valor })) ?? [];
 
+  // Costos + Utilidad operativa suman el 100% de Ventas totales — se
+  // grafica esa descomposición (no las 3 cifras por separado, porque
+  // Ventas ya es la suma de las otras dos y triplicaría el total).
+  // Si la utilidad es negativa la torta pierde sentido (una porción no
+  // puede ser "menos que nada"), así que en ese caso se omite y se deja
+  // solo el mensaje con la cifra real.
+  const resumenData =
+    dashboard && dashboard.utilidadOperativa.valor >= 0
+      ? [
+          { name: 'Costos totales', value: dashboard.costosTotales.valor, color: '#ea580c' },
+          { name: 'Utilidad operativa', value: dashboard.utilidadOperativa.valor, color: '#16a34a' },
+        ].filter((item) => item.value > 0)
+      : [];
+
   return (
     <div>
       <div className="mb-4 flex items-start justify-between">
@@ -153,7 +167,39 @@ export function DashboardPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="rounded-lg border bg-white p-4">
+              <h2 className="mb-3 text-sm font-medium text-neutral-700">
+                Ventas: costos vs. utilidad operativa
+              </h2>
+              {resumenData.length === 0 ? (
+                <p className="py-10 text-center text-sm text-neutral-400">
+                  {dashboard.utilidadOperativa.valor < 0
+                    ? `Utilidad negativa en este período (${formatCOP(dashboard.utilidadOperativa.valor)}).`
+                    : 'Sin ventas registradas en este período.'}
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={resumenData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                    >
+                      {resumenData.map((item) => (
+                        <Cell key={item.name} fill={item.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => formatCOP(value)} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
             <div className="rounded-lg border bg-white p-4">
               <h2 className="mb-3 text-sm font-medium text-neutral-700">
                 Composición de costos por categoría

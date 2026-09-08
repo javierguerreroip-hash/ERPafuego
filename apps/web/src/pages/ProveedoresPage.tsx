@@ -9,6 +9,7 @@ import {
 } from '@erp-afuego/shared';
 import { useResource } from '../hooks/useResource';
 import { Modal } from '../components/Modal';
+import { BulkImportModal, type ImportColumn } from '../components/BulkImportModal';
 import { Field, FilterChip, inputClass } from '../components/Field';
 
 const EMPTY_FORM: ProveedorInput = {
@@ -19,11 +20,32 @@ const EMPTY_FORM: ProveedorInput = {
   categoria: 'MATERIA_PRIMA',
 };
 
+// Acepta tanto el valor exacto del enum ("MATERIA_PRIMA") como su etiqueta
+// en español ("Materia prima") para que la plantilla de Excel sea legible
+// sin dejar de coincidir con lo que espera el backend.
+function resolveArticuloCategoria(raw: string): string {
+  const normalized = raw.trim().toUpperCase().replace(/\s+/g, '_');
+  if ((ARTICULO_CATEGORIAS as readonly string[]).includes(normalized)) return normalized;
+  const byLabel = Object.entries(ARTICULO_CATEGORIA_LABELS).find(
+    ([, label]) => label.toLowerCase() === raw.trim().toLowerCase(),
+  );
+  return byLabel ? byLabel[0] : raw;
+}
+
+const IMPORT_COLUMNS: ImportColumn[] = [
+  { header: 'Nombre / Razón social', field: 'name' },
+  { header: 'NIT', field: 'identificacion' },
+  { header: 'Teléfono', field: 'telefono' },
+  { header: 'Correo', field: 'correo' },
+  { header: 'Categoría', field: 'categoria', parse: resolveArticuloCategoria },
+];
+
 export function ProveedoresPage() {
-  const { items, loading, error, create, update, setActive } = useResource<
+  const { items, loading, error, create, update, setActive, refresh } = useResource<
     ProveedorDTO,
     ProveedorInput
   >('/proveedores');
+  const [showImport, setShowImport] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<ArticuloCategoria | 'TODAS'>('TODAS');
   const [editing, setEditing] = useState<ProveedorDTO | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -86,12 +108,20 @@ export function ProveedoresPage() {
             Quienes suministran materia prima, mano de obra, transporte, arte o menaje.
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          Nuevo proveedor
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-md border border-orange-600 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
+          >
+            Cargar desde Excel
+          </button>
+          <button
+            onClick={openCreate}
+            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          >
+            Nuevo proveedor
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -246,6 +276,20 @@ export function ProveedoresPage() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {showImport && (
+        <BulkImportModal<ProveedorInput>
+          title="Cargar proveedores desde Excel"
+          columns={IMPORT_COLUMNS}
+          schema={proveedorSchema}
+          onCreateOne={create}
+          onClose={() => setShowImport(false)}
+          onDone={() => {
+            setShowImport(false);
+            refresh();
+          }}
+        />
       )}
     </div>
   );

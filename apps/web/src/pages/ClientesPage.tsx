@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { clienteSchema, type ClienteDTO, type ClienteInput } from '@erp-afuego/shared';
 import { useResource } from '../hooks/useResource';
 import { Modal } from '../components/Modal';
+import { BulkImportModal, type ImportColumn } from '../components/BulkImportModal';
 import { Field, inputClass } from '../components/Field';
 
 const EMPTY_FORM: ClienteInput = {
@@ -13,11 +14,21 @@ const EMPTY_FORM: ClienteInput = {
   ciudad: '',
 };
 
+const IMPORT_COLUMNS: ImportColumn[] = [
+  { header: 'Nombre / Razón social', field: 'name' },
+  { header: 'Identificación', field: 'identificacion' },
+  { header: 'Teléfono', field: 'telefono' },
+  { header: 'Correo', field: 'correo' },
+  { header: 'Dirección', field: 'direccion' },
+  { header: 'Ciudad', field: 'ciudad' },
+];
+
 export function ClientesPage() {
-  const { items, loading, error, create, update, setActive } = useResource<
+  const { items, loading, error, create, update, setActive, refresh } = useResource<
     ClienteDTO,
     ClienteInput
   >('/clientes');
+  const [showImport, setShowImport] = useState(false);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<ClienteDTO | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -81,12 +92,20 @@ export function ClientesPage() {
           <h1 className="text-xl font-semibold text-neutral-900">Clientes</h1>
           <p className="text-sm text-neutral-500">Personas o empresas a quienes se les cotizan eventos.</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          Nuevo cliente
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-md border border-orange-600 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
+          >
+            Cargar desde Excel
+          </button>
+          <button
+            onClick={openCreate}
+            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          >
+            Nuevo cliente
+          </button>
+        </div>
       </div>
 
       <input
@@ -228,6 +247,20 @@ export function ClientesPage() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {showImport && (
+        <BulkImportModal<ClienteInput>
+          title="Cargar clientes desde Excel"
+          columns={IMPORT_COLUMNS}
+          schema={clienteSchema}
+          onCreateOne={create}
+          onClose={() => setShowImport(false)}
+          onDone={() => {
+            setShowImport(false);
+            refresh();
+          }}
+        />
       )}
     </div>
   );
