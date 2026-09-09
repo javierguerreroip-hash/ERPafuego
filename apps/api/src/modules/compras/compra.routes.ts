@@ -6,7 +6,7 @@ export const compraRouter = Router();
 
 // Módulo 2: solo Administrador y Operación (spec: "Operación — compras,
 // inventario, eventos").
-compraRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION'));
+compraRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 compraRouter.get('/', listHandler);
 compraRouter.post('/', createHandler);

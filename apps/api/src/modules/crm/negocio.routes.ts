@@ -5,7 +5,7 @@ import { createHandler, ganarHandler, listHandler, perderHandler, updateHandler 
 export const negocioRouter = Router();
 
 // CRM: Administrador (acceso total) y Ventas ("solo CRM" por spec).
-negocioRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'VENTAS'));
+negocioRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 negocioRouter.get('/', listHandler);
 negocioRouter.post('/', createHandler);

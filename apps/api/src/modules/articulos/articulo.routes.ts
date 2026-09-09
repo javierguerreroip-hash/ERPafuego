@@ -11,7 +11,7 @@ export const articuloRouter = Router();
 
 // Módulo 1 (maestros): solo Administrador y Operación (spec: "Operación —
 // compras, inventario, eventos", que dependen de estos maestros).
-articuloRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION'));
+articuloRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 articuloRouter.get('/', listHandler);
 articuloRouter.post('/', createHandler);

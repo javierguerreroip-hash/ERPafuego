@@ -12,7 +12,7 @@ export const carteraRouter = Router();
 
 // Cartera es información financiera de back-office — igual que Estado de
 // Resultados y Gastos Administrativos, solo Administrador.
-carteraRouter.use(requireAuth, requireRole('ADMINISTRADOR'));
+carteraRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 carteraRouter.get('/totales', totalesHandler);
 carteraRouter.get('/cxc', listCxCHandler);

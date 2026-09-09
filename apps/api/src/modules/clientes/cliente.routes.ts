@@ -9,7 +9,7 @@ import {
 
 export const clienteRouter = Router();
 
-clienteRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION'));
+clienteRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 clienteRouter.get('/', listHandler);
 clienteRouter.post('/', createHandler);

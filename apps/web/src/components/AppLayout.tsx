@@ -6,29 +6,35 @@ import { useAuth } from '../context/AuthContext';
 // roles: quién ve el enlace en el menú — debe reflejar exactamente lo que
 // el backend permite (requireRole en cada *.routes.ts), para que nadie
 // vea un enlace que solo lleva a un error 403.
+// Administrador, Operación y Ventas tienen acceso a todos los módulos del
+// negocio (decisión del negocio); Cocina/Nómina solo a su propio turno y
+// su propia liquidación de nómina.
+const FULL_ACCESS: UserRole[] = ['ADMINISTRADOR', 'OPERACION', 'VENTAS'];
+
 const NAV_ITEMS: { to: string; label: string; roles: UserRole[] }[] = [
-  { to: '/', label: 'Dashboard', roles: ['ADMINISTRADOR', 'OPERACION'] },
-  { to: '/articulos', label: 'Artículos y Servicios', roles: ['ADMINISTRADOR', 'OPERACION'] },
-  { to: '/opciones-menu', label: 'Opciones de Menú', roles: ['ADMINISTRADOR', 'OPERACION'] },
-  { to: '/clientes', label: 'Clientes', roles: ['ADMINISTRADOR', 'OPERACION'] },
-  { to: '/proveedores', label: 'Proveedores', roles: ['ADMINISTRADOR', 'OPERACION'] },
-  { to: '/compras', label: 'Compras', roles: ['ADMINISTRADOR', 'OPERACION'] },
-  { to: '/eventos', label: 'Ventas y Costos por Evento', roles: ['ADMINISTRADOR', 'OPERACION'] },
-  { to: '/inventario', label: 'Inventario', roles: ['ADMINISTRADOR', 'OPERACION'] },
-  {
-    to: '/juego-inventarios',
-    label: 'Juego de Inventarios (CMV)',
-    roles: ['ADMINISTRADOR', 'OPERACION'],
-  },
-  { to: '/gastos-administrativos', label: 'Gastos Administrativos', roles: ['ADMINISTRADOR'] },
-  { to: '/estado-resultados', label: 'Estado de Resultados', roles: ['ADMINISTRADOR'] },
-  { to: '/tax-rates', label: 'Parámetros Fiscales', roles: ['ADMINISTRADOR', 'OPERACION'] },
+  { to: '/', label: 'Dashboard', roles: FULL_ACCESS },
+  { to: '/articulos', label: 'Artículos y Servicios', roles: FULL_ACCESS },
+  { to: '/opciones-menu', label: 'Opciones de Menú', roles: FULL_ACCESS },
+  { to: '/clientes', label: 'Clientes', roles: FULL_ACCESS },
+  { to: '/proveedores', label: 'Proveedores', roles: FULL_ACCESS },
+  { to: '/compras', label: 'Compras', roles: FULL_ACCESS },
+  { to: '/eventos', label: 'Ventas y Costos por Evento', roles: FULL_ACCESS },
+  { to: '/inventario', label: 'Inventario', roles: FULL_ACCESS },
+  { to: '/juego-inventarios', label: 'Juego de Inventarios (CMV)', roles: FULL_ACCESS },
+  { to: '/gastos-administrativos', label: 'Gastos Administrativos', roles: FULL_ACCESS },
+  { to: '/estado-resultados', label: 'Estado de Resultados', roles: FULL_ACCESS },
+  { to: '/tax-rates', label: 'Parámetros Fiscales', roles: FULL_ACCESS },
   { to: '/mi-turno', label: 'Mi Turno', roles: ['COCINA_NOMINA'] },
-  { to: '/nomina/liquidacion', label: 'Liquidación de Nómina', roles: ['ADMINISTRADOR'] },
-  { to: '/nomina/parametros', label: 'Parámetros de Nómina', roles: ['ADMINISTRADOR'] },
-  { to: '/crm', label: 'CRM de Ventas', roles: ['ADMINISTRADOR', 'VENTAS'] },
-  { to: '/agenda', label: 'Agenda de Eventos', roles: ['ADMINISTRADOR', 'OPERACION'] },
-  { to: '/cartera', label: 'Cartera', roles: ['ADMINISTRADOR'] },
+  {
+    to: '/nomina/liquidacion',
+    label: 'Liquidación de Nómina',
+    roles: [...FULL_ACCESS, 'COCINA_NOMINA'],
+  },
+  { to: '/nomina/parametros', label: 'Parámetros de Nómina', roles: FULL_ACCESS },
+  { to: '/crm', label: 'CRM de Ventas', roles: FULL_ACCESS },
+  { to: '/agenda', label: 'Agenda de Eventos', roles: FULL_ACCESS },
+  { to: '/cartera', label: 'Cartera', roles: FULL_ACCESS },
+  { to: '/usuarios', label: 'Usuarios', roles: ['ADMINISTRADOR'] },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {

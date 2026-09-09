@@ -12,7 +12,7 @@ import {
 export const agendaRouter = Router();
 
 // Igual que Módulo 3 (eventos): solo Administrador y Operación.
-agendaRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION'));
+agendaRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 agendaRouter.get('/', listHandler);
 agendaRouter.get('/eventos-disponibles', listEventosDisponiblesHandler);

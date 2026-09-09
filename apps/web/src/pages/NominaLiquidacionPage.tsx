@@ -50,9 +50,14 @@ function fromColombiaInput(localValue: string): string {
 }
 
 export function NominaLiquidacionPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  // Cocina/Nómina solo puede ver su propia liquidación ("solo su
+  // módulo") — el backend ya fuerza esto (getLiquidacionHandler ignora el
+  // userId de la URL para este rol), pero además ocultamos el selector de
+  // empleado y la gestión de turnos de otras personas, que no le sirven.
+  const isSelfService = user?.role === 'COCINA_NOMINA';
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
-  const [empleadoId, setEmpleadoId] = useState('');
+  const [empleadoId, setEmpleadoId] = useState(isSelfService ? (user?.id ?? '') : '');
   const filter = usePeriodFilter('QUINCENA');
   const { start, end } = filter;
 
@@ -70,6 +75,7 @@ export function NominaLiquidacionPage() {
   const [editingTurnoId, setEditingTurnoId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isSelfService) return;
     apiFetch<Empleado[]>('/nomina/empleados', { token })
       .then((data) => {
         setEmpleados(data);
@@ -187,38 +193,40 @@ export function NominaLiquidacionPage() {
         )}
       </div>
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-neutral-600">Empleado</label>
-          <select
-            value={empleadoId}
-            onChange={(e) => setEmpleadoId(e.target.value)}
-            className={`${inputClass} min-w-[200px]`}
+      {!isSelfService && (
+        <div className="mb-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-600">Empleado</label>
+            <select
+              value={empleadoId}
+              onChange={(e) => setEmpleadoId(e.target.value)}
+              className={`${inputClass} min-w-[200px]`}
+            >
+              {empleados.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                  {!e.active ? ' (inactivo)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={openNewTurno}
+            disabled={!empleadoId}
+            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
           >
-            {empleados.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-                {!e.active ? ' (inactivo)' : ''}
-              </option>
-            ))}
-          </select>
+            Registrar/corregir turno
+          </button>
         </div>
-        <button
-          onClick={openNewTurno}
-          disabled={!empleadoId}
-          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
-        >
-          Registrar/corregir turno
-        </button>
-      </div>
+      )}
 
       <PeriodPickerControls filter={filter} />
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      {empleados.length === 0 ? (
+      {!isSelfService && empleados.length === 0 ? (
         <p className="text-sm text-neutral-400">
-          No hay empleados con rol Cocina/Nómina todavía. Créalos en el módulo de usuarios.
+          No hay empleados con rol Cocina/Nómina todavía. Créalos en el módulo de Usuarios.
         </p>
       ) : loading || !liquidacion ? (
         <p className="text-sm text-neutral-400">Cargando…</p>
@@ -254,13 +262,13 @@ export function NominaLiquidacionPage() {
                   <th className="px-3 py-2">Entrada</th>
                   <th className="px-3 py-2">Salida</th>
                   <th className="px-3 py-2">Horas</th>
-                  <th className="px-3 py-2" />
+                  {!isSelfService && <th className="px-3 py-2" />}
                 </tr>
               </thead>
               <tbody>
                 {liquidacion.turnos.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-4 text-center text-neutral-400">
+                    <td colSpan={isSelfService ? 3 : 4} className="px-3 py-4 text-center text-neutral-400">
                       Sin turnos en este período.
                     </td>
                   </tr>
@@ -272,20 +280,22 @@ export function NominaLiquidacionPage() {
                         {t.horaSalida ? new Date(t.horaSalida).toLocaleString('es-CO') : '—'}
                       </td>
                       <td className="px-3 py-2">{t.horasTrabajadas ?? '—'}</td>
-                      <td className="space-x-2 px-3 py-2 text-right">
-                        <button
-                          onClick={() => openEditTurno(t.id, t.horaEntrada, t.horaSalida)}
-                          className="text-orange-600 hover:underline"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTurno(t.id)}
-                          className="text-neutral-400 hover:text-red-600"
-                        >
-                          Borrar
-                        </button>
-                      </td>
+                      {!isSelfService && (
+                        <td className="space-x-2 px-3 py-2 text-right">
+                          <button
+                            onClick={() => openEditTurno(t.id, t.horaEntrada, t.horaSalida)}
+                            className="text-orange-600 hover:underline"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTurno(t.id)}
+                            className="text-neutral-400 hover:text-red-600"
+                          >
+                            Borrar
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}

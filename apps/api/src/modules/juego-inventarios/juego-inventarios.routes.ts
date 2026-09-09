@@ -6,7 +6,7 @@ export const juegoInventariosRouter = Router();
 
 // Módulo de inventario: solo Administrador y Operación, igual que
 // Compras/Eventos/Inventario.
-juegoInventariosRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION'));
+juegoInventariosRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 juegoInventariosRouter.get('/', reporteHandler);
 juegoInventariosRouter.post('/final-fisico', setFinalFisicoHandler);

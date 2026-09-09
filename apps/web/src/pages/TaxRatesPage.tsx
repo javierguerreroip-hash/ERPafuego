@@ -9,7 +9,9 @@ const EMPTY_FORM: TaxRateInput = { name: '', rate: 0 };
 
 export function TaxRatesPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMINISTRADOR';
+  // Administrador, Operación y Ventas tienen acceso completo (decisión del
+  // negocio); solo Cocina/Nómina no ve este módulo (ni el enlace en el menú).
+  const isAdmin = user?.role !== 'COCINA_NOMINA';
   const { items, loading, error, create, update, setActive } = useResource<
     TaxRateDTO,
     TaxRateInput
@@ -63,7 +65,6 @@ export function TaxRatesPage() {
           <h1 className="text-xl font-semibold text-neutral-900">Parámetros Fiscales</h1>
           <p className="text-sm text-neutral-500">
             Tasas de impuesto para calcular el valor después de impuestos en eventos.
-            {!isAdmin && ' Solo Administrador puede editarlas.'}
           </p>
         </div>
         {isAdmin && (

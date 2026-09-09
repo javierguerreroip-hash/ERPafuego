@@ -1,5 +1,6 @@
 export * from './roles.js';
 export * from './schemas/auth.schema.js';
+export * from './schemas/user.schema.js';
 export * from './catalog/articulo.js';
 export * from './catalog/opcion-menu.js';
 export * from './catalog/cliente.js';

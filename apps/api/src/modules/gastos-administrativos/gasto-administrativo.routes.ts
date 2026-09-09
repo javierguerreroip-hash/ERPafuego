@@ -7,7 +7,7 @@ export const gastoAdministrativoRouter = Router();
 // Gastos administrativos son información financiera de back-office —
 // fuera del alcance de Operación ("compras, inventario, eventos") y
 // Ventas ("solo CRM") según la especificación. Solo Administrador.
-gastoAdministrativoRouter.use(requireAuth, requireRole('ADMINISTRADOR'));
+gastoAdministrativoRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 gastoAdministrativoRouter.get('/', listHandler);
 gastoAdministrativoRouter.get('/mes', getHandler);

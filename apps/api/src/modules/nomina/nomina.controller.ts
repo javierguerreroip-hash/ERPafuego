@@ -81,7 +81,7 @@ export async function marcarSalidaHandler(req: Request, res: Response, next: Nex
 // el userId desde el token, ignorando cualquier query param.
 export async function listTurnosHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const isAdmin = req.user!.role === 'ADMINISTRADOR';
+    const isAdmin = req.user!.role !== 'COCINA_NOMINA';
     const userId = isAdmin && typeof req.query.userId === 'string' ? req.query.userId : req.user!.sub;
     const startParam = typeof req.query.start === 'string' ? req.query.start : undefined;
     const endParam = typeof req.query.end === 'string' ? req.query.end : undefined;
@@ -133,7 +133,7 @@ export async function deleteTurnoHandler(req: Request, res: Response, next: Next
 // Cocina/Nómina solo puede liquidar su propio período.
 export async function getLiquidacionHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const isAdmin = req.user!.role === 'ADMINISTRADOR';
+    const isAdmin = req.user!.role !== 'COCINA_NOMINA';
     const userId = isAdmin && typeof req.query.userId === 'string' ? req.query.userId : req.user!.sub;
 
     const startParam = typeof req.query.start === 'string' ? req.query.start : undefined;

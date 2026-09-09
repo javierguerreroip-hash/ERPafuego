@@ -17,6 +17,7 @@ import { nominaRouter } from '../modules/nomina/nomina.routes.js';
 import { negocioRouter } from '../modules/crm/negocio.routes.js';
 import { agendaRouter } from '../modules/agenda/agenda.routes.js';
 import { carteraRouter } from '../modules/cartera/cartera.routes.js';
+import { userRouter } from '../modules/usuarios/user.routes.js';
 
 export const router = Router();
 
@@ -38,3 +39,4 @@ router.use('/nomina', nominaRouter);
 router.use('/negocios', negocioRouter);
 router.use('/agenda', agendaRouter);
 router.use('/cartera', carteraRouter);
+router.use('/usuarios', userRouter);

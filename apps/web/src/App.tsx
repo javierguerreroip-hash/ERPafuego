@@ -18,21 +18,19 @@ import { NominaLiquidacionPage } from './pages/NominaLiquidacionPage';
 import { CRMPage } from './pages/CRMPage';
 import { AgendaPage } from './pages/AgendaPage';
 import { CarteraPage } from './pages/CarteraPage';
+import { UsuariosPage } from './pages/UsuariosPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { AppLayout } from './components/AppLayout';
 import { useAuth } from './context/AuthContext';
 
-// El aterrizaje en "/" depende del rol: Cocina/Nómina y Ventas no tienen
-// acceso al Dashboard (cada uno solo ve su propio módulo — "solo su
-// módulo" / "solo CRM" en la especificación), así que se les manda
-// directo a su pantalla en vez de un Dashboard que les devolvería 403.
+// El aterrizaje en "/" depende del rol: Administrador, Operación y Ventas
+// tienen acceso a todos los módulos y ven el Dashboard; Cocina/Nómina solo
+// tiene "Mi Turno" y no puede ver el Dashboard, así que se le manda
+// directo a su pantalla en vez de un Dashboard que le devolvería 403.
 function HomeRoute() {
   const { user } = useAuth();
   if (user?.role === 'COCINA_NOMINA') {
     return <Navigate to="/mi-turno" replace />;
-  }
-  if (user?.role === 'VENTAS') {
-    return <Navigate to="/crm" replace />;
   }
   return <DashboardPage />;
 }
@@ -65,6 +63,7 @@ export default function App() {
                 <Route path="/crm" element={<CRMPage />} />
                 <Route path="/agenda" element={<AgendaPage />} />
                 <Route path="/cartera" element={<CarteraPage />} />
+                <Route path="/usuarios" element={<UsuariosPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </AppLayout>

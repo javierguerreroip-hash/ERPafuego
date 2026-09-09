@@ -9,7 +9,7 @@ import {
 
 export const proveedorRouter = Router();
 
-proveedorRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION'));
+proveedorRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 proveedorRouter.get('/', listHandler);
 proveedorRouter.post('/', createHandler);

@@ -12,10 +12,9 @@ import {
 
 export const eventoRouter = Router();
 
-// Módulo 3: solo Administrador y Operación (spec: "Operación — compras,
-// inventario, eventos"; Ventas trabaja desde el CRM, que se integrará en la
-// Fase 10).
-eventoRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION'));
+// Administrador, Operación y Ventas tienen acceso completo a todos los
+// módulos (decisión del negocio).
+eventoRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 eventoRouter.get('/', listHandler);
 eventoRouter.post('/', createHandler);

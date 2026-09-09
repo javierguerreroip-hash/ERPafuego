@@ -5,6 +5,6 @@ import { getHandler } from './estado-resultados.controller.js';
 export const estadoResultadosRouter = Router();
 
 // Estado financiero — igual que Gastos Administrativos, solo Administrador.
-estadoResultadosRouter.use(requireAuth, requireRole('ADMINISTRADOR'));
+estadoResultadosRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 estadoResultadosRouter.get('/', getHandler);

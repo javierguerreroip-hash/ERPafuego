@@ -11,9 +11,13 @@ export const opcionMenuRouter = Router();
 
 opcionMenuRouter.use(requireAuth);
 
-// Ventas necesita leer el catálogo para cotizar y para ganar negocios en
-// el CRM (Fase 10), pero no puede crear/editar opciones de menú.
+// Administrador, Operación y Ventas tienen acceso completo a todos los
+// módulos (decisión del negocio).
 opcionMenuRouter.get('/', requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'), listHandler);
-opcionMenuRouter.post('/', requireRole('ADMINISTRADOR', 'OPERACION'), createHandler);
-opcionMenuRouter.put('/:id', requireRole('ADMINISTRADOR', 'OPERACION'), updateHandler);
-opcionMenuRouter.patch('/:id/active', requireRole('ADMINISTRADOR', 'OPERACION'), setActiveHandler);
+opcionMenuRouter.post('/', requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'), createHandler);
+opcionMenuRouter.put('/:id', requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'), updateHandler);
+opcionMenuRouter.patch(
+  '/:id/active',
+  requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'),
+  setActiveHandler,
+);

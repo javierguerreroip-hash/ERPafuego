@@ -11,10 +11,13 @@ export const taxRateRouter = Router();
 
 taxRateRouter.use(requireAuth);
 
-// Operación necesita poder leerlas para elegir la tasa al crear un evento,
-// y Ventas para ganar negocios en el CRM (Fase 10) — pero solo
-// Administrador puede crear/editar parámetros fiscales.
+// Administrador, Operación y Ventas tienen acceso completo a todos los
+// módulos (decisión del negocio); Cocina/Nómina no lo necesita.
 taxRateRouter.get('/', requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'), listHandler);
-taxRateRouter.post('/', requireRole('ADMINISTRADOR'), createHandler);
-taxRateRouter.put('/:id', requireRole('ADMINISTRADOR'), updateHandler);
-taxRateRouter.patch('/:id/active', requireRole('ADMINISTRADOR'), setActiveHandler);
+taxRateRouter.post('/', requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'), createHandler);
+taxRateRouter.put('/:id', requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'), updateHandler);
+taxRateRouter.patch(
+  '/:id/active',
+  requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'),
+  setActiveHandler,
+);
