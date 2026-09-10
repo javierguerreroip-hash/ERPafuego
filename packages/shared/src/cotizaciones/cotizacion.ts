@@ -11,11 +11,18 @@ export type CotizacionVendedor = (typeof COTIZACION_VENDEDORES)[number];
 // Ilustraciones esquemáticas (blanco y negro, sin fondo) que se pueden
 // mostrar en el PDF de la cotización — mismo estilo que la plantilla de
 // referencia. Los archivos viven en apps/web/public/cotizacion-icons/.
-export const COTIZACION_ICONOS = ['hamburguesa', 'paella', 'canapes', 'sandwich'] as const;
+export const COTIZACION_ICONOS = [
+  'costillas',
+  'hamburguesa',
+  'paella',
+  'canapes',
+  'sandwich',
+] as const;
 
 export type CotizacionIcono = (typeof COTIZACION_ICONOS)[number];
 
 export const COTIZACION_ICONO_LABELS: Record<CotizacionIcono, string> = {
+  costillas: 'Costillas',
   hamburguesa: 'Hamburguesa',
   paella: 'Paella',
   canapes: 'Canapés',
