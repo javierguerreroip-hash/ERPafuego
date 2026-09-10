@@ -155,6 +155,14 @@ export async function generateCotizacionPDF(data: CotizacionPdfData): Promise<vo
   const rightW = pageW - margin - rightX;
   let rightY = cursorY;
 
+  // Columnas numéricas alineadas a la derecha, con espacio fijo reservado
+  // para cada una (antes CANT y VR UND quedaban casi en la misma posición
+  // y el texto se encimaba).
+  const colVrTotalX = rightX + rightW;
+  const colVrUndX = colVrTotalX - 32;
+  const colCantX = colVrUndX - 24;
+  const descripcionMaxWidth = colCantX - rightX - 12;
+
   function tableHeader(title: string) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
@@ -162,9 +170,9 @@ export async function generateCotizacionPDF(data: CotizacionPdfData): Promise<vo
     doc.text(title.toUpperCase(), rightX, rightY);
     doc.setFontSize(7);
     doc.setTextColor(...COLOR_MUTED);
-    doc.text('CANT', rightX + rightW - 46, rightY);
-    doc.text('VR UND', rightX + rightW - 32, rightY, { align: 'right' });
-    doc.text('VR TOTAL', rightX + rightW, rightY, { align: 'right' });
+    doc.text('CANT', colCantX, rightY, { align: 'right' });
+    doc.text('VR UND', colVrUndX, rightY, { align: 'right' });
+    doc.text('VR TOTAL', colVrTotalX, rightY, { align: 'right' });
     rightY += 4;
     doc.setDrawColor(...COLOR_MUTED);
     doc.setLineWidth(0.1);
@@ -177,16 +185,13 @@ export async function generateCotizacionPDF(data: CotizacionPdfData): Promise<vo
     doc.setFontSize(8.5);
     doc.setTextColor(...COLOR_INK);
     for (const linea of lineas) {
-      const nombreLines = doc.splitTextToSize(linea.descripcion, rightW - 52);
+      const nombreLines = doc.splitTextToSize(linea.descripcion, descripcionMaxWidth);
       doc.text(nombreLines, rightX, rightY);
-      doc.text(String(linea.cantidad), rightX + rightW - 46, rightY);
-      doc.text(money(linea.valorUnitario), rightX + rightW - 32, rightY, { align: 'right' });
-      doc.text(
-        money(linea.cantidad * linea.valorUnitario),
-        rightX + rightW,
-        rightY,
-        { align: 'right' },
-      );
+      doc.text(String(linea.cantidad), colCantX, rightY, { align: 'right' });
+      doc.text(money(linea.valorUnitario), colVrUndX, rightY, { align: 'right' });
+      doc.text(money(linea.cantidad * linea.valorUnitario), colVrTotalX, rightY, {
+        align: 'right',
+      });
       rightY += Math.max(5, nombreLines.length * 4.2);
     }
   }
