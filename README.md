@@ -119,13 +119,13 @@ Acceso restringido a los roles Administrador y Operación.
 ## Gastos Administrativos (Fase 6)
 
 - **Gastos Administrativos** (`/gastos-administrativos`, Administrador/
-  Operación/Ventas): registro mensual de los 10 rubros fijos (arriendo,
+  Operación/Ventas): registro mensual de los 11 rubros fijos (arriendo,
   nómina administrativa, servicios públicos, honorarios de contador y
   socios, control de plagas, seguros, internet, adicionales, cuota de
-  obligación financiera, y **Publicidad** — este último agregado
-  2026-09-10 a pedido del negocio, ver "Decisiones de la Fase 6").
-  Selector de mes (un registro por año+mes) con histórico de meses ya
-  cargados a un clic.
+  obligación financiera, **Publicidad** y **Lavandería** — estos dos
+  últimos agregados 2026-09-10 a pedido del negocio, ver "Decisiones de
+  la Fase 6"). Selector de mes (un registro por año+mes) con histórico de
+  meses ya cargados a un clic.
 - El total del mes no se guarda: se suma en el servicio
   (`calcularTotalGastosAdministrativos`, con pruebas unitarias) para que
   el futuro Estado de Resultados siempre lo consuma actualizado.
@@ -691,12 +691,12 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
   (Fase 9), que calculará la liquidación detallada de turnos; la
   especificación los distingue explícitamente ("Nómina (administrativa,
   distinta de la nómina de cocina del Módulo 9)").
-- **Actualización post-lanzamiento (2026-09-10):** se agregó un décimo
-  rubro fijo, **Publicidad**, a pedido directo del negocio (no estaba en
-  la especificación original). Se sumó a `GASTO_ADMINISTRATIVO_RUBROS`
-  (el total y el Estado de Resultados lo recogen automáticamente, sin
-  tocar su fórmula) y se agregó la migración de base de datos
-  correspondiente.
+- **Actualización post-lanzamiento (2026-09-10):** se agregaron dos
+  rubros fijos más, **Publicidad** y **Lavandería**, a pedido directo del
+  negocio (no estaban en la especificación original). Se sumaron a
+  `GASTO_ADMINISTRATIVO_RUBROS` (el total y el Estado de Resultados los
+  recogen automáticamente, sin tocar su fórmula) y se agregó la
+  migración de base de datos correspondiente a cada uno.
 
 ### Decisiones de la Fase 7
 

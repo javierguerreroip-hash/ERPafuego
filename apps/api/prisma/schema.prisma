@@ -299,10 +299,11 @@ model InventarioInicial {
 }
 
 // Módulo de Gastos Administrativos. Un solo registro por (year, month) —
-// los 10 rubros son fijos (los pide la especificación literalmente, más
-// Publicidad agregada a pedido del negocio — no es un catálogo abierto).
-// "total" no se guarda: se suma en el servicio para que nunca quede
-// desactualizado, y así lo consumirá el Estado de Resultados (Fase 8).
+// los 11 rubros son fijos (los pide la especificación literalmente, más
+// Publicidad y Lavandería agregadas a pedido del negocio — no es un
+// catálogo abierto). "total" no se guarda: se suma en el servicio para
+// que nunca quede desactualizado, y así lo consumirá el Estado de
+// Resultados (Fase 8).
 model GastoAdministrativo {
   id                       String   @id @default(uuid())
   year                     Int
@@ -317,6 +318,7 @@ model GastoAdministrativo {
   adicionales              Decimal  @default(0) @db.Decimal(14, 2)
   cuotaObligacionFinanciera Decimal @default(0) @db.Decimal(14, 2)
   publicidad               Decimal  @default(0) @db.Decimal(14, 2)
+  lavanderia               Decimal  @default(0) @db.Decimal(14, 2)
   registeredById           String
   registeredBy             User     @relation("GastoAdministrativoRegisteredBy", fields: [registeredById], references: [id])
   createdAt                DateTime @default(now())
