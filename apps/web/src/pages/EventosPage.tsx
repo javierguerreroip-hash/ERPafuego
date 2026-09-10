@@ -11,6 +11,7 @@ import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
 import { EventoDetailModal } from '../components/EventoDetailModal';
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { Field, inputClass } from '../components/Field';
 import { formatCOP } from '../lib/format';
 
@@ -40,6 +41,7 @@ export function EventosPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [openEventoId, setOpenEventoId] = useState<string | null>(null);
+  const [deletingEvento, setDeletingEvento] = useState<EventoDTO | null>(null);
 
   async function loadAll() {
     setLoading(true);
@@ -127,18 +129,19 @@ export function EventosPage() {
               <th className="px-4 py-2">Valor después de imp.</th>
               <th className="px-4 py-2">Costo total</th>
               <th className="px-4 py-2">Utilidad operacional</th>
+              <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
                   Cargando…
                 </td>
               </tr>
             ) : eventos.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
                   Todavía no hay eventos registrados.
                 </td>
               </tr>
@@ -169,6 +172,17 @@ export function EventosPage() {
                     <span className="text-xs text-neutral-400">
                       ({evento.utilidadOperacionalPorcentaje.toFixed(1)}%)
                     </span>
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingEvento(evento);
+                      }}
+                      className="text-red-600 hover:underline"
+                    >
+                      Eliminar
+                    </button>
                   </td>
                 </tr>
               ))
@@ -281,6 +295,23 @@ export function EventosPage() {
           eventoId={openEventoId}
           onClose={() => setOpenEventoId(null)}
           onChanged={loadAll}
+        />
+      )}
+
+      {deletingEvento && (
+        <ConfirmDeleteModal
+          title="Eliminar venta"
+          message={`Vas a eliminar definitivamente el evento de "${deletingEvento.clienteNombre}" (${new Date(deletingEvento.fecha).toLocaleDateString('es-CO')}). Esto solo funciona si no tiene abonos/pagos registrados en Cartera. Si vino de un negocio ganado en el CRM, ese negocio vuelve a "Cotizado".`}
+          onConfirm={async (password) => {
+            await apiFetch(`/eventos/${deletingEvento.id}`, {
+              method: 'DELETE',
+              body: { password },
+              token,
+            });
+            setDeletingEvento(null);
+            await loadAll();
+          }}
+          onClose={() => setDeletingEvento(null)}
         />
       )}
     </div>

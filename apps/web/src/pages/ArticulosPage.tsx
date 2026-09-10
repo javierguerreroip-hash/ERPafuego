@@ -8,9 +8,12 @@ import {
   type ArticuloInput,
 } from '@erp-afuego/shared';
 import { useResource } from '../hooks/useResource';
+import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../lib/api';
 import { Modal } from '../components/Modal';
 import { ArticuloPriceHistoryModal } from '../components/ArticuloPriceHistoryModal';
 import { BulkImportModal, type ImportColumn } from '../components/BulkImportModal';
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { Field, FilterChip, inputClass } from '../components/Field';
 import { formatCOP } from '../lib/format';
 
@@ -41,6 +44,7 @@ const IMPORT_COLUMNS: ImportColumn[] = [
 ];
 
 export function ArticulosPage() {
+  const { token } = useAuth();
   const { items, loading, error, create, update, setActive, refresh } = useResource<
     ArticuloDTO,
     ArticuloInput
@@ -50,6 +54,7 @@ export function ArticulosPage() {
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [historyFor, setHistoryFor] = useState<ArticuloDTO | null>(null);
+  const [deletingArticulo, setDeletingArticulo] = useState<ArticuloDTO | null>(null);
   const [form, setForm] = useState<ArticuloInput>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -202,6 +207,12 @@ export function ArticulosPage() {
                     >
                       {item.active ? 'Desactivar' : 'Activar'}
                     </button>
+                    <button
+                      onClick={() => setDeletingArticulo(item)}
+                      className="text-red-600 hover:underline"
+                    >
+                      Eliminar
+                    </button>
                   </td>
                 </tr>
               ))
@@ -287,6 +298,23 @@ export function ArticulosPage() {
             setShowImport(false);
             refresh();
           }}
+        />
+      )}
+
+      {deletingArticulo && (
+        <ConfirmDeleteModal
+          title="Eliminar artículo"
+          message={`Vas a eliminar definitivamente "${deletingArticulo.name}". Esto solo funciona si el artículo nunca se usó en compras, consumos o inventarios — si ya tiene historial, desactívalo en su lugar.`}
+          onConfirm={async (password) => {
+            await apiFetch(`/articulos/${deletingArticulo.id}`, {
+              method: 'DELETE',
+              body: { password },
+              token,
+            });
+            setDeletingArticulo(null);
+            await refresh();
+          }}
+          onClose={() => setDeletingArticulo(null)}
         />
       )}
     </div>

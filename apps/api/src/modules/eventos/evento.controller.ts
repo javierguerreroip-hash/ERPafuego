@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { eventoConsumoSchema, eventoConsumoUpdateSchema, eventoSchema } from '@erp-afuego/shared';
+import { assertDeleteAuthorized } from '../../middleware/delete-auth.js';
 import * as eventoService from './evento.service.js';
 
 export async function listHandler(_req: Request, res: Response, next: NextFunction) {
@@ -60,6 +61,16 @@ export async function updateConsumoHandler(req: Request, res: Response, next: Ne
 export async function removeConsumoHandler(req: Request, res: Response, next: NextFunction) {
   try {
     await eventoService.removeConsumo(req.params.id, req.params.consumoId);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    assertDeleteAuthorized(req);
+    await eventoService.deleteEvento(req.params.id);
     res.status(204).send();
   } catch (error) {
     next(error);

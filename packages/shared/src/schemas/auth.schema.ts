@@ -8,6 +8,14 @@ export const loginSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
+// Body del DELETE de ventas (Evento) y artículos — control adicional
+// pedido por el negocio, además del rol del usuario.
+export const deleteAuthSchema = z.object({
+  password: z.string().min(1, 'La contraseña de autorización es requerida'),
+});
+
+export type DeleteAuthInput = z.infer<typeof deleteAuthSchema>;
+
 export const authUserSchema = z.object({
   id: z.string(),
   name: z.string(),

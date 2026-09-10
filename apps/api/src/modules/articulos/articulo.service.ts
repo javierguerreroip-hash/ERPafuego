@@ -43,6 +43,33 @@ export async function setArticuloActive(id: string, active: boolean) {
   return serialize(articulo);
 }
 
+// Borrado real (no solo desactivar) — pedido por el negocio para poder
+// corregir artículos creados por error. Solo se permite si el artículo
+// nunca se usó en ningún hecho histórico (compra, consumo de evento,
+// inventario inicial o final físico); si ya tiene alguno, borrarlo
+// rompería la trazabilidad de esos registros — se pide desactivarlo en
+// su lugar (ver README, "cada compra/consumo debe quedar vinculado a su
+// origen").
+export async function deleteArticulo(id: string) {
+  await findArticuloOrThrow(id);
+
+  const [compras, consumos, inventarioInicial, inventarioFinalFisico] = await Promise.all([
+    prisma.compra.count({ where: { articuloId: id } }),
+    prisma.eventoConsumo.count({ where: { articuloId: id } }),
+    prisma.inventarioInicial.count({ where: { articuloId: id } }),
+    prisma.inventarioFinalFisico.count({ where: { articuloId: id } }),
+  ]);
+
+  if (compras > 0 || consumos > 0 || inventarioInicial > 0 || inventarioFinalFisico > 0) {
+    throw new HttpError(
+      409,
+      'No se puede eliminar: este artículo ya tiene compras, consumos o inventarios registrados. Desactívalo en su lugar.',
+    );
+  }
+
+  await prisma.articulo.delete({ where: { id } });
+}
+
 async function assertCodeAvailable(code: string, excludeId?: string) {
   const existing = await prisma.articulo.findFirst({
     where: excludeId ? { code, NOT: { id: excludeId } } : { code },

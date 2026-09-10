@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth, requireRole } from '../../middleware/auth.middleware.js';
 import {
   createHandler,
+  deleteHandler,
   listHandler,
   setActiveHandler,
   updateHandler,
@@ -17,3 +18,4 @@ articuloRouter.get('/', listHandler);
 articuloRouter.post('/', createHandler);
 articuloRouter.put('/:id', updateHandler);
 articuloRouter.patch('/:id/active', setActiveHandler);
+articuloRouter.delete('/:id', deleteHandler);

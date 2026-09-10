@@ -268,6 +268,26 @@ Acceso restringido a los roles Administrador y Operación.
   `apps/api/src/modules/cotizaciones/cotizacion.calculations.ts`,
   verificada contra el ejemplo exacto de la plantilla de referencia.
 
+## Eliminar ventas y artículos (post-lanzamiento, 2026-09-10)
+
+- **Ventas y Costos por Evento** (`/eventos`) y **Artículos y Servicios**
+  (`/articulos`) ahora tienen un botón "Eliminar" (borrado real, no solo
+  desactivar) — pedido por el negocio para poder corregir errores de
+  digitación, protegido con una **contraseña de autorización**
+  (`DELETE_AUTH_PASSWORD`, variable de entorno — nunca fija en el código
+  fuente) que se pide en un modal de confirmación antes de borrar.
+- **Artículo**: solo se puede eliminar si nunca se usó en ninguna compra,
+  consumo de evento o inventario (inicial/final físico) — si ya tiene
+  historial, el borrado se rechaza (409) y se pide desactivarlo en su
+  lugar, para no romper la trazabilidad de esos registros (regla no
+  negociable de `CLAUDE.md`).
+- **Evento**: se rechaza si ya tiene abonos/pagos registrados en Cartera
+  (borrar eso corrompería el histórico de pagos reales). Si se puede
+  eliminar: se borra su Agenda y sus consumos (existen solo para
+  describir ese evento), y si vino de un negocio ganado en el CRM, ese
+  negocio vuelve a etapa "Cotizado" en vez de quedar apuntando a un
+  evento inexistente — así se puede corregir y volver a ganar.
+
 ## Cartera — Cuentas por Cobrar y por Pagar (Fase 12, último módulo del plan)
 
 - **Cartera** (`/cartera`, solo Administrador): dos tableros
@@ -440,6 +460,7 @@ git push -u origin main
    | `JWT_EXPIRES_IN` | `8h` |
    | `CORS_ORIGIN` | la URL que Netlify te va a asignar (ej. `https://tu-sitio.netlify.app`) — la puedes ajustar después del primer deploy |
    | `VITE_API_URL` | `/api` (con la barra inicial, sin dominio — el frontend le habla a su propio dominio) |
+   | `DELETE_AUTH_PASSWORD` | la contraseña de autorización para eliminar ventas/artículos (post-lanzamiento, 2026-09-10) |
 
 4. Dispara el deploy (**Deploy site**). El build corre `prisma generate`
    automáticamente (ya está como `postinstall` del workspace), aplica

@@ -220,6 +220,34 @@ export async function removeConsumo(eventoId: string, consumoId: string) {
   await prisma.eventoConsumo.delete({ where: { id: consumoId } });
 }
 
+// Borrado real de una venta completa — pedido por el negocio para poder
+// corregir errores. Se bloquea si ya tiene abonos/pagos registrados en
+// Cartera (borrar eso corrompería el histórico de pagos reales). Si el
+// evento vino de un negocio ganado en el CRM, ese negocio vuelve a
+// "Cotizado" en vez de quedar apuntando a un evento inexistente — así se
+// puede corregir y volver a ganar. La Agenda y los consumos del evento
+// se eliminan en cascada porque solo existen para describir ese evento.
+export async function deleteEvento(id: string) {
+  await findEventoOrThrow(id);
+
+  const abonos = await prisma.abono.count({ where: { eventoId: id } });
+  if (abonos > 0) {
+    throw new HttpError(
+      409,
+      'No se puede eliminar: este evento ya tiene abonos/pagos registrados en Cartera.',
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.agendaEvento.deleteMany({ where: { eventoId: id } });
+    await tx.negocio.updateMany({
+      where: { eventoId: id },
+      data: { eventoId: null, etapa: 'COTIZADO' },
+    });
+    await tx.evento.delete({ where: { id } });
+  });
+}
+
 async function findEventoOrThrow(id: string) {
   const evento = await prisma.evento.findUnique({ where: { id } });
   if (!evento) {

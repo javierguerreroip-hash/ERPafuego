@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '../../middleware/auth.middleware.js';
 import {
   addConsumoHandler,
   createHandler,
+  deleteHandler,
   getHandler,
   listHandler,
   removeConsumoHandler,
@@ -23,3 +24,4 @@ eventoRouter.put('/:id', updateHandler);
 eventoRouter.post('/:id/consumos', addConsumoHandler);
 eventoRouter.put('/:id/consumos/:consumoId', updateConsumoHandler);
 eventoRouter.delete('/:id/consumos/:consumoId', removeConsumoHandler);
+eventoRouter.delete('/:id', deleteHandler);
