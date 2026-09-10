@@ -49,8 +49,18 @@ export async function getJuegoInventariosReporte(startDate: Date, endDate: Date)
     consumosMap.set(c.articuloId, (consumosMap.get(c.articuloId) ?? 0) + Number(c.subtotal));
   }
 
+  // El registro de inventario final físico se guarda con fecha a
+  // medianoche UTC (mismo criterio que InventarioInicial), pero endDate
+  // aquí es fin de día (23:59:59.999Z) para que las consultas por rango
+  // (compras/consumos/eventos) incluyan todo el último día. Si se
+  // buscara con endDate directamente, la igualdad exacta nunca haría
+  // match contra lo guardado y el conteo físico parecería no quedar
+  // registrado aunque el guardado sí hubiera funcionado.
+  const endDateAtMidnight = new Date(
+    Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()),
+  );
   const finalesFisicos = await prisma.inventarioFinalFisico.findMany({
-    where: { fecha: endDate, articuloId: { in: articuloIds } },
+    where: { fecha: endDateAtMidnight, articuloId: { in: articuloIds } },
   });
   const finalesFisicosMap = new Map(finalesFisicos.map((f) => [f.articuloId, f]));
 
