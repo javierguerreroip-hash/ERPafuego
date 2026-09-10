@@ -65,6 +65,7 @@ model User {
   negociosComoVendedor  Negocio[]               @relation("NegocioVendedor")
   agendaComoVendedor    AgendaEvento[]          @relation("AgendaEventoVendedor")
   abonosRegistrados    Abono[]                 @relation("AbonoRegisteredBy")
+  cotizacionesRegistradas Cotizacion[]         @relation("CotizacionRegisteredBy")
 
   @@map("users")
 }
@@ -217,6 +218,7 @@ model TaxRate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   eventos   Evento[]
+  cotizaciones Cotizacion[]
 
   @@map("tax_rates")
 }
@@ -426,6 +428,7 @@ model Negocio {
   evento                Evento?      @relation(fields: [eventoId], references: [id])
   vendedorId            String
   vendedor               User         @relation("NegocioVendedor", fields: [vendedorId], references: [id])
+  cotizacion              Cotizacion?
   createdAt              DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
 
@@ -501,4 +504,43 @@ model Abono {
   @@index([eventoId])
   @@index([cuentaPorPagarId])
   @@map("abonos")
+}
+
+// Módulo — Cotizaciones (post-lanzamiento, 2026-09-10). Genera el
+// documento comercial (exportable a PDF con el diseño de la plantilla
+// de A Fuego) y, al guardarse, crea automáticamente un Negocio en etapa
+// COTIZADO en el CRM (misma transacción) — así toda cotización queda
+// visible en el CRM sin doble digitación. items/logistica se guardan
+// como JSON porque son líneas libres propias de esta cotización (no
+// referencian Articulo/OpcionMenu — el cliente puede pedir algo que
+// todavía no existe en el catálogo), no un catálogo que otro módulo
+// deba consultar. vendedorNombre es solo el nombre que firma el
+// documento (lista fija: Carlina Duque, Javier Guerrero, Sergio
+// Restrepo) — independiente de vendedorId en Negocio, que sigue
+// significando "qué usuario del sistema registró el negocio" igual que
+// en el resto del CRM.
+model Cotizacion {
+  id                     String      @id @default(uuid())
+  fecha                  DateTime
+  asunto                 String
+  lugar                  String
+  numeroPersonas         Int
+  clienteNombre          String
+  clienteIdentificacion  String      @default("")
+  telefono               String      @default("")
+  items                  Json
+  logistica              Json
+  taxRateId              String?
+  taxRate                TaxRate?    @relation(fields: [taxRateId], references: [id])
+  condicionesComerciales String      @default("")
+  vendedorNombre         String
+  icono                  String?
+  negocioId              String?     @unique
+  negocio                Negocio?    @relation(fields: [negocioId], references: [id])
+  registeredById         String
+  registeredBy           User        @relation("CotizacionRegisteredBy", fields: [registeredById], references: [id])
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@map("cotizaciones")
 }

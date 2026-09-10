@@ -232,6 +232,42 @@ Acceso restringido a los roles Administrador y Operación.
   vino del CRM (selector de "eventos disponibles" — los que aún no
   tienen registro de agenda).
 
+## Cotizaciones (post-lanzamiento, 2026-09-10)
+
+- **Cotizaciones** (`/cotizaciones`): genera el documento comercial con el
+  mismo diseño de la plantilla de referencia entregada por el negocio
+  (papel kraft, ilustración esquemática, tabla de ítems de menú +
+  logística, SUBTOTAL/IMPUESTO/TOTAL, condiciones comerciales y firma del
+  vendedor) y lo exporta directo a PDF (`apps/web/src/lib/cotizacion-pdf.ts`,
+  vía jsPDF) — sin necesidad de vista previa en pantalla, se descarga con
+  un clic tanto desde el formulario (vista previa antes de guardar) como
+  desde el listado (cotizaciones ya guardadas).
+- **Integración con el CRM**: al guardar una cotización se crea
+  automáticamente, en la misma transacción, un Negocio en etapa
+  "Cotizado" (`cotizacion.service.ts`) — así toda cotización aparece de
+  inmediato en el tablero del CRM sin doble digitación. El flujo
+  Cotizado → Ganado sigue siendo el mismo de la Fase 10 (con su
+  integración a Agenda de la Fase 11, ver arriba).
+- **`vendedorNombre` (quién firma el PDF) es independiente de
+  `vendedorId` del Negocio** (quién lo registró en el sistema): la firma
+  es una lista fija de 3 vendedores (Carlina Duque, Javier Guerrero,
+  Sergio Restrepo) pedida explícitamente por el negocio, no
+  necesariamente los mismos usuarios que inician sesión en el ERP.
+- **`items`/`logistica` se guardan como JSON**, no como tablas
+  relacionales: son líneas libres propias de cada cotización (el cliente
+  puede pedir algo que todavía no existe en el catálogo de Artículo/
+  OpcionMenu), no un catálogo que otro módulo necesite consultar.
+- **Ilustraciones**: 4 imágenes esquemáticas entregadas por el negocio
+  (hamburguesa, paella, canapés, sándwich — costillas pendiente),
+  procesadas para quitarles el fondo kraft y dejarlas en trazo negro
+  sobre transparente (`apps/web/public/cotizacion-icons/`), seleccionables
+  por cotización.
+- **Total = subtotal de ítems + subtotal de logística, más impuesto
+  configurable** (reutiliza `TaxRate`, Fase 3) — fórmula aislada con
+  pruebas unitarias en
+  `apps/api/src/modules/cotizaciones/cotizacion.calculations.ts`,
+  verificada contra el ejemplo exacto de la plantilla de referencia.
+
 ## Cartera — Cuentas por Cobrar y por Pagar (Fase 12, último módulo del plan)
 
 - **Cartera** (`/cartera`, solo Administrador): dos tableros

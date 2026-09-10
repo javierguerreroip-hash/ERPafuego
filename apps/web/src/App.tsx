@@ -16,6 +16,7 @@ import { MiTurnoPage } from './pages/MiTurnoPage';
 import { NominaParametrosPage } from './pages/NominaParametrosPage';
 import { NominaLiquidacionPage } from './pages/NominaLiquidacionPage';
 import { CRMPage } from './pages/CRMPage';
+import { CotizacionesPage } from './pages/CotizacionesPage';
 import { AgendaPage } from './pages/AgendaPage';
 import { CarteraPage } from './pages/CarteraPage';
 import { UsuariosPage } from './pages/UsuariosPage';
@@ -61,6 +62,7 @@ export default function App() {
                 <Route path="/nomina/parametros" element={<NominaParametrosPage />} />
                 <Route path="/nomina/liquidacion" element={<NominaLiquidacionPage />} />
                 <Route path="/crm" element={<CRMPage />} />
+                <Route path="/cotizaciones" element={<CotizacionesPage />} />
                 <Route path="/agenda" element={<AgendaPage />} />
                 <Route path="/cartera" element={<CarteraPage />} />
                 <Route path="/usuarios" element={<UsuariosPage />} />

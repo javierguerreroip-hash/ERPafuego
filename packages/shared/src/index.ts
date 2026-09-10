@@ -18,3 +18,4 @@ export * from './nomina/turno.js';
 export * from './crm/negocio.js';
 export * from './agenda/agenda-evento.js';
 export * from './cartera/cartera.js';
+export * from './cotizaciones/cotizacion.js';

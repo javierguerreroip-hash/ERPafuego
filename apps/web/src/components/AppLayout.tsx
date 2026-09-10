@@ -31,6 +31,7 @@ const NAV_ITEMS: { to: string; label: string; roles: UserRole[] }[] = [
     roles: [...FULL_ACCESS, 'COCINA_NOMINA'],
   },
   { to: '/nomina/parametros', label: 'Parámetros de Nómina', roles: FULL_ACCESS },
+  { to: '/cotizaciones', label: 'Cotizaciones', roles: FULL_ACCESS },
   { to: '/crm', label: 'CRM de Ventas', roles: FULL_ACCESS },
   { to: '/agenda', label: 'Agenda de Eventos', roles: FULL_ACCESS },
   { to: '/cartera', label: 'Cartera', roles: FULL_ACCESS },
