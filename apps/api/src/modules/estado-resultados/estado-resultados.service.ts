@@ -1,3 +1,4 @@
+import { GASTO_ADMINISTRATIVO_RUBROS } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { calcularCostoPorcentaje } from '../eventos/evento.calculations.js';
 import { getJuegoInventariosReporte } from '../juego-inventarios/juego-inventarios.service.js';
@@ -55,22 +56,12 @@ export async function getEstadoResultados(startDate: Date, endDate: Date) {
       ? await prisma.gastoAdministrativo.findMany({ where: { OR: meses } })
       : [];
   const gastosAdministrativos = round2(
-    gastosAdminRegistros.reduce(
-      (sum, g) =>
-        sum +
-        calcularTotalGastosAdministrativos({
-          arriendo: Number(g.arriendo),
-          nomina: Number(g.nomina),
-          serviciosPublicos: Number(g.serviciosPublicos),
-          honorariosContadorSocios: Number(g.honorariosContadorSocios),
-          controlPlagas: Number(g.controlPlagas),
-          seguros: Number(g.seguros),
-          internet: Number(g.internet),
-          adicionales: Number(g.adicionales),
-          cuotaObligacionFinanciera: Number(g.cuotaObligacionFinanciera),
-        }),
-      0,
-    ),
+    gastosAdminRegistros.reduce((sum, g) => {
+      const rubros = Object.fromEntries(
+        GASTO_ADMINISTRATIVO_RUBROS.map((rubro) => [rubro, Number(g[rubro])]),
+      ) as Record<(typeof GASTO_ADMINISTRATIVO_RUBROS)[number], number>;
+      return sum + calcularTotalGastosAdministrativos(rubros);
+    }, 0),
   );
 
   // 5. Utilidad neta

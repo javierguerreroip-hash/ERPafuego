@@ -14,6 +14,7 @@ export const GASTO_ADMINISTRATIVO_RUBROS = [
   'internet',
   'adicionales',
   'cuotaObligacionFinanciera',
+  'publicidad',
 ] as const;
 
 export type GastoAdministrativoRubro = (typeof GASTO_ADMINISTRATIVO_RUBROS)[number];
@@ -28,6 +29,7 @@ export const GASTO_ADMINISTRATIVO_RUBRO_LABELS: Record<GastoAdministrativoRubro,
   internet: 'Internet',
   adicionales: 'Adicionales',
   cuotaObligacionFinanciera: 'Cuota de obligación financiera',
+  publicidad: 'Publicidad',
 };
 
 const nonNegative = () => z.number().nonnegative('El valor no puede ser negativo').default(0);
@@ -44,6 +46,7 @@ export const gastoAdministrativoSchema = z.object({
   internet: nonNegative(),
   adicionales: nonNegative(),
   cuotaObligacionFinanciera: nonNegative(),
+  publicidad: nonNegative(),
 });
 
 export type GastoAdministrativoInput = z.infer<typeof gastoAdministrativoSchema>;
