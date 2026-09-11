@@ -68,3 +68,20 @@ export interface EventoConsumoDTO {
 export interface EventoDetailDTO extends EventoDTO {
   consumos: EventoConsumoDTO[];
 }
+
+// Ranking de opciones de menú vendidas (post-lanzamiento, 2026-09-11):
+// cuántas veces se vendió cada opción del catálogo (un evento = una
+// unidad vendida) y a cuántas personas atendió, en el período elegido.
+export interface RankingOpcionDTO {
+  opcionMenuId: string;
+  opcionMenuNombre: string;
+  unidadesVendidas: number;
+  personasAtendidas: number;
+}
+
+export interface RankingOpcionesReporteDTO {
+  start: string;
+  end: string;
+  totalPersonasAtendidas: number;
+  ranking: RankingOpcionDTO[];
+}

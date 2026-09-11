@@ -1,5 +1,16 @@
 import { z } from 'zod';
 
+// Clasificación del cliente (post-lanzamiento, 2026-09-11) — corporativo
+// (empresa) o persona natural.
+export const CLIENTE_TIPOS = ['PERSONA_NATURAL', 'CORPORATIVO'] as const;
+
+export type ClienteTipo = (typeof CLIENTE_TIPOS)[number];
+
+export const CLIENTE_TIPO_LABELS: Record<ClienteTipo, string> = {
+  PERSONA_NATURAL: 'Persona natural',
+  CORPORATIVO: 'Corporativo',
+};
+
 export const clienteSchema = z.object({
   name: z.string().min(1, 'El nombre o razón social es requerido').max(200),
   identificacion: z.string().min(1, 'La identificación es requerida').max(50),
@@ -12,6 +23,7 @@ export const clienteSchema = z.object({
     }),
   direccion: z.string().max(300).default(''),
   ciudad: z.string().max(100).default(''),
+  tipoCliente: z.enum(CLIENTE_TIPOS).default('PERSONA_NATURAL'),
 });
 
 export type ClienteInput = z.infer<typeof clienteSchema>;

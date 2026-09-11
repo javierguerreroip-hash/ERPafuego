@@ -12,6 +12,7 @@ function serialize(cliente: Cliente) {
     correo: cliente.correo,
     direccion: cliente.direccion,
     ciudad: cliente.ciudad,
+    tipoCliente: cliente.tipoCliente,
     active: cliente.active,
     createdAt: cliente.createdAt.toISOString(),
     updatedAt: cliente.updatedAt.toISOString(),

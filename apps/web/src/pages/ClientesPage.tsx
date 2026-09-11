@@ -1,9 +1,16 @@
 import { useState } from 'react';
-import { clienteSchema, type ClienteDTO, type ClienteInput } from '@erp-afuego/shared';
+import {
+  CLIENTE_TIPOS,
+  CLIENTE_TIPO_LABELS,
+  clienteSchema,
+  type ClienteDTO,
+  type ClienteInput,
+  type ClienteTipo,
+} from '@erp-afuego/shared';
 import { useResource } from '../hooks/useResource';
 import { Modal } from '../components/Modal';
 import { BulkImportModal, type ImportColumn } from '../components/BulkImportModal';
-import { Field, inputClass } from '../components/Field';
+import { Field, FilterChip, inputClass } from '../components/Field';
 
 const EMPTY_FORM: ClienteInput = {
   name: '',
@@ -12,7 +19,20 @@ const EMPTY_FORM: ClienteInput = {
   correo: '',
   direccion: '',
   ciudad: '',
+  tipoCliente: 'PERSONA_NATURAL',
 };
+
+// Acepta tanto el valor exacto del enum como su etiqueta en español, para
+// que la plantilla de Excel sea legible sin dejar de coincidir con lo
+// que espera el backend (mismo patrón que categoría de Artículo).
+function resolveClienteTipo(raw: string): string {
+  const normalized = raw.trim().toUpperCase().replace(/\s+/g, '_');
+  if ((CLIENTE_TIPOS as readonly string[]).includes(normalized)) return normalized;
+  const byLabel = Object.entries(CLIENTE_TIPO_LABELS).find(
+    ([, label]) => label.toLowerCase() === raw.trim().toLowerCase(),
+  );
+  return byLabel ? byLabel[0] : raw;
+}
 
 const IMPORT_COLUMNS: ImportColumn[] = [
   { header: 'Nombre / Razón social', field: 'name' },
@@ -21,6 +41,7 @@ const IMPORT_COLUMNS: ImportColumn[] = [
   { header: 'Correo', field: 'correo' },
   { header: 'Dirección', field: 'direccion' },
   { header: 'Ciudad', field: 'ciudad' },
+  { header: 'Tipo', field: 'tipoCliente', parse: resolveClienteTipo },
 ];
 
 export function ClientesPage() {
@@ -30,6 +51,7 @@ export function ClientesPage() {
   >('/clientes');
   const [showImport, setShowImport] = useState(false);
   const [search, setSearch] = useState('');
+  const [tipoFilter, setTipoFilter] = useState<ClienteTipo | 'TODOS'>('TODOS');
   const [editing, setEditing] = useState<ClienteDTO | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<ClienteInput>(EMPTY_FORM);
@@ -37,6 +59,7 @@ export function ClientesPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const filtered = items.filter((item) => {
+    if (tipoFilter !== 'TODOS' && item.tipoCliente !== tipoFilter) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return item.name.toLowerCase().includes(q) || item.identificacion.toLowerCase().includes(q);
@@ -58,6 +81,7 @@ export function ClientesPage() {
       correo: item.correo,
       direccion: item.direccion,
       ciudad: item.ciudad,
+      tipoCliente: item.tipoCliente,
     });
     setFormError(null);
     setShowForm(true);
@@ -108,12 +132,29 @@ export function ClientesPage() {
         </div>
       </div>
 
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar por nombre o identificación…"
-        className={`${inputClass} mb-4 max-w-sm`}
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nombre o identificación…"
+          className={`${inputClass} max-w-sm`}
+        />
+        <div className="flex flex-wrap gap-2">
+          <FilterChip
+            label="Todos"
+            active={tipoFilter === 'TODOS'}
+            onClick={() => setTipoFilter('TODOS')}
+          />
+          {CLIENTE_TIPOS.map((tipo) => (
+            <FilterChip
+              key={tipo}
+              label={CLIENTE_TIPO_LABELS[tipo]}
+              active={tipoFilter === tipo}
+              onClick={() => setTipoFilter(tipo)}
+            />
+          ))}
+        </div>
+      </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
@@ -123,6 +164,7 @@ export function ClientesPage() {
             <tr>
               <th className="px-4 py-2">Nombre / Razón social</th>
               <th className="px-4 py-2">Identificación</th>
+              <th className="px-4 py-2">Tipo</th>
               <th className="px-4 py-2">Teléfono</th>
               <th className="px-4 py-2">Correo</th>
               <th className="px-4 py-2">Ciudad</th>
@@ -133,13 +175,13 @@ export function ClientesPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
                   Cargando…
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
                   No hay clientes que coincidan con la búsqueda.
                 </td>
               </tr>
@@ -148,6 +190,17 @@ export function ClientesPage() {
                 <tr key={item.id} className="border-t">
                   <td className="px-4 py-2">{item.name}</td>
                   <td className="px-4 py-2">{item.identificacion}</td>
+                  <td className="px-4 py-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        item.tipoCliente === 'CORPORATIVO'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-neutral-100 text-neutral-600'
+                      }`}
+                    >
+                      {CLIENTE_TIPO_LABELS[item.tipoCliente]}
+                    </span>
+                  </td>
                   <td className="px-4 py-2">{item.telefono || '—'}</td>
                   <td className="px-4 py-2">{item.correo || '—'}</td>
                   <td className="px-4 py-2">{item.ciudad || '—'}</td>
@@ -183,6 +236,24 @@ export function ClientesPage() {
       {showForm && (
         <Modal title={editing ? 'Editar cliente' : 'Nuevo cliente'} onClose={() => setShowForm(false)}>
           <div className="space-y-3">
+            <Field label="Tipo de cliente">
+              <div className="flex overflow-hidden rounded-md border w-fit">
+                {CLIENTE_TIPOS.map((tipo) => (
+                  <button
+                    key={tipo}
+                    type="button"
+                    onClick={() => setForm({ ...form, tipoCliente: tipo })}
+                    className={`px-4 py-2 text-sm ${
+                      form.tipoCliente === tipo
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-white text-neutral-600'
+                    }`}
+                  >
+                    {CLIENTE_TIPO_LABELS[tipo]}
+                  </button>
+                ))}
+              </div>
+            </Field>
             <Field label="Nombre o razón social">
               <input
                 value={form.name}

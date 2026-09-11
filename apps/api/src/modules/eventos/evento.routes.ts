@@ -5,6 +5,7 @@ import {
   createHandler,
   deleteHandler,
   getHandler,
+  getRankingOpcionesHandler,
   listHandler,
   removeConsumoHandler,
   updateConsumoHandler,
@@ -19,6 +20,9 @@ eventoRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'
 
 eventoRouter.get('/', listHandler);
 eventoRouter.post('/', createHandler);
+// Debe ir antes de "/:id" — si no, Express interpretaría
+// "ranking-opciones" como un id de evento y nunca llegaría aquí.
+eventoRouter.get('/ranking-opciones', getRankingOpcionesHandler);
 eventoRouter.get('/:id', getHandler);
 eventoRouter.put('/:id', updateHandler);
 eventoRouter.post('/:id/consumos', addConsumoHandler);

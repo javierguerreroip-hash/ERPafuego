@@ -248,6 +248,48 @@ export async function deleteEvento(id: string) {
   });
 }
 
+// Ranking de opciones de menú vendidas: un evento = una unidad vendida
+// de la opción elegida, agrupado por opcionMenuId dentro del período
+// (mismo criterio de fecha que el resto del ERP), de mayor a menor.
+export async function getRankingOpciones(start: Date, end: Date) {
+  const eventos = await prisma.evento.findMany({
+    where: { fecha: { gte: start, lte: end } },
+    select: {
+      opcionMenuId: true,
+      numeroPersonas: true,
+      opcionMenu: { select: { name: true } },
+    },
+  });
+
+  const porOpcion = new Map<
+    string,
+    { opcionMenuNombre: string; unidadesVendidas: number; personasAtendidas: number }
+  >();
+  for (const evento of eventos) {
+    const actual = porOpcion.get(evento.opcionMenuId) ?? {
+      opcionMenuNombre: evento.opcionMenu.name,
+      unidadesVendidas: 0,
+      personasAtendidas: 0,
+    };
+    actual.unidadesVendidas += 1;
+    actual.personasAtendidas += evento.numeroPersonas;
+    porOpcion.set(evento.opcionMenuId, actual);
+  }
+
+  const ranking = Array.from(porOpcion.entries())
+    .map(([opcionMenuId, valores]) => ({ opcionMenuId, ...valores }))
+    .sort((a, b) => b.unidadesVendidas - a.unidadesVendidas);
+
+  const totalPersonasAtendidas = eventos.reduce((sum, e) => sum + e.numeroPersonas, 0);
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+    totalPersonasAtendidas,
+    ranking,
+  };
+}
+
 async function findEventoOrThrow(id: string) {
   const evento = await prisma.evento.findUnique({ where: { id } });
   if (!evento) {

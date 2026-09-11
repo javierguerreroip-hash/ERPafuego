@@ -5,10 +5,13 @@ import {
   type EventoDTO,
   type EventoInput,
   type OpcionMenuDTO,
+  type RankingOpcionesReporteDTO,
   type TaxRateDTO,
 } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { usePeriodFilter } from '../hooks/usePeriodFilter';
+import { PeriodPickerControls } from '../components/PeriodPickerControls';
 import { Modal } from '../components/Modal';
 import { EventoDetailModal } from '../components/EventoDetailModal';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
@@ -42,6 +45,31 @@ export function EventosPage() {
 
   const [openEventoId, setOpenEventoId] = useState<string | null>(null);
   const [deletingEvento, setDeletingEvento] = useState<EventoDTO | null>(null);
+
+  const rankingFilter = usePeriodFilter('MES');
+  const { start: rankingStart, end: rankingEnd } = rankingFilter;
+  const [ranking, setRanking] = useState<RankingOpcionesReporteDTO | null>(null);
+  const [rankingLoading, setRankingLoading] = useState(true);
+
+  async function loadRanking() {
+    setRankingLoading(true);
+    try {
+      const data = await apiFetch<RankingOpcionesReporteDTO>(
+        `/eventos/ranking-opciones?start=${rankingStart}&end=${rankingEnd}`,
+        { token },
+      );
+      setRanking(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el ranking de opciones');
+    } finally {
+      setRankingLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadRanking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rankingStart, rankingEnd]);
 
   async function loadAll() {
     setLoading(true);
@@ -113,6 +141,52 @@ export function EventosPage() {
         >
           Nuevo evento
         </button>
+      </div>
+
+      <div className="mb-4 rounded-lg border bg-white p-4">
+        <h2 className="mb-3 text-sm font-medium text-neutral-700">
+          Ranking de opciones vendidas
+        </h2>
+        <PeriodPickerControls filter={rankingFilter} />
+
+        {rankingLoading || !ranking ? (
+          <p className="py-6 text-center text-sm text-neutral-400">Cargando…</p>
+        ) : ranking.ranking.length === 0 ? (
+          <p className="py-6 text-center text-sm text-neutral-400">
+            Sin eventos registrados en este período.
+          </p>
+        ) : (
+          <>
+            <p className="mb-3 text-sm text-neutral-600">
+              Total de personas atendidas en el período:{' '}
+              <span className="font-semibold text-neutral-900">
+                {ranking.totalPersonasAtendidas}
+              </span>
+            </p>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-neutral-50 text-neutral-500">
+                  <tr>
+                    <th className="px-3 py-2">#</th>
+                    <th className="px-3 py-2">Opción de menú</th>
+                    <th className="px-3 py-2">Unidades vendidas</th>
+                    <th className="px-3 py-2">Personas atendidas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ranking.ranking.map((r, index) => (
+                    <tr key={r.opcionMenuId} className="border-t">
+                      <td className="px-3 py-2 text-neutral-400">{index + 1}</td>
+                      <td className="px-3 py-2">{r.opcionMenuNombre}</td>
+                      <td className="px-3 py-2 font-medium">{r.unidadesVendidas}</td>
+                      <td className="px-3 py-2">{r.personasAtendidas}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}

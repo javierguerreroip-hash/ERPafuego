@@ -137,17 +137,27 @@ model OpcionMenu {
   @@map("opciones_menu")
 }
 
+// Clasificación del cliente (post-lanzamiento, 2026-09-11) — pedida por
+// el negocio para poder distinguir clientes corporativos de personas
+// naturales. Por defecto PERSONA_NATURAL para no dejar sin clasificar a
+// los clientes ya existentes al aplicar la migración.
+enum ClienteTipo {
+  PERSONA_NATURAL
+  CORPORATIVO
+}
+
 model Cliente {
-  id             String   @id @default(uuid())
+  id             String      @id @default(uuid())
   name           String
   identificacion String
-  telefono       String   @default("")
-  correo         String   @default("")
-  direccion      String   @default("")
-  ciudad         String   @default("")
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  telefono       String      @default("")
+  correo         String      @default("")
+  direccion      String      @default("")
+  ciudad         String      @default("")
+  tipoCliente    ClienteTipo @default(PERSONA_NATURAL)
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
   eventos        Evento[]
 
   @@map("clientes")
