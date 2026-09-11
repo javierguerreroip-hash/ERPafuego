@@ -13,7 +13,7 @@ import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
 import { Field, inputClass } from '../components/Field';
-import { formatCOP } from '../lib/format';
+import { formatCOP, formatDateOnly } from '../lib/format';
 
 interface ItemRow {
   articuloId: string;
@@ -191,7 +191,7 @@ export function ComprasPage() {
             ) : (
               compras.map((compra) => (
                 <tr key={compra.id} className="border-t">
-                  <td className="px-4 py-2">{new Date(compra.fecha).toLocaleDateString('es-CO')}</td>
+                  <td className="px-4 py-2">{formatDateOnly(compra.fecha)}</td>
                   <td className="px-4 py-2">
                     {compra.articuloNombre}{' '}
                     <span className="text-xs text-neutral-400">({compra.articuloCodigo})</span>
@@ -205,9 +205,7 @@ export function ComprasPage() {
                   <td className="px-4 py-2">{compra.facturaNumero}</td>
                   <td className="px-4 py-2">{CONDICION_PAGO_LABELS[compra.condicionPago]}</td>
                   <td className="px-4 py-2">
-                    {compra.fechaVencimiento
-                      ? new Date(compra.fechaVencimiento).toLocaleDateString('es-CO')
-                      : '—'}
+                    {compra.fechaVencimiento ? formatDateOnly(compra.fechaVencimiento) : '—'}
                   </td>
                 </tr>
               ))

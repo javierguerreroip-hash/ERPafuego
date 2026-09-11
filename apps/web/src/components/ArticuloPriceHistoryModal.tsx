@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ArticuloDTO, CompraDTO } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { formatCOP } from '../lib/format';
+import { formatCOP, formatDateOnly } from '../lib/format';
 import { Modal } from './Modal';
 
 export function ArticuloPriceHistoryModal({
@@ -48,7 +48,7 @@ export function ArticuloPriceHistoryModal({
             <tbody>
               {compras.map((compra) => (
                 <tr key={compra.id} className="border-t">
-                  <td className="px-2 py-2">{new Date(compra.fecha).toLocaleDateString('es-CO')}</td>
+                  <td className="px-2 py-2">{formatDateOnly(compra.fecha)}</td>
                   <td className="px-2 py-2">{compra.proveedorNombre}</td>
                   <td className="px-2 py-2">
                     {compra.quantity} {compra.unit}

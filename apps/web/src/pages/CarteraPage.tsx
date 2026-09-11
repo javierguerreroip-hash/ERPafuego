@@ -17,7 +17,7 @@ import { AbonoModal } from '../components/AbonoModal';
 import { KpiCard } from '../components/KpiCard';
 import { ExportButtons } from '../components/ExportButtons';
 import { inputClass } from '../components/Field';
-import { formatCOP } from '../lib/format';
+import { formatCOP, formatDateOnly } from '../lib/format';
 
 const CXC_COLUMNS = [
   { key: 'fecha', label: 'Fecha evento' },
@@ -148,12 +148,12 @@ export function CarteraPage() {
             subtitle={`Período: ${start} a ${end}`}
             columns={CXC_COLUMNS}
             rows={cxc.map((r) => ({
-              fecha: new Date(r.fechaEvento).toLocaleDateString('es-CO'),
+              fecha: formatDateOnly(r.fechaEvento),
               cliente: r.clienteNombre,
               valorFacturado: formatCOP(r.valorTotalFacturado),
               anticipo: formatCOP(r.anticipo),
               saldo: formatCOP(r.saldoPendiente),
-              vencimiento: new Date(r.fechaVencimiento).toLocaleDateString('es-CO'),
+              vencimiento: formatDateOnly(r.fechaVencimiento),
               estado: ESTADO_CARTERA_LABELS[r.estado],
             }))}
           />
@@ -164,14 +164,12 @@ export function CarteraPage() {
             subtitle={`Período: ${start} a ${end}`}
             columns={CXP_COLUMNS}
             rows={cxp.map((r) => ({
-              fecha: new Date(r.fechaCompra).toLocaleDateString('es-CO'),
+              fecha: formatDateOnly(r.fechaCompra),
               proveedor: r.proveedorNombre,
               factura: r.facturaNumero,
               valorFactura: formatCOP(r.valorFactura),
               saldo: formatCOP(r.saldoPendiente),
-              vencimiento: r.fechaVencimiento
-                ? new Date(r.fechaVencimiento).toLocaleDateString('es-CO')
-                : '—',
+              vencimiento: r.fechaVencimiento ? formatDateOnly(r.fechaVencimiento) : '—',
               estado: ESTADO_CARTERA_LABELS[r.estado],
             }))}
           />
@@ -271,12 +269,12 @@ export function CarteraPage() {
                       onClick={() => setExpandedId(expandedId === r.eventoId ? null : r.eventoId)}
                       className="cursor-pointer border-t hover:bg-neutral-50"
                     >
-                      <td className="px-4 py-2">{new Date(r.fechaEvento).toLocaleDateString('es-CO')}</td>
+                      <td className="px-4 py-2">{formatDateOnly(r.fechaEvento)}</td>
                       <td className="px-4 py-2">{r.clienteNombre}</td>
                       <td className="px-4 py-2">{formatCOP(r.valorTotalFacturado)}</td>
                       <td className="px-4 py-2">{formatCOP(r.anticipo)}</td>
                       <td className="px-4 py-2">{formatCOP(r.saldoPendiente)}</td>
-                      <td className="px-4 py-2">{new Date(r.fechaVencimiento).toLocaleDateString('es-CO')}</td>
+                      <td className="px-4 py-2">{formatDateOnly(r.fechaVencimiento)}</td>
                       <td className="px-4 py-2">
                         <span className={`rounded-full px-2 py-0.5 text-xs ${ESTADO_COLORS[r.estado]}`}>
                           {ESTADO_CARTERA_LABELS[r.estado]}
@@ -308,8 +306,8 @@ export function CarteraPage() {
                             <ul className="text-xs text-neutral-600">
                               {r.abonos.map((a) => (
                                 <li key={a.id}>
-                                  {new Date(a.fecha).toLocaleDateString('es-CO')} —{' '}
-                                  {formatCOP(a.valor)} (registrado por {a.registeredByName})
+                                  {formatDateOnly(a.fecha)} — {formatCOP(a.valor)} (registrado por{' '}
+                                  {a.registeredByName})
                                 </li>
                               ))}
                             </ul>
@@ -352,13 +350,13 @@ export function CarteraPage() {
                       onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
                       className="cursor-pointer border-t hover:bg-neutral-50"
                     >
-                      <td className="px-4 py-2">{new Date(r.fechaCompra).toLocaleDateString('es-CO')}</td>
+                      <td className="px-4 py-2">{formatDateOnly(r.fechaCompra)}</td>
                       <td className="px-4 py-2">{r.proveedorNombre}</td>
                       <td className="px-4 py-2">{r.facturaNumero}</td>
                       <td className="px-4 py-2">{formatCOP(r.valorFactura)}</td>
                       <td className="px-4 py-2">{formatCOP(r.saldoPendiente)}</td>
                       <td className="px-4 py-2">
-                        {r.fechaVencimiento ? new Date(r.fechaVencimiento).toLocaleDateString('es-CO') : '—'}
+                        {r.fechaVencimiento ? formatDateOnly(r.fechaVencimiento) : '—'}
                       </td>
                       <td className="px-4 py-2">
                         <span className={`rounded-full px-2 py-0.5 text-xs ${ESTADO_COLORS[r.estado]}`}>
@@ -389,8 +387,8 @@ export function CarteraPage() {
                             <ul className="text-xs text-neutral-600">
                               {r.abonos.map((a) => (
                                 <li key={a.id}>
-                                  {new Date(a.fecha).toLocaleDateString('es-CO')} —{' '}
-                                  {formatCOP(a.valor)} (registrado por {a.registeredByName})
+                                  {formatDateOnly(a.fecha)} — {formatCOP(a.valor)} (registrado por{' '}
+                                  {a.registeredByName})
                                 </li>
                               ))}
                             </ul>

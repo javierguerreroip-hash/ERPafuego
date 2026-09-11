@@ -13,7 +13,7 @@ import { Modal } from '../components/Modal';
 import { EventoDetailModal } from '../components/EventoDetailModal';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { Field, inputClass } from '../components/Field';
-import { formatCOP } from '../lib/format';
+import { formatCOP, formatDateOnly } from '../lib/format';
 
 function emptyForm(): EventoInput {
   return {
@@ -153,7 +153,7 @@ export function EventosPage() {
                   className="cursor-pointer border-t hover:bg-neutral-50"
                   title="Doble clic para ver el detalle y cargar consumos"
                 >
-                  <td className="px-4 py-2">{new Date(evento.fecha).toLocaleDateString('es-CO')}</td>
+                  <td className="px-4 py-2">{formatDateOnly(evento.fecha)}</td>
                   <td className="px-4 py-2">{evento.clienteNombre}</td>
                   <td className="px-4 py-2">{evento.opcionMenuNombre}</td>
                   <td className="px-4 py-2">{evento.numeroPersonas}</td>
@@ -301,7 +301,7 @@ export function EventosPage() {
       {deletingEvento && (
         <ConfirmDeleteModal
           title="Eliminar venta"
-          message={`Vas a eliminar definitivamente el evento de "${deletingEvento.clienteNombre}" (${new Date(deletingEvento.fecha).toLocaleDateString('es-CO')}). Esto solo funciona si no tiene abonos/pagos registrados en Cartera. Si vino de un negocio ganado en el CRM, ese negocio vuelve a "Cotizado".`}
+          message={`Vas a eliminar definitivamente el evento de "${deletingEvento.clienteNombre}" (${formatDateOnly(deletingEvento.fecha)}). Esto solo funciona si no tiene abonos/pagos registrados en Cartera. Si vino de un negocio ganado en el CRM, ese negocio vuelve a "Cotizado".`}
           onConfirm={async (password) => {
             await apiFetch(`/eventos/${deletingEvento.id}`, {
               method: 'DELETE',

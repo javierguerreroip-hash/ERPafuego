@@ -19,7 +19,7 @@ import { Modal } from '../components/Modal';
 import { GanarNegocioModal } from '../components/GanarNegocioModal';
 import { KpiCard } from '../components/KpiCard';
 import { Field, inputClass } from '../components/Field';
-import { formatCOP } from '../lib/format';
+import { formatCOP, formatDateOnly } from '../lib/format';
 
 const ETAPA_COLORS: Record<EtapaNegocio, string> = {
   COTIZADO: '#64748b',
@@ -263,9 +263,7 @@ export function CRMPage() {
                     <div key={n.id} className="rounded-md border bg-white p-3 shadow-sm">
                       <p className="text-sm font-medium text-neutral-900">{n.clienteNombre}</p>
                       <p className="text-xs text-neutral-500">{n.nombreEvento}</p>
-                      <p className="text-xs text-neutral-500">
-                        {new Date(n.fechaEvento).toLocaleDateString('es-CO')}
-                      </p>
+                      <p className="text-xs text-neutral-500">{formatDateOnly(n.fechaEvento)}</p>
                       <p className="mt-1 text-sm font-medium text-neutral-900">
                         {formatCOP(n.valorAntesImpuestos)}
                       </p>

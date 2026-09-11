@@ -12,7 +12,7 @@ import { usePeriodFilter } from '../hooks/usePeriodFilter';
 import { PeriodPickerControls } from '../components/PeriodPickerControls';
 import { AgendaEventoFormModal } from '../components/AgendaEventoFormModal';
 import { inputClass } from '../components/Field';
-import { formatCOP } from '../lib/format';
+import { formatCOP, formatDateOnly } from '../lib/format';
 
 interface Vendedor {
   id: string;
@@ -221,7 +221,7 @@ export function AgendaPage() {
                     onClick={() => openEdit(r)}
                     className="cursor-pointer border-t hover:bg-neutral-50"
                   >
-                    <td className="px-4 py-2">{new Date(r.fecha).toLocaleDateString('es-CO')}</td>
+                    <td className="px-4 py-2">{formatDateOnly(r.fecha)}</td>
                     <td className="px-4 py-2">{r.clienteNombre}</td>
                     <td className="px-4 py-2">{r.opcionMenuNombre}</td>
                     <td className="px-4 py-2">{r.numeroPersonas}</td>

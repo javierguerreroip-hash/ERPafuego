@@ -10,7 +10,7 @@ import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from './Modal';
 import { Field, inputClass } from './Field';
-import { formatCOP } from '../lib/format';
+import { formatCOP, formatDateOnly } from '../lib/format';
 
 interface Vendedor {
   id: string;
@@ -91,7 +91,7 @@ export function AgendaEventoFormModal({
               <option value="">Selecciona…</option>
               {eventosDisponibles.map((e) => (
                 <option key={e.id} value={e.id}>
-                  {e.clienteNombre} — {new Date(e.fecha).toLocaleDateString('es-CO')} —{' '}
+                  {e.clienteNombre} — {formatDateOnly(e.fecha)} —{' '}
                   {e.opcionMenuNombre}
                 </option>
               ))}
@@ -109,7 +109,7 @@ export function AgendaEventoFormModal({
           <div className="rounded-md bg-neutral-50 p-3 text-xs text-neutral-500">
             {editing.opcionMenuNombre} · {editing.numeroPersonas} personas ·{' '}
             {formatCOP(editing.valorAntesImpuestos)} ·{' '}
-            {new Date(editing.fecha).toLocaleDateString('es-CO')}
+            {formatDateOnly(editing.fecha)}
             <br />
             Estos datos vienen del Módulo 3 y no se editan aquí.
           </div>
