@@ -34,6 +34,24 @@ export interface NegocioDTO extends NegocioInput {
   updatedAt: string;
 }
 
+// Resumen del CRM por período (post-lanzamiento, 2026-09-11): valor y
+// cantidad de negocios por etapa (Cotizado/Ganado/Perdido) — cubre "todo
+// lo cotizado" — y la eficiencia comercial (Ganado ÷ total cotizado).
+export interface CrmResumenEtapaDTO {
+  etapa: EtapaNegocio;
+  cantidad: number;
+  valor: number;
+}
+
+export interface CrmResumenDTO {
+  start: string;
+  end: string;
+  porEtapa: CrmResumenEtapaDTO[];
+  totalCotizado: number;
+  totalGanado: number;
+  eficiencia: number;
+}
+
 // Datos que faltan para poder crear el Evento del Módulo 3 al ganar un
 // negocio — el CRM no los captura (ver decisión documentada en el README).
 export const ganarNegocioSchema = z.object({

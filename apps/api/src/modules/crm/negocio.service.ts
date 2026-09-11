@@ -1,8 +1,13 @@
 import type { Negocio, Prisma, User } from '@prisma/client';
-import type { GanarNegocioInput, NegocioInput } from '@erp-afuego/shared';
+import { ETAPAS_NEGOCIO, type GanarNegocioInput, type NegocioInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import { calcularValorDespuesImpuestos } from '../eventos/evento.calculations.js';
+import { calcularEficienciaComercial } from './negocio.calculations.js';
+
+function round2(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
 
 type NegocioWithVendedor = Negocio & { vendedor: Pick<User, 'name'> };
 
@@ -20,6 +25,38 @@ function serialize(negocio: NegocioWithVendedor) {
     vendedorNombre: negocio.vendedor.name,
     createdAt: negocio.createdAt.toISOString(),
     updatedAt: negocio.updatedAt.toISOString(),
+  };
+}
+
+// Resumen para la gráfica circular del CRM: valor + cantidad por etapa
+// (Cotizado/Ganado/Perdido, filtrados por fechaEvento en el período — el
+// mismo criterio de fecha que usa el resto del ERP) y la eficiencia
+// comercial (Ganado ÷ total cotizado).
+export async function getResumenCrm(start: Date, end: Date) {
+  const negocios = await prisma.negocio.findMany({
+    where: { fechaEvento: { gte: start, lte: end } },
+    select: { etapa: true, valorAntesImpuestos: true },
+  });
+
+  const porEtapa = ETAPAS_NEGOCIO.map((etapa) => {
+    const deLaEtapa = negocios.filter((n) => n.etapa === etapa);
+    return {
+      etapa,
+      cantidad: deLaEtapa.length,
+      valor: round2(deLaEtapa.reduce((sum, n) => sum + Number(n.valorAntesImpuestos), 0)),
+    };
+  });
+
+  const totalCotizado = round2(porEtapa.reduce((sum, p) => sum + p.valor, 0));
+  const totalGanado = porEtapa.find((p) => p.etapa === 'GANADO')?.valor ?? 0;
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+    porEtapa,
+    totalCotizado,
+    totalGanado,
+    eficiencia: calcularEficienciaComercial(totalGanado, totalCotizado),
   };
 }
 

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import {
   ETAPAS_NEGOCIO,
   ETAPA_NEGOCIO_LABELS,
   negocioSchema,
+  type CrmResumenDTO,
   type EtapaNegocio,
   type NegocioDTO,
   type NegocioInput,
@@ -11,10 +13,19 @@ import {
 } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { usePeriodFilter } from '../hooks/usePeriodFilter';
+import { PeriodPickerControls } from '../components/PeriodPickerControls';
 import { Modal } from '../components/Modal';
 import { GanarNegocioModal } from '../components/GanarNegocioModal';
+import { KpiCard } from '../components/KpiCard';
 import { Field, inputClass } from '../components/Field';
 import { formatCOP } from '../lib/format';
+
+const ETAPA_COLORS: Record<EtapaNegocio, string> = {
+  COTIZADO: '#64748b',
+  GANADO: '#16a34a',
+  PERDIDO: '#dc2626',
+};
 
 function emptyForm(): NegocioInput {
   return {
@@ -48,6 +59,31 @@ export function CRMPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [ganarFor, setGanarFor] = useState<NegocioDTO | null>(null);
+
+  const resumenFilter = usePeriodFilter('MES');
+  const { start: resumenStart, end: resumenEnd } = resumenFilter;
+  const [resumen, setResumen] = useState<CrmResumenDTO | null>(null);
+  const [resumenLoading, setResumenLoading] = useState(true);
+
+  async function loadResumen() {
+    setResumenLoading(true);
+    try {
+      const data = await apiFetch<CrmResumenDTO>(
+        `/negocios/resumen?start=${resumenStart}&end=${resumenEnd}`,
+        { token },
+      );
+      setResumen(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el resumen del CRM');
+    } finally {
+      setResumenLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadResumen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumenStart, resumenEnd]);
 
   async function loadAll() {
     setLoading(true);
@@ -141,6 +177,69 @@ export function CRMPage() {
         >
           Nuevo negocio
         </button>
+      </div>
+
+      <div className="mb-4 rounded-lg border bg-white p-4">
+        <h2 className="mb-3 text-sm font-medium text-neutral-700">
+          Resumen comercial — Cotizado, Ganado y Perdido
+        </h2>
+        <PeriodPickerControls filter={resumenFilter} />
+
+        {resumenLoading || !resumen ? (
+          <p className="py-6 text-center text-sm text-neutral-400">Cargando…</p>
+        ) : resumen.totalCotizado === 0 ? (
+          <p className="py-6 text-center text-sm text-neutral-400">
+            Sin negocios (fecha de evento) en este período.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={resumen.porEtapa.filter((p) => p.valor > 0)}
+                    dataKey="valor"
+                    nameKey="etapa"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                  >
+                    {resumen.porEtapa
+                      .filter((p) => p.valor > 0)
+                      .map((p) => (
+                        <Cell key={p.etapa} fill={ETAPA_COLORS[p.etapa]} />
+                      ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatCOP(value)} />
+                  <Legend formatter={(value: string) => ETAPA_NEGOCIO_LABELS[value as EtapaNegocio]} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs text-neutral-600">
+                {resumen.porEtapa.map((p) => (
+                  <div key={p.etapa}>
+                    <p className="font-medium" style={{ color: ETAPA_COLORS[p.etapa] }}>
+                      {ETAPA_NEGOCIO_LABELS[p.etapa]}
+                    </p>
+                    <p>{p.cantidad} cotización(es)</p>
+                    <p>{formatCOP(p.valor)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <KpiCard label="Total cotizado (todas las etapas)" value={resumen.totalCotizado} highlight />
+              <KpiCard label="Total ganado" value={resumen.totalGanado} />
+              <div className="rounded-lg border bg-white p-3">
+                <p className="text-xs text-neutral-500">Eficiencia comercial</p>
+                <p className="text-lg font-semibold text-neutral-900">
+                  {resumen.eficiencia.toFixed(1)}%
+                </p>
+                <p className="text-xs text-neutral-400">Ganado ÷ total cotizado</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
