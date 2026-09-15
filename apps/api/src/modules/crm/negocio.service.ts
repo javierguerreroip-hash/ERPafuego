@@ -212,3 +212,23 @@ export async function ganarNegocio(id: string, input: GanarNegocioInput, registe
 
   return serialize(actualizado);
 }
+
+// Borrado real de un negocio — pedido por el negocio para poder corregir
+// errores de digitación en el CRM. Se bloquea si ya está "Ganado": ese
+// negocio ya generó una venta (Evento) real, y borrarlo aquí la dejaría
+// huérfana. Para corregir un negocio ganado por error, primero se borra
+// la venta desde el módulo de Ventas (eso ya regresa el negocio a
+// "Cotizado" automáticamente) y luego se puede borrar aquí.
+export async function deleteNegocio(id: string) {
+  const negocio = await prisma.negocio.findUnique({ where: { id } });
+  if (!negocio) {
+    throw new HttpError(404, 'Negocio no encontrado');
+  }
+  if (negocio.etapa === 'GANADO') {
+    throw new HttpError(
+      409,
+      'No se puede eliminar: este negocio ya fue ganado y tiene una venta asociada. Elimina primero la venta desde el módulo de Ventas.',
+    );
+  }
+  await prisma.negocio.delete({ where: { id } });
+}

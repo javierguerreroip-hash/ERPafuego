@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePeriodFilter } from '../hooks/usePeriodFilter';
 import { PeriodPickerControls } from '../components/PeriodPickerControls';
 import { Modal } from '../components/Modal';
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { GanarNegocioModal } from '../components/GanarNegocioModal';
 import { KpiCard } from '../components/KpiCard';
 import { Field, inputClass } from '../components/Field';
@@ -59,6 +60,7 @@ export function CRMPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [ganarFor, setGanarFor] = useState<NegocioDTO | null>(null);
+  const [deletingNegocio, setDeletingNegocio] = useState<NegocioDTO | null>(null);
 
   const resumenFilter = usePeriodFilter('MES');
   const { start: resumenStart, end: resumenEnd } = resumenFilter;
@@ -270,7 +272,7 @@ export function CRMPage() {
                       <p className="text-xs text-neutral-400">Vendedor: {n.vendedorNombre}</p>
 
                       {etapa === 'COTIZADO' && (
-                        <div className="mt-2 flex gap-3 text-xs">
+                        <div className="mt-2 flex flex-wrap gap-3 text-xs">
                           <button onClick={() => openEdit(n)} className="text-orange-600 hover:underline">
                             Editar
                           </button>
@@ -285,6 +287,17 @@ export function CRMPage() {
                             className="text-red-600 hover:underline"
                           >
                             Marcar Perdido
+                          </button>
+                        </div>
+                      )}
+
+                      {etapa !== 'GANADO' && (
+                        <div className="mt-2 flex gap-3 text-xs">
+                          <button
+                            onClick={() => setDeletingNegocio(n)}
+                            className="text-red-600 hover:underline"
+                          >
+                            Eliminar
                           </button>
                         </div>
                       )}
@@ -381,6 +394,23 @@ export function CRMPage() {
           taxRates={taxRates}
           onClose={() => setGanarFor(null)}
           onGanado={loadAll}
+        />
+      )}
+
+      {deletingNegocio && (
+        <ConfirmDeleteModal
+          title="Eliminar negocio"
+          message={`Vas a eliminar definitivamente el negocio de "${deletingNegocio.clienteNombre}" (${deletingNegocio.nombreEvento}).`}
+          onConfirm={async (password) => {
+            await apiFetch(`/negocios/${deletingNegocio.id}`, {
+              method: 'DELETE',
+              body: { password },
+              token,
+            });
+            setDeletingNegocio(null);
+            await loadAll();
+          }}
+          onClose={() => setDeletingNegocio(null)}
         />
       )}
     </div>

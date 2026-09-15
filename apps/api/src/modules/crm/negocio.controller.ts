@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ganarNegocioSchema, negocioSchema } from '@erp-afuego/shared';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { assertDeleteAuthorized } from '../../middleware/delete-auth.js';
 import * as negocioService from './negocio.service.js';
 
 export async function getResumenHandler(req: Request, res: Response, next: NextFunction) {
@@ -59,6 +60,16 @@ export async function ganarHandler(req: Request, res: Response, next: NextFuncti
   try {
     const input = ganarNegocioSchema.parse(req.body);
     res.json(await negocioService.ganarNegocio(req.params.id, input, req.user!.sub));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    assertDeleteAuthorized(req);
+    await negocioService.deleteNegocio(req.params.id);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
