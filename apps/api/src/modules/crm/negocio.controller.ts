@@ -30,10 +30,18 @@ export async function listHandler(_req: Request, res: Response, next: NextFuncti
   }
 }
 
+export async function getVendedoresHandler(_req: Request, res: Response, next: NextFunction) {
+  try {
+    res.json(await negocioService.listVendedoresDisponibles());
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function createHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const input = negocioSchema.parse(req.body);
-    res.status(201).json(await negocioService.createNegocio(input, req.user!.sub));
+    res.status(201).json(await negocioService.createNegocio(input));
   } catch (error) {
     next(error);
   }

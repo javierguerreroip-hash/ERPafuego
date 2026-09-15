@@ -22,10 +22,29 @@ function serialize(negocio: NegocioWithVendedor) {
     valorAntesImpuestos: Number(negocio.valorAntesImpuestos),
     etapa: negocio.etapa,
     eventoId: negocio.eventoId,
+    vendedorId: negocio.vendedorId,
     vendedorNombre: negocio.vendedor.name,
     createdAt: negocio.createdAt.toISOString(),
     updatedAt: negocio.updatedAt.toISOString(),
   };
+}
+
+// Vendedores que se pueden asignar en el CRM: usuarios activos con rol
+// Administrador o Ventas — Operación y Cocina/Nómina no venden.
+export async function listVendedoresDisponibles() {
+  return prisma.user.findMany({
+    where: { active: true, role: { in: ['ADMINISTRADOR', 'VENTAS'] } },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+}
+
+async function findVendedorOrThrow(vendedorId: string) {
+  const vendedor = await prisma.user.findUnique({ where: { id: vendedorId } });
+  if (!vendedor || !vendedor.active) {
+    throw new HttpError(404, 'Vendedor no encontrado o inactivo');
+  }
+  return vendedor;
 }
 
 // Resumen para la gráfica circular del CRM: valor + cantidad por etapa
@@ -68,7 +87,8 @@ export async function listNegocios() {
   return negocios.map(serialize);
 }
 
-export async function createNegocio(input: NegocioInput, vendedorId: string) {
+export async function createNegocio(input: NegocioInput) {
+  await findVendedorOrThrow(input.vendedorId);
   const negocio = await prisma.negocio.create({
     data: {
       clienteNombre: input.clienteNombre,
@@ -77,7 +97,7 @@ export async function createNegocio(input: NegocioInput, vendedorId: string) {
       nombreEvento: input.nombreEvento,
       fechaEvento: new Date(input.fechaEvento),
       valorAntesImpuestos: input.valorAntesImpuestos,
-      vendedorId,
+      vendedorId: input.vendedorId,
     },
     include: { vendedor: { select: { name: true } } },
   });
@@ -97,6 +117,7 @@ async function findNegocioCotizadoOrThrow(id: string) {
 
 export async function updateNegocio(id: string, input: NegocioInput) {
   await findNegocioCotizadoOrThrow(id);
+  await findVendedorOrThrow(input.vendedorId);
   const negocio = await prisma.negocio.update({
     where: { id },
     data: {
@@ -106,6 +127,7 @@ export async function updateNegocio(id: string, input: NegocioInput) {
       nombreEvento: input.nombreEvento,
       fechaEvento: new Date(input.fechaEvento),
       valorAntesImpuestos: input.valorAntesImpuestos,
+      vendedorId: input.vendedorId,
     },
     include: { vendedor: { select: { name: true } } },
   });

@@ -5,6 +5,7 @@ import {
   deleteHandler,
   ganarHandler,
   getResumenHandler,
+  getVendedoresHandler,
   listHandler,
   perderHandler,
   updateHandler,
@@ -16,6 +17,9 @@ export const negocioRouter = Router();
 negocioRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
 
 negocioRouter.get('/resumen', getResumenHandler);
+// Debe ir antes de "/:id" — si no, Express interpretaría "vendedores"
+// como un id de negocio y nunca llegaría aquí.
+negocioRouter.get('/vendedores', getVendedoresHandler);
 negocioRouter.get('/', listHandler);
 negocioRouter.post('/', createHandler);
 negocioRouter.put('/:id', updateHandler);

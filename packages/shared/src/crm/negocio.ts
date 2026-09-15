@@ -21,6 +21,7 @@ export const negocioSchema = z.object({
   nombreEvento: z.string().min(1, 'Describe el evento').max(200),
   fechaEvento: z.string().min(1, 'La fecha del evento es requerida'),
   valorAntesImpuestos: z.number().nonnegative('El valor no puede ser negativo'),
+  vendedorId: z.string().min(1, 'Selecciona un vendedor'),
 });
 
 export type NegocioInput = z.infer<typeof negocioSchema>;
@@ -32,6 +33,13 @@ export interface NegocioDTO extends NegocioInput {
   vendedorNombre: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Vendedores disponibles para asignar en el CRM: usuarios activos con rol
+// Administrador o Ventas (Operación y Cocina/Nómina no venden).
+export interface VendedorDisponibleDTO {
+  id: string;
+  name: string;
 }
 
 // Resumen del CRM por período (post-lanzamiento, 2026-09-11): valor y

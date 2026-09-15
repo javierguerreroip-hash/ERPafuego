@@ -10,6 +10,7 @@ import {
   type NegocioInput,
   type OpcionMenuDTO,
   type TaxRateDTO,
+  type VendedorDisponibleDTO,
 } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -28,7 +29,7 @@ const ETAPA_COLORS: Record<EtapaNegocio, string> = {
   PERDIDO: '#dc2626',
 };
 
-function emptyForm(): NegocioInput {
+function emptyForm(vendedorId: string): NegocioInput {
   return {
     clienteNombre: '',
     clienteIdentificacion: '',
@@ -36,6 +37,7 @@ function emptyForm(): NegocioInput {
     nombreEvento: '',
     fechaEvento: new Date().toISOString().slice(0, 10),
     valorAntesImpuestos: 0,
+    vendedorId,
   };
 }
 
@@ -46,16 +48,17 @@ const COLUMN_STYLES: Record<EtapaNegocio, string> = {
 };
 
 export function CRMPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [negocios, setNegocios] = useState<NegocioDTO[]>([]);
   const [opcionesMenu, setOpcionesMenu] = useState<OpcionMenuDTO[]>([]);
   const [taxRates, setTaxRates] = useState<TaxRateDTO[]>([]);
+  const [vendedores, setVendedores] = useState<VendedorDisponibleDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<NegocioDTO | null>(null);
-  const [form, setForm] = useState<NegocioInput>(emptyForm());
+  const [form, setForm] = useState<NegocioInput>(emptyForm(''));
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -91,14 +94,16 @@ export function CRMPage() {
     setLoading(true);
     setError(null);
     try {
-      const [negociosData, opcionesData, taxRatesData] = await Promise.all([
+      const [negociosData, opcionesData, taxRatesData, vendedoresData] = await Promise.all([
         apiFetch<NegocioDTO[]>('/negocios', { token }),
         apiFetch<OpcionMenuDTO[]>('/opciones-menu', { token }),
         apiFetch<TaxRateDTO[]>('/tax-rates', { token }),
+        apiFetch<VendedorDisponibleDTO[]>('/negocios/vendedores', { token }),
       ]);
       setNegocios(negociosData);
       setOpcionesMenu(opcionesData.filter((o) => o.active));
       setTaxRates(taxRatesData.filter((t) => t.active));
+      setVendedores(vendedoresData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar el CRM');
     } finally {
@@ -113,7 +118,7 @@ export function CRMPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm(emptyForm());
+    setForm(emptyForm(user?.id ?? ''));
     setFormError(null);
     setShowForm(true);
   }
@@ -127,6 +132,7 @@ export function CRMPage() {
       nombreEvento: negocio.nombreEvento,
       fechaEvento: negocio.fechaEvento.slice(0, 10),
       valorAntesImpuestos: negocio.valorAntesImpuestos,
+      vendedorId: negocio.vendedorId,
     });
     setFormError(null);
     setShowForm(true);
@@ -365,6 +371,22 @@ export function CRMPage() {
                 />
               </Field>
             </div>
+            <Field label="Vendedor">
+              <select
+                value={form.vendedorId}
+                onChange={(e) => setForm({ ...form, vendedorId: e.target.value })}
+                className={inputClass}
+              >
+                <option value="" disabled>
+                  Selecciona un vendedor…
+                </option>
+                {vendedores.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
 
             {formError && <p className="text-sm text-red-600">{formError}</p>}
 
