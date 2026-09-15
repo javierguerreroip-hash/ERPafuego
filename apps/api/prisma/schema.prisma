@@ -66,6 +66,8 @@ model User {
   agendaComoVendedor    AgendaEvento[]          @relation("AgendaEventoVendedor")
   abonosRegistrados    Abono[]                 @relation("AbonoRegisteredBy")
   cotizacionesRegistradas Cotizacion[]         @relation("CotizacionRegisteredBy")
+  incapacidades           Incapacidad[]        @relation("IncapacidadEmpleado")
+  incapacidadesRegistradas Incapacidad[]       @relation("IncapacidadRegisteredBy")
 
   @@map("users")
 }
@@ -380,6 +382,10 @@ model ParametroNomina {
   recargoNocturnoDomFestivo      Decimal  @db.Decimal(5, 4)
   recargoExtraDiurnaDomFestiva   Decimal  @db.Decimal(5, 4)
   recargoExtraNocturnaDomFestiva Decimal  @db.Decimal(5, 4)
+  // % del salario diario que se paga por incapacidad (Ley 100/CST) —
+  // 66.67% confirmado con el usuario 2026-09-15. Configurable, nunca fijo
+  // en el código (la ley puede cambiarlo).
+  porcentajeIncapacidad          Decimal  @default(0.6667) @db.Decimal(5, 4)
   updatedAt                      DateTime @updatedAt
 
   @@map("parametros_nomina")
@@ -410,6 +416,25 @@ model Turno {
 
   @@index([userId])
   @@map("turnos")
+}
+
+// Días de incapacidad (post-lanzamiento, 2026-09-15) — se liquidan al
+// porcentajeIncapacidad configurado (66.67% por defecto) sobre el
+// salario diario, en vez de como turno trabajado. Un registro por día
+// (mismo patrón que DiaFestivo), único por empleado+fecha para no
+// duplicar un mismo día.
+model Incapacidad {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation("IncapacidadEmpleado", fields: [userId], references: [id])
+  fecha          DateTime
+  observaciones  String   @default("")
+  registeredById String
+  registeredBy   User     @relation("IncapacidadRegisteredBy", fields: [registeredById], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, fecha])
+  @@map("incapacidades")
 }
 
 enum EtapaNegocio {

@@ -18,6 +18,7 @@ function serialize(p: ParametroNomina) {
     recargoNocturnoDomFestivo: Number(p.recargoNocturnoDomFestivo),
     recargoExtraDiurnaDomFestiva: Number(p.recargoExtraDiurnaDomFestiva),
     recargoExtraNocturnaDomFestiva: Number(p.recargoExtraNocturnaDomFestiva),
+    porcentajeIncapacidad: Number(p.porcentajeIncapacidad),
     valorHoraOrdinaria: Math.round((smlv / divisorHoras + Number.EPSILON) * 100) / 100,
     updatedAt: p.updatedAt.toISOString(),
   };
@@ -36,6 +37,7 @@ const DEFAULTS = {
   recargoNocturnoDomFestivo: 1.25,
   recargoExtraDiurnaDomFestiva: 1.15,
   recargoExtraNocturnaDomFestiva: 1.65,
+  porcentajeIncapacidad: 0.6667,
 };
 
 export async function getParametros() {

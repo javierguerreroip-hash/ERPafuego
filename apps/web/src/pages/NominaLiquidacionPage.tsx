@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import { turnoAdminSchema, type LiquidacionQuincenalDTO, type TurnoAdminInput } from '@erp-afuego/shared';
+import {
+  incapacidadSchema,
+  turnoAdminSchema,
+  type IncapacidadInput,
+  type LiquidacionQuincenalDTO,
+  type TurnoAdminInput,
+} from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { usePeriodFilter } from '../hooks/usePeriodFilter';
@@ -73,6 +79,14 @@ export function NominaLiquidacionPage() {
   });
   const [turnoFormError, setTurnoFormError] = useState<string | null>(null);
   const [editingTurnoId, setEditingTurnoId] = useState<string | null>(null);
+
+  const [showIncapacidadForm, setShowIncapacidadForm] = useState(false);
+  const [incapacidadForm, setIncapacidadForm] = useState<IncapacidadInput>({
+    userId: '',
+    fecha: '',
+    observaciones: '',
+  });
+  const [incapacidadFormError, setIncapacidadFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isSelfService) return;
@@ -159,6 +173,37 @@ export function NominaLiquidacionPage() {
     }
   }
 
+  function openNewIncapacidad() {
+    setIncapacidadForm({ userId: empleadoId, fecha: '', observaciones: '' });
+    setIncapacidadFormError(null);
+    setShowIncapacidadForm(true);
+  }
+
+  async function handleSaveIncapacidad() {
+    setIncapacidadFormError(null);
+    const parsed = incapacidadSchema.safeParse(incapacidadForm);
+    if (!parsed.success) {
+      setIncapacidadFormError(parsed.error.issues[0]?.message ?? 'Datos inválidos');
+      return;
+    }
+    try {
+      await apiFetch('/nomina/incapacidades', { method: 'POST', body: parsed.data, token });
+      setShowIncapacidadForm(false);
+      await loadLiquidacion();
+    } catch (err) {
+      setIncapacidadFormError(err instanceof Error ? err.message : 'Error al guardar la incapacidad');
+    }
+  }
+
+  async function handleDeleteIncapacidad(id: string) {
+    try {
+      await apiFetch(`/nomina/incapacidades/${id}`, { method: 'DELETE', token });
+      await loadLiquidacion();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar la incapacidad');
+    }
+  }
+
   return (
     <div>
       <div className="mb-4 flex items-start justify-between">
@@ -187,6 +232,15 @@ export function NominaLiquidacionPage() {
                 horas: '',
                 valor: formatCOP(liquidacion.auxilioTransporte),
               },
+              ...(liquidacion.diasIncapacidad > 0
+                ? [
+                    {
+                      concepto: `Incapacidad (${liquidacion.diasIncapacidad} día(s))`,
+                      horas: '',
+                      valor: formatCOP(liquidacion.valorIncapacidad),
+                    },
+                  ]
+                : []),
               { concepto: 'Total a pagar', horas: '', valor: formatCOP(liquidacion.totalAPagar) },
             ]}
           />
@@ -249,6 +303,14 @@ export function NominaLiquidacionPage() {
               </span>
               <span>{formatCOP(liquidacion.auxilioTransporte)}</span>
             </div>
+            {liquidacion.diasIncapacidad > 0 && (
+              <div className="flex items-center justify-between border-t px-4 py-2 text-sm">
+                <span className="text-neutral-600">
+                  Incapacidad ({liquidacion.diasIncapacidad} día(s))
+                </span>
+                <span>{formatCOP(liquidacion.valorIncapacidad)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between border-t bg-orange-50 px-4 py-3">
               <span className="font-semibold text-neutral-900">Total a pagar</span>
               <span className="font-semibold text-neutral-900">{formatCOP(liquidacion.totalAPagar)}</span>
@@ -302,6 +364,60 @@ export function NominaLiquidacionPage() {
               </tbody>
             </table>
           </div>
+
+          <div className="overflow-hidden rounded-lg border bg-white lg:col-span-2">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h2 className="text-sm font-medium text-neutral-700">
+                Incapacidades en el período (se liquidan al % configurado en Parámetros de Nómina)
+              </h2>
+              {!isSelfService && (
+                <button
+                  onClick={openNewIncapacidad}
+                  disabled={!empleadoId}
+                  className="rounded-md bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+                >
+                  Registrar incapacidad
+                </button>
+              )}
+            </div>
+            {liquidacion.incapacidades.length === 0 ? (
+              <p className="px-4 py-4 text-center text-sm text-neutral-400">
+                Sin incapacidades registradas en este período.
+              </p>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead className="bg-neutral-50 text-neutral-500">
+                  <tr>
+                    <th className="px-3 py-2">Fecha</th>
+                    <th className="px-3 py-2">Observaciones</th>
+                    <th className="px-3 py-2">Registrado por</th>
+                    {!isSelfService && <th className="px-3 py-2" />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {liquidacion.incapacidades.map((i) => (
+                    <tr key={i.id} className="border-t">
+                      <td className="px-3 py-2">
+                        {new Date(`${i.fecha.slice(0, 10)}T00:00:00`).toLocaleDateString('es-CO')}
+                      </td>
+                      <td className="px-3 py-2">{i.observaciones || '—'}</td>
+                      <td className="px-3 py-2">{i.registeredByName}</td>
+                      {!isSelfService && (
+                        <td className="px-3 py-2 text-right">
+                          <button
+                            onClick={() => handleDeleteIncapacidad(i.id)}
+                            className="text-neutral-400 hover:text-red-600"
+                          >
+                            Borrar
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
@@ -336,6 +452,48 @@ export function NominaLiquidacionPage() {
               </button>
               <button
                 onClick={handleSaveTurno}
+                className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showIncapacidadForm && (
+        <Modal title="Registrar incapacidad" onClose={() => setShowIncapacidadForm(false)}>
+          <div className="space-y-3">
+            <Field label="Fecha">
+              <input
+                type="date"
+                value={incapacidadForm.fecha}
+                onChange={(e) => setIncapacidadForm({ ...incapacidadForm, fecha: e.target.value })}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Observaciones (opcional)">
+              <input
+                value={incapacidadForm.observaciones}
+                onChange={(e) =>
+                  setIncapacidadForm({ ...incapacidadForm, observaciones: e.target.value })
+                }
+                className={inputClass}
+                placeholder="Ej. incapacidad médica general"
+              />
+            </Field>
+
+            {incapacidadFormError && <p className="text-sm text-red-600">{incapacidadFormError}</p>}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowIncapacidadForm(false)}
+                className="rounded-md px-4 py-2 text-sm text-neutral-600"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveIncapacidad}
                 className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
               >
                 Guardar

@@ -4,12 +4,15 @@ import {
   adminCreateTurnoHandler,
   adminUpdateTurnoHandler,
   createFestivoHandler,
+  createIncapacidadHandler,
   deleteFestivoHandler,
+  deleteIncapacidadHandler,
   deleteTurnoHandler,
   getLiquidacionHandler,
   getParametrosHandler,
   listEmpleadosHandler,
   listFestivosHandler,
+  listIncapacidadesHandler,
   listTurnosHandler,
   marcarEntradaHandler,
   marcarSalidaHandler,
@@ -44,6 +47,20 @@ nominaRouter.get(
 nominaRouter.post('/turnos', requireRole(...NOMINA_ADMIN_ROLES), adminCreateTurnoHandler);
 nominaRouter.put('/turnos/:id', requireRole(...NOMINA_ADMIN_ROLES), adminUpdateTurnoHandler);
 nominaRouter.delete('/turnos/:id', requireRole(...NOMINA_ADMIN_ROLES), deleteTurnoHandler);
+
+// Incapacidades: mismo criterio que turnos — Cocina/Nómina solo ve las
+// propias; solo los roles administrativos registran/corrigen/eliminan.
+nominaRouter.get(
+  '/incapacidades',
+  requireRole(...NOMINA_ADMIN_ROLES, 'COCINA_NOMINA'),
+  listIncapacidadesHandler,
+);
+nominaRouter.post('/incapacidades', requireRole(...NOMINA_ADMIN_ROLES), createIncapacidadHandler);
+nominaRouter.delete(
+  '/incapacidades/:id',
+  requireRole(...NOMINA_ADMIN_ROLES),
+  deleteIncapacidadHandler,
+);
 
 // Liquidación: Cocina/Nómina solo puede ver la propia ("solo su módulo").
 nominaRouter.get(

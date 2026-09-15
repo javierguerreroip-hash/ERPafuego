@@ -39,6 +39,27 @@ export interface DesgloseHorasDTO {
   extraNocturnaDominicalFestiva: number;
 }
 
+// Días de incapacidad (post-lanzamiento, 2026-09-15) — se liquidan al
+// porcentajeIncapacidad configurado (66.67% por defecto) en vez de como
+// turno trabajado (no llevan hora de entrada/salida, es un día completo).
+export const incapacidadSchema = z.object({
+  userId: z.string().min(1, 'Selecciona un empleado'),
+  fecha: z.string().min(1, 'La fecha es requerida'),
+  observaciones: z.string().max(300).default(''),
+});
+
+export type IncapacidadInput = z.infer<typeof incapacidadSchema>;
+
+export interface IncapacidadDTO {
+  id: string;
+  userId: string;
+  empleadoNombre: string;
+  fecha: string;
+  observaciones: string;
+  registeredByName: string;
+  createdAt: string;
+}
+
 export interface LiquidacionQuincenalDTO {
   userId: string;
   empleadoNombre: string;
@@ -50,6 +71,9 @@ export interface LiquidacionQuincenalDTO {
   totalDevengadoHoras: number;
   diasTrabajados: number;
   auxilioTransporte: number;
+  diasIncapacidad: number;
+  valorIncapacidad: number;
   totalAPagar: number;
   turnos: TurnoDTO[];
+  incapacidades: IncapacidadDTO[];
 }

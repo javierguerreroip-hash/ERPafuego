@@ -7,6 +7,15 @@ import type { DesgloseHorasDTO } from '@erp-afuego/shared';
 const COLOMBIA_OFFSET_MS = 5 * 60 * 60 * 1000;
 const JORNADA_ORDINARIA_MINUTOS = 8 * 60;
 
+// El almuerzo lo asume el empleado (no es tiempo de trabajo) — se
+// descuenta media hora de cada turno completo, pedido por el negocio
+// 2026-09-15. Se resta de las horas ORDINARIAS (nunca de horas extra ni
+// dominicales/festivas, que sí son un derecho económico ya causado), y
+// primero de la diurna porque el almuerzo normalmente cae al mediodía;
+// solo si un turno no tiene suficiente diurna ordinaria (turnos 100%
+// nocturnos) se completa desde la nocturna ordinaria.
+const ALMUERZO_HORAS = 0.5;
+
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
@@ -128,7 +137,34 @@ export function clasificarTurno(
   for (const key of Object.keys(desglose) as (keyof DesgloseHorasDTO)[]) {
     desglose[key] = round2(desglose[key]);
   }
-  return desglose;
+  return descontarAlmuerzo(desglose);
+}
+
+// Orden en el que se descuenta el almuerzo: primero diurna ordinaria
+// (el caso normal), luego nocturna ordinaria (turnos 100% nocturnos),
+// luego dominical/festiva diurna y nocturna (el almuerzo también aplica
+// en domingo/festivo). Las 4 categorías de horas EXTRA nunca se tocan —
+// son un derecho económico ya causado por trabajar más allá de la
+// jornada ordinaria, el almuerzo no debe reducirlas.
+const ORDEN_DEDUCCION_ALMUERZO: (keyof DesgloseHorasDTO)[] = [
+  'diurnaOrdinaria',
+  'nocturnaOrdinaria',
+  'dominicalFestivaDiurna',
+  'dominicalFestivaNocturna',
+];
+
+function descontarAlmuerzo(desglose: DesgloseHorasDTO): DesgloseHorasDTO {
+  let restante = ALMUERZO_HORAS;
+  const resultado = { ...desglose };
+
+  for (const key of ORDEN_DEDUCCION_ALMUERZO) {
+    if (restante <= 0) break;
+    const aRestar = Math.min(resultado[key], restante);
+    resultado[key] = round2(resultado[key] - aRestar);
+    restante = round2(restante - aRestar);
+  }
+
+  return resultado;
 }
 
 export function sumarDesgloses(desgloses: DesgloseHorasDTO[]): DesgloseHorasDTO {
@@ -191,6 +227,20 @@ export function calcularValorPorConcepto(
 
 export function calcularTotalDevengadoHoras(valorPorConcepto: DesgloseHorasDTO): number {
   return round2(Object.values(valorPorConcepto).reduce((sum, v) => sum + v, 0));
+}
+
+// Incapacidad por enfermedad general (Ley 100 / CST): se paga como
+// porcentaje configurable (66,67% confirmado con el usuario 2026-09-15,
+// ver ParametroNomina.porcentajeIncapacidad) del salario DIARIO —
+// SMLV/30, mismo criterio de "día" que ya usa el auxilio de transporte,
+// no de la hora ordinaria (que depende del divisor de horas semanal).
+export function calcularValorIncapacidad(
+  smlv: number,
+  porcentajeIncapacidad: number,
+  diasIncapacidad: number,
+): number {
+  const salarioDiario = smlv / 30;
+  return round2(salarioDiario * porcentajeIncapacidad * diasIncapacidad);
 }
 
 // Auxilio de transporte prorrateado por días trabajados (no por horas) —

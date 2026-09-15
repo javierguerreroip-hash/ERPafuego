@@ -16,6 +16,9 @@ export const parametroNominaSchema = z.object({
   recargoNocturnoDomFestivo: z.number().min(0).max(3),
   recargoExtraDiurnaDomFestiva: z.number().min(0).max(3),
   recargoExtraNocturnaDomFestiva: z.number().min(0).max(3),
+  // % del salario diario que se paga por día de incapacidad (Ley
+  // 100/CST) — 66.67% confirmado con el usuario 2026-09-15.
+  porcentajeIncapacidad: z.number().min(0).max(1),
 });
 
 export type ParametroNominaInput = z.infer<typeof parametroNominaSchema>;

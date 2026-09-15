@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import {
   diaFestivoSchema,
+  incapacidadSchema,
   marcarSalidaSchema,
   parametroNominaSchema,
   turnoAdminSchema,
@@ -9,6 +10,7 @@ import { HttpError } from '../../middleware/error.middleware.js';
 import * as parametroService from './parametro-nomina.service.js';
 import * as festivoService from './dia-festivo.service.js';
 import * as turnoService from './turno.service.js';
+import * as incapacidadService from './incapacidad.service.js';
 import * as liquidacionService from './liquidacion.service.js';
 
 // --- Parámetros ---
@@ -122,6 +124,41 @@ export async function adminUpdateTurnoHandler(req: Request, res: Response, next:
 export async function deleteTurnoHandler(req: Request, res: Response, next: NextFunction) {
   try {
     await turnoService.deleteTurno(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
+
+// --- Incapacidades ---
+
+// Mismo criterio que los turnos: Cocina/Nómina solo ve las propias.
+export async function listIncapacidadesHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const isAdmin = req.user!.role !== 'COCINA_NOMINA';
+    const userId = isAdmin && typeof req.query.userId === 'string' ? req.query.userId : req.user!.sub;
+    const startParam = typeof req.query.start === 'string' ? req.query.start : undefined;
+    const endParam = typeof req.query.end === 'string' ? req.query.end : undefined;
+    const start = startParam ? new Date(`${startParam}T00:00:00.000Z`) : undefined;
+    const end = endParam ? new Date(`${endParam}T23:59:59.999Z`) : undefined;
+    res.json(await incapacidadService.listIncapacidades({ userId, start, end }));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createIncapacidadHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const input = incapacidadSchema.parse(req.body);
+    res.status(201).json(await incapacidadService.createIncapacidad(input, req.user!.sub));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteIncapacidadHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    await incapacidadService.deleteIncapacidad(req.params.id);
     res.status(204).send();
   } catch (error) {
     next(error);

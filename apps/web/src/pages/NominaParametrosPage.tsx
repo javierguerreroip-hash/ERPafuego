@@ -34,6 +34,7 @@ function toForm(p: ParametroNominaDTO): ParametroNominaInput {
     recargoNocturnoDomFestivo: p.recargoNocturnoDomFestivo,
     recargoExtraDiurnaDomFestiva: p.recargoExtraDiurnaDomFestiva,
     recargoExtraNocturnaDomFestiva: p.recargoExtraNocturnaDomFestiva,
+    porcentajeIncapacidad: p.porcentajeIncapacidad,
   };
 }
 
@@ -208,6 +209,24 @@ export function NominaParametrosPage() {
                   </Field>
                 ))}
               </div>
+
+              <p className="mb-2 mt-4 text-sm font-medium text-neutral-700">Incapacidades</p>
+              <Field label="% del salario diario que se paga por día de incapacidad">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    value={Math.round(form.porcentajeIncapacidad * 10000) / 100}
+                    onChange={(e) =>
+                      setForm({ ...form, porcentajeIncapacidad: Number(e.target.value) / 100 })
+                    }
+                    className={inputClass}
+                  />
+                  <span className="text-sm text-neutral-500">%</span>
+                </div>
+              </Field>
 
               <div className="mt-4 flex items-center justify-between border-t pt-4">
                 {saved && <p className="text-sm text-green-600">Guardado correctamente.</p>}

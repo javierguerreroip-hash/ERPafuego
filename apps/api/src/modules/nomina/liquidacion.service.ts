@@ -3,6 +3,7 @@ import { HttpError } from '../../middleware/error.middleware.js';
 import {
   calcularAuxilioTransporte,
   calcularTotalDevengadoHoras,
+  calcularValorIncapacidad,
   calcularValorPorConcepto,
   clasificarTurno,
   sumarDesgloses,
@@ -10,6 +11,7 @@ import {
 import { getParametrosRaw } from './parametro-nomina.service.js';
 import { getFestivosSet } from './dia-festivo.service.js';
 import { listTurnos } from './turno.service.js';
+import { listIncapacidades } from './incapacidad.service.js';
 
 // Un turno se atribuye por completo a la quincena/período en que inicia
 // (horaEntrada) — no se parte un turno que cruza la medianoche de fin de
@@ -62,7 +64,17 @@ export async function getLiquidacion(userId: string, start: Date, end: Date) {
     diasTrabajados,
   );
 
-  const totalAPagar = Math.round((totalDevengadoHoras + auxilioTransporte + Number.EPSILON) * 100) / 100;
+  const incapacidadesDTO = await listIncapacidades({ userId, start, end });
+  const diasIncapacidad = incapacidadesDTO.length;
+  const valorIncapacidad = calcularValorIncapacidad(
+    Number(parametros.smlv),
+    Number(parametros.porcentajeIncapacidad),
+    diasIncapacidad,
+  );
+
+  const totalAPagar =
+    Math.round((totalDevengadoHoras + auxilioTransporte + valorIncapacidad + Number.EPSILON) * 100) /
+    100;
 
   const turnosDTO = await listTurnos({ userId, start, end });
 
@@ -77,7 +89,10 @@ export async function getLiquidacion(userId: string, start: Date, end: Date) {
     totalDevengadoHoras,
     diasTrabajados,
     auxilioTransporte,
+    diasIncapacidad,
+    valorIncapacidad,
     totalAPagar,
     turnos: turnosDTO,
+    incapacidades: incapacidadesDTO,
   };
 }

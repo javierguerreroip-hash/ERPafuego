@@ -288,6 +288,34 @@ Acceso restringido a los roles Administrador y Operación.
   negocio vuelve a etapa "Cotizado" en vez de quedar apuntando a un
   evento inexistente — así se puede corregir y volver a ganar.
 
+## Almuerzo e Incapacidades en Nómina (post-lanzamiento, 2026-09-15)
+
+- **Descuento de almuerzo (0.5h por turno):** pedido por el negocio — el
+  almuerzo lo asume el empleado y no cuenta como tiempo de trabajo. Se
+  descuenta de las horas ORDINARIAS de cada turno (nunca de horas
+  extra, que ya son un derecho económico causado), primero de la diurna
+  ordinaria (el caso normal, almuerzo al mediodía), luego de la
+  nocturna, luego de la dominical/festiva diurna y nocturna si un turno
+  no tiene suficiente diurna/nocturna ordinaria para cubrir la media
+  hora completa. Implementado en `clasificarTurno`
+  (`apps/api/src/modules/nomina/nomina.calculations.ts`), con pruebas
+  unitarias actualizadas para reflejar el descuento en cada escenario.
+  El campo `horasTrabajadas` que se ve en la lista de turnos sigue
+  mostrando el tiempo bruto reloj-a-reloj (para poder auditar contra lo
+  que el empleado realmente marcó); el descuento solo afecta el
+  desglose de la liquidación.
+- **Incapacidades (66.67% del salario diario):** nuevo modelo
+  `Incapacidad` — un registro por día de incapacidad, por empleado, en
+  la Liquidación de Nómina. Se liquidan al `porcentajeIncapacidad`
+  configurado en Parámetros de Nómina (66.67% por defecto, confirmado
+  con el usuario — Ley 100/CST), calculado sobre el salario diario
+  (SMLV/30, mismo criterio que el auxilio de transporte) — no se
+  cuentan como turno trabajado ni afectan el auxilio de transporte
+  (que solo se prorratea por días efectivamente trabajados).
+  `calcularValorIncapacidad` con pruebas unitarias. Mismo criterio de
+  acceso que los turnos: Cocina/Nómina solo ve las propias (de solo
+  lectura); los roles administrativos las registran/eliminan.
+
 ## Cartera — Cuentas por Cobrar y por Pagar (Fase 12, último módulo del plan)
 
 - **Cartera** (`/cartera`, solo Administrador): dos tableros

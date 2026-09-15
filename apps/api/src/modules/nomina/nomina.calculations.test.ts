@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calcularAuxilioTransporte,
   calcularTotalDevengadoHoras,
+  calcularValorIncapacidad,
   calcularValorPorConcepto,
   clasificarTurno,
   sumarDesgloses,
@@ -32,45 +33,57 @@ function colombia(fechaHoraLocal: string): Date {
 }
 
 describe('clasificarTurno', () => {
-  it('turno diurno de 8h en día ordinario: todo es diurna ordinaria', () => {
+  // Todos los casos descuentan 0.5h de almuerzo (confirmado con el
+  // usuario 2026-09-15) — el almuerzo lo asume el empleado y no cuenta
+  // como tiempo de trabajo. Se resta de la jornada ordinaria, nunca de
+  // horas extra.
+  it('turno diurno de 8h en día ordinario: diurna ordinaria menos 0.5h de almuerzo', () => {
     const d = clasificarTurno(colombia('2026-01-05T08:00'), colombia('2026-01-05T16:00'), sinFestivos);
-    expect(d.diurnaOrdinaria).toBe(8);
+    expect(d.diurnaOrdinaria).toBe(7.5);
     expect(d.nocturnaOrdinaria).toBe(0);
     expect(d.extraDiurna).toBe(0);
   });
 
-  it('turno que cruza a la noche (19:00) sin pasar de 8h: se reparte diurna/nocturna', () => {
+  it('turno que cruza a la noche (19:00) sin pasar de 8h: el almuerzo se descuenta de la diurna primero', () => {
     const d = clasificarTurno(colombia('2026-01-05T15:00'), colombia('2026-01-05T21:00'), sinFestivos);
-    expect(d.diurnaOrdinaria).toBe(4); // 15:00-19:00
-    expect(d.nocturnaOrdinaria).toBe(2); // 19:00-21:00
+    expect(d.diurnaOrdinaria).toBe(3.5); // 4h (15:00-19:00) - 0.5h almuerzo
+    expect(d.nocturnaOrdinaria).toBe(2); // 19:00-21:00, sin tocar
   });
 
-  it('turno largo nocturno (10h) genera horas extra nocturnas tras el tope de 8h', () => {
+  it('turno largo nocturno (10h) genera horas extra nocturnas tras el tope de 8h, y el almuerzo no toca la extra', () => {
     // 18:00 lunes -> 04:00 martes: 1h diurna (18-19) + 9h nocturna (19-04)
     const d = clasificarTurno(colombia('2026-01-05T18:00'), colombia('2026-01-06T04:00'), sinFestivos);
-    expect(d.diurnaOrdinaria).toBe(1);
-    expect(d.nocturnaOrdinaria).toBe(7); // 8h ordinarias - 1h diurna ya usada
-    expect(d.extraNocturna).toBe(2); // 9h nocturnas - 7h ordinarias restantes
+    expect(d.diurnaOrdinaria).toBe(0.5); // 1h - 0.5h almuerzo (se cubre completo aquí)
+    expect(d.nocturnaOrdinaria).toBe(7); // 8h ordinarias - 1h diurna ya usada, sin tocar
+    expect(d.extraNocturna).toBe(2); // 9h nocturnas - 7h ordinarias restantes, sin tocar
     const total = Object.values(d).reduce((a, b) => a + b, 0);
-    expect(total).toBeCloseTo(10, 5);
+    expect(total).toBeCloseTo(9.5, 5); // 10h - 0.5h almuerzo
   });
 
-  it('turno de 8h en domingo: todo es dominical/festiva diurna (sin extra)', () => {
+  it('turno de 8h en domingo: dominical/festiva diurna menos 0.5h de almuerzo (sin extra)', () => {
     const d = clasificarTurno(colombia('2026-01-04T08:00'), colombia('2026-01-04T16:00'), sinFestivos);
-    expect(d.dominicalFestivaDiurna).toBe(8);
+    expect(d.dominicalFestivaDiurna).toBe(7.5);
     expect(d.diurnaOrdinaria).toBe(0);
   });
 
-  it('turno de 10h en domingo: 8h dominical/festiva diurna + 2h extra dominical/festiva diurna', () => {
+  it('turno de 10h en domingo: la extra dominical/festiva no se toca, el almuerzo sale de la ordinaria dominical', () => {
     const d = clasificarTurno(colombia('2026-01-04T07:00'), colombia('2026-01-04T17:00'), sinFestivos);
-    expect(d.dominicalFestivaDiurna).toBe(8);
-    expect(d.extraDiurnaDominicalFestiva).toBe(2);
+    expect(d.dominicalFestivaDiurna).toBe(7.5); // 8h - 0.5h almuerzo
+    expect(d.extraDiurnaDominicalFestiva).toBe(2); // sin tocar
   });
 
   it('día marcado como festivo (no domingo) se trata igual que un domingo', () => {
     const esFestivo = (fecha: string) => fecha === '2026-01-06';
     const d = clasificarTurno(colombia('2026-01-06T08:00'), colombia('2026-01-06T16:00'), esFestivo);
-    expect(d.dominicalFestivaDiurna).toBe(8);
+    expect(d.dominicalFestivaDiurna).toBe(7.5);
+  });
+
+  it('turno corto (2h) sin suficiente ordinaria diurna: el almuerzo se completa desde la nocturna', () => {
+    // 17:00-19:00: 2h diurnas puras (antes de las 19:00) — solo hay 2h
+    // ordinarias diurnas disponibles, así que se descuentan las 0.5h ahí.
+    const d = clasificarTurno(colombia('2026-01-05T17:00'), colombia('2026-01-05T19:00'), sinFestivos);
+    expect(d.diurnaOrdinaria).toBe(1.5); // 2h - 0.5h almuerzo
+    expect(Object.values(d).reduce((a, b) => a + b, 0)).toBeCloseTo(1.5, 5);
   });
 
   it('turno vacío o inválido (salida <= entrada) no lanza y devuelve todo en 0', () => {
@@ -80,11 +93,11 @@ describe('clasificarTurno', () => {
 });
 
 describe('sumarDesgloses', () => {
-  it('suma varios desgloses concepto por concepto', () => {
+  it('suma varios desgloses concepto por concepto (cada turno ya con su almuerzo descontado)', () => {
     const a = clasificarTurno(colombia('2026-01-05T08:00'), colombia('2026-01-05T16:00'), sinFestivos);
     const b = clasificarTurno(colombia('2026-01-06T08:00'), colombia('2026-01-06T16:00'), sinFestivos);
     const total = sumarDesgloses([a, b]);
-    expect(total.diurnaOrdinaria).toBe(16);
+    expect(total.diurnaOrdinaria).toBe(15); // 7.5h + 7.5h
   });
 });
 
@@ -104,10 +117,10 @@ describe('calcularValorPorConcepto', () => {
     expect(valorUnitarioExtraNocturna).toBeCloseTo(14590.87, 0);
   });
 
-  it('la diurna ordinaria no lleva recargo (es la base)', () => {
+  it('la diurna ordinaria no lleva recargo (es la base) — ya con el almuerzo descontado', () => {
     const desglose = clasificarTurno(colombia('2026-01-05T08:00'), colombia('2026-01-05T16:00'), sinFestivos);
     const valores = calcularValorPorConcepto(desglose, VALOR_HORA, TASAS);
-    expect(valores.diurnaOrdinaria).toBeCloseTo(8 * VALOR_HORA, 2);
+    expect(valores.diurnaOrdinaria).toBeCloseTo(7.5 * VALOR_HORA, 2);
   });
 });
 
@@ -124,6 +137,23 @@ describe('calcularTotalDevengadoHoras', () => {
       extraNocturnaDominicalFestiva: 0,
     });
     expect(total).toBe(150);
+  });
+});
+
+describe('calcularValorIncapacidad', () => {
+  it('paga el 66.67% del salario diario (SMLV/30) por cada día de incapacidad', () => {
+    // SMLV 1.750.905 / 30 = 58.363,5 por día; × 66.67% × 3 días
+    const valor = calcularValorIncapacidad(1750905, 0.6667, 3);
+    expect(valor).toBeCloseTo(116732.84, 1);
+  });
+
+  it('devuelve 0 si no hay días de incapacidad', () => {
+    expect(calcularValorIncapacidad(1750905, 0.6667, 0)).toBe(0);
+  });
+
+  it('un solo día de incapacidad', () => {
+    const valor = calcularValorIncapacidad(1750905, 0.6667, 1);
+    expect(valor).toBeCloseTo(38910.95, 1);
   });
 });
 
