@@ -241,6 +241,8 @@ export function NominaLiquidacionPage() {
                     },
                   ]
                 : []),
+              { concepto: 'Deducción EPS', horas: '', valor: `-${formatCOP(liquidacion.deduccionEPS)}` },
+              { concepto: 'Deducción AFP', horas: '', valor: `-${formatCOP(liquidacion.deduccionAFP)}` },
               { concepto: 'Total a pagar', horas: '', valor: formatCOP(liquidacion.totalAPagar) },
             ]}
           />
@@ -311,6 +313,14 @@ export function NominaLiquidacionPage() {
                 <span>{formatCOP(liquidacion.valorIncapacidad)}</span>
               </div>
             )}
+            <div className="flex items-center justify-between border-t px-4 py-2 text-sm text-red-600">
+              <span>Deducción EPS</span>
+              <span>-{formatCOP(liquidacion.deduccionEPS)}</span>
+            </div>
+            <div className="flex items-center justify-between border-t px-4 py-2 text-sm text-red-600">
+              <span>Deducción AFP</span>
+              <span>-{formatCOP(liquidacion.deduccionAFP)}</span>
+            </div>
             <div className="flex items-center justify-between border-t bg-orange-50 px-4 py-3">
               <span className="font-semibold text-neutral-900">Total a pagar</span>
               <span className="font-semibold text-neutral-900">{formatCOP(liquidacion.totalAPagar)}</span>

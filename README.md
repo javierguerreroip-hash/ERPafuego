@@ -316,6 +316,19 @@ Acceso restringido a los roles Administrador y Operación.
   acceso que los turnos: Cocina/Nómina solo ve las propias (de solo
   lectura); los roles administrativos las registran/eliminan.
 
+## Deducciones EPS y AFP en Nómina (post-lanzamiento, 2026-09-15)
+
+- **4% EPS + 4% AFP sobre el total devengado** (horas + incapacidad, SIN
+  el auxilio de transporte, que nunca es base de cotización) —
+  porcentajes confirmados con el usuario comparando línea por línea
+  contra la nómina manual en Excel que manejaba el negocio antes de
+  este sistema (verificado exacto para 2 empleados de la quincena
+  1-15 sept. 2026). Configurables en Parámetros de Nómina, nunca fijos
+  en el código. `calcularDeducciones` con pruebas unitarias que
+  reproducen esos mismos dos casos de referencia.
+- El total a pagar ahora es: `(devengado por horas + incapacidad) −
+  (EPS + AFP) + auxilio de transporte`.
+
 ## Cartera — Cuentas por Cobrar y por Pagar (Fase 12, último módulo del plan)
 
 - **Cartera** (`/cartera`, solo Administrador): dos tableros

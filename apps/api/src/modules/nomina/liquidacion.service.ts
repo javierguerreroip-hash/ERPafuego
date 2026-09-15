@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import {
   calcularAuxilioTransporte,
+  calcularDeducciones,
   calcularTotalDevengadoHoras,
   calcularValorIncapacidad,
   calcularValorPorConcepto,
@@ -12,6 +13,10 @@ import { getParametrosRaw } from './parametro-nomina.service.js';
 import { getFestivosSet } from './dia-festivo.service.js';
 import { listTurnos } from './turno.service.js';
 import { listIncapacidades } from './incapacidad.service.js';
+
+function round2(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
 
 // Un turno se atribuye por completo a la quincena/período en que inicia
 // (horaEntrada) — no se parte un turno que cruza la medianoche de fin de
@@ -72,9 +77,17 @@ export async function getLiquidacion(userId: string, start: Date, end: Date) {
     diasIncapacidad,
   );
 
-  const totalAPagar =
-    Math.round((totalDevengadoHoras + auxilioTransporte + valorIncapacidad + Number.EPSILON) * 100) /
-    100;
+  // Base de EPS/AFP = total devengado por horas + incapacidad, SIN el
+  // auxilio de transporte (nunca es base de cotización) — confirmado
+  // 2026-09-15 comparando contra la nómina manual en Excel del negocio.
+  const baseDeducciones = round2(totalDevengadoHoras + valorIncapacidad);
+  const { deduccionEPS, deduccionAFP, totalDeducciones } = calcularDeducciones(
+    baseDeducciones,
+    Number(parametros.porcentajeEPS),
+    Number(parametros.porcentajeAFP),
+  );
+
+  const totalAPagar = round2(baseDeducciones - totalDeducciones + auxilioTransporte);
 
   const turnosDTO = await listTurnos({ userId, start, end });
 
@@ -91,6 +104,9 @@ export async function getLiquidacion(userId: string, start: Date, end: Date) {
     auxilioTransporte,
     diasIncapacidad,
     valorIncapacidad,
+    deduccionEPS,
+    deduccionAFP,
+    totalDeducciones,
     totalAPagar,
     turnos: turnosDTO,
     incapacidades: incapacidadesDTO,

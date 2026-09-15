@@ -386,6 +386,11 @@ model ParametroNomina {
   // 66.67% confirmado con el usuario 2026-09-15. Configurable, nunca fijo
   // en el código (la ley puede cambiarlo).
   porcentajeIncapacidad          Decimal  @default(0.6667) @db.Decimal(5, 4)
+  // Deducciones de EPS y AFP (post-lanzamiento, 2026-09-15) — 4% cada una
+  // sobre el total devengado, confirmado comparando contra la nómina
+  // manual en Excel que manejaba el negocio. Configurables, nunca fijas.
+  porcentajeEPS                  Decimal  @default(0.04) @db.Decimal(5, 4)
+  porcentajeAFP                  Decimal  @default(0.04) @db.Decimal(5, 4)
   updatedAt                      DateTime @updatedAt
 
   @@map("parametros_nomina")

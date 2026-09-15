@@ -73,6 +73,9 @@ export interface LiquidacionQuincenalDTO {
   auxilioTransporte: number;
   diasIncapacidad: number;
   valorIncapacidad: number;
+  deduccionEPS: number;
+  deduccionAFP: number;
+  totalDeducciones: number;
   totalAPagar: number;
   turnos: TurnoDTO[];
   incapacidades: IncapacidadDTO[];

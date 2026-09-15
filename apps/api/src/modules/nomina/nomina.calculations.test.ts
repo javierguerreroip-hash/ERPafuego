@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   calcularAuxilioTransporte,
+  calcularDeducciones,
   calcularTotalDevengadoHoras,
   calcularValorIncapacidad,
   calcularValorPorConcepto,
@@ -154,6 +155,30 @@ describe('calcularValorIncapacidad', () => {
   it('un solo día de incapacidad', () => {
     const valor = calcularValorIncapacidad(1750905, 0.6667, 1);
     expect(valor).toBeCloseTo(38910.95, 1);
+  });
+});
+
+describe('calcularDeducciones', () => {
+  it('reproduce el ejemplo de Carolina Duque (nómina manual de referencia, quincena sept. 2026)', () => {
+    // Total devengado $1.175.000 (sin incapacidad ni recargos) -> EPS y
+    // AFP de $47.000 cada una en la nómina manual.
+    const d = calcularDeducciones(1175000, 0.04, 0.04);
+    expect(d.deduccionEPS).toBe(47000);
+    expect(d.deduccionAFP).toBe(47000);
+    expect(d.totalDeducciones).toBe(94000);
+  });
+
+  it('reproduce el ejemplo de Daniel Aristizábal (con incapacidad y recargos)', () => {
+    // Total devengado $952.023,744... -> EPS y AFP de $38.080,95 cada una.
+    const d = calcularDeducciones(952023.744, 0.04, 0.04);
+    expect(d.deduccionEPS).toBeCloseTo(38080.95, 1);
+    expect(d.deduccionAFP).toBeCloseTo(38080.95, 1);
+    expect(d.totalDeducciones).toBeCloseTo(76161.9, 1);
+  });
+
+  it('devuelve 0 si el total devengado es 0', () => {
+    const d = calcularDeducciones(0, 0.04, 0.04);
+    expect(d.totalDeducciones).toBe(0);
   });
 });
 

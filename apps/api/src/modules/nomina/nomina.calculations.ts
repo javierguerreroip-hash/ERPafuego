@@ -243,6 +243,31 @@ export function calcularValorIncapacidad(
   return round2(salarioDiario * porcentajeIncapacidad * diasIncapacidad);
 }
 
+export interface Deducciones {
+  deduccionEPS: number;
+  deduccionAFP: number;
+  totalDeducciones: number;
+}
+
+// Deducciones de EPS y AFP — confirmadas con el usuario 2026-09-15
+// comparando contra la nómina manual que manejaban en Excel: 4% cada
+// una sobre el total devengado (horas + incapacidad), SIN incluir el
+// auxilio de transporte (que nunca es base de cotización). Porcentajes
+// configurables en ParametroNomina, nunca fijos en el código.
+export function calcularDeducciones(
+  totalDevengado: number,
+  porcentajeEPS: number,
+  porcentajeAFP: number,
+): Deducciones {
+  const deduccionEPS = round2(totalDevengado * porcentajeEPS);
+  const deduccionAFP = round2(totalDevengado * porcentajeAFP);
+  return {
+    deduccionEPS,
+    deduccionAFP,
+    totalDeducciones: round2(deduccionEPS + deduccionAFP),
+  };
+}
+
 // Auxilio de transporte prorrateado por días trabajados (no por horas) —
 // es un beneficio no salarial que se paga por día laborado, no por hora.
 export function calcularAuxilioTransporte(

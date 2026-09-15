@@ -35,6 +35,8 @@ function toForm(p: ParametroNominaDTO): ParametroNominaInput {
     recargoExtraDiurnaDomFestiva: p.recargoExtraDiurnaDomFestiva,
     recargoExtraNocturnaDomFestiva: p.recargoExtraNocturnaDomFestiva,
     porcentajeIncapacidad: p.porcentajeIncapacidad,
+    porcentajeEPS: p.porcentajeEPS,
+    porcentajeAFP: p.porcentajeAFP,
   };
 }
 
@@ -227,6 +229,42 @@ export function NominaParametrosPage() {
                   <span className="text-sm text-neutral-500">%</span>
                 </div>
               </Field>
+
+              <p className="mb-2 mt-4 text-sm font-medium text-neutral-700">Deducciones</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="% EPS sobre el total devengado">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      value={Math.round(form.porcentajeEPS * 10000) / 100}
+                      onChange={(e) =>
+                        setForm({ ...form, porcentajeEPS: Number(e.target.value) / 100 })
+                      }
+                      className={inputClass}
+                    />
+                    <span className="text-sm text-neutral-500">%</span>
+                  </div>
+                </Field>
+                <Field label="% AFP sobre el total devengado">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      value={Math.round(form.porcentajeAFP * 10000) / 100}
+                      onChange={(e) =>
+                        setForm({ ...form, porcentajeAFP: Number(e.target.value) / 100 })
+                      }
+                      className={inputClass}
+                    />
+                    <span className="text-sm text-neutral-500">%</span>
+                  </div>
+                </Field>
+              </div>
 
               <div className="mt-4 flex items-center justify-between border-t pt-4">
                 {saved && <p className="text-sm text-green-600">Guardado correctamente.</p>}
