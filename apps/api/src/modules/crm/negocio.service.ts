@@ -122,15 +122,29 @@ export async function perderNegocio(id: string) {
   return serialize(negocio);
 }
 
-// Busca un Cliente existente por identificación (si se dio) o por nombre
-// exacto; si no existe ninguno, lo crea — evita doble digitación y evita
-// duplicar clientes ya registrados en el Módulo 1. Recibe `tx` porque
-// corre dentro de la transacción de ganarNegocio.
+// Valores que el equipo comercial escribe en "Cédula/NIT" cuando en
+// realidad no tienen el dato (no significan "es la misma persona que
+// otro cliente con el mismo texto"). Bug real detectado 2026-09-15: dos
+// clientes distintos con identificación "n/a" quedaron fusionados en uno
+// solo porque el matching los trataba como la misma identificación.
+const IDENTIFICACIONES_NO_VALIDAS = new Set([
+  '', 'n/a', 'na', 'no aplica', 'no tiene', 'ninguna', 'ninguno', '-', '0',
+]);
+
+function esIdentificacionValida(identificacion: string): boolean {
+  return !IDENTIFICACIONES_NO_VALIDAS.has(identificacion.trim().toLowerCase());
+}
+
+// Busca un Cliente existente por identificación (si se dio y es un dato
+// real, no un placeholder tipo "n/a") o por nombre exacto; si no existe
+// ninguno, lo crea — evita doble digitación y evita duplicar clientes ya
+// registrados en el Módulo 1. Recibe `tx` porque corre dentro de la
+// transacción de ganarNegocio.
 async function resolverOCrearCliente(
   tx: Prisma.TransactionClient,
   input: { clienteNombre: string; clienteIdentificacion: string; telefono: string },
 ) {
-  if (input.clienteIdentificacion) {
+  if (esIdentificacionValida(input.clienteIdentificacion)) {
     const porIdentificacion = await tx.cliente.findFirst({
       where: { identificacion: input.clienteIdentificacion },
     });
