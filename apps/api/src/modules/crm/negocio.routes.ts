@@ -8,6 +8,7 @@ import {
   getVendedoresHandler,
   listHandler,
   perderHandler,
+  updateGanadoHandler,
   updateHandler,
 } from './negocio.controller.js';
 
@@ -23,6 +24,7 @@ negocioRouter.get('/vendedores', getVendedoresHandler);
 negocioRouter.get('/', listHandler);
 negocioRouter.post('/', createHandler);
 negocioRouter.put('/:id', updateHandler);
+negocioRouter.put('/:id/venta', updateGanadoHandler);
 negocioRouter.patch('/:id/perder', perderHandler);
 negocioRouter.patch('/:id/ganar', ganarHandler);
 negocioRouter.delete('/:id', deleteHandler);

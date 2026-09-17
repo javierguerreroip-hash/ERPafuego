@@ -1,5 +1,10 @@
-import type { Negocio, Prisma, User } from '@prisma/client';
-import { ETAPAS_NEGOCIO, type GanarNegocioInput, type NegocioInput } from '@erp-afuego/shared';
+import type { AgendaEvento, Evento, Negocio, Prisma, User } from '@prisma/client';
+import {
+  ETAPAS_NEGOCIO,
+  type GanarNegocioInput,
+  type NegocioGanadoUpdateInput,
+  type NegocioInput,
+} from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import { calcularValorDespuesImpuestos } from '../eventos/evento.calculations.js';
@@ -9,9 +14,17 @@ function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-type NegocioWithVendedor = Negocio & { vendedor: Pick<User, 'name'> };
+const includeRelations = {
+  vendedor: { select: { name: true } },
+  evento: { include: { agenda: true } },
+} satisfies Prisma.NegocioInclude;
 
-function serialize(negocio: NegocioWithVendedor) {
+type NegocioWithRelations = Negocio & {
+  vendedor: Pick<User, 'name'>;
+  evento: (Evento & { agenda: AgendaEvento | null }) | null;
+};
+
+function serialize(negocio: NegocioWithRelations) {
   return {
     id: negocio.id,
     clienteNombre: negocio.clienteNombre,
@@ -24,6 +37,9 @@ function serialize(negocio: NegocioWithVendedor) {
     eventoId: negocio.eventoId,
     vendedorId: negocio.vendedorId,
     vendedorNombre: negocio.vendedor.name,
+    numeroPersonas: negocio.evento?.numeroPersonas ?? null,
+    horaServicio: negocio.evento?.agenda?.horaServicio ?? null,
+    direccion: negocio.evento?.agenda?.direccion ?? null,
     createdAt: negocio.createdAt.toISOString(),
     updatedAt: negocio.updatedAt.toISOString(),
   };
@@ -81,7 +97,7 @@ export async function getResumenCrm(start: Date, end: Date) {
 
 export async function listNegocios() {
   const negocios = await prisma.negocio.findMany({
-    include: { vendedor: { select: { name: true } } },
+    include: includeRelations,
     orderBy: { createdAt: 'desc' },
   });
   return negocios.map(serialize);
@@ -99,7 +115,7 @@ export async function createNegocio(input: NegocioInput) {
       valorAntesImpuestos: input.valorAntesImpuestos,
       vendedorId: input.vendedorId,
     },
-    include: { vendedor: { select: { name: true } } },
+    include: includeRelations,
   });
   return serialize(negocio);
 }
@@ -129,7 +145,7 @@ export async function updateNegocio(id: string, input: NegocioInput) {
       valorAntesImpuestos: input.valorAntesImpuestos,
       vendedorId: input.vendedorId,
     },
-    include: { vendedor: { select: { name: true } } },
+    include: includeRelations,
   });
   return serialize(negocio);
 }
@@ -139,7 +155,7 @@ export async function perderNegocio(id: string) {
   const negocio = await prisma.negocio.update({
     where: { id },
     data: { etapa: 'PERDIDO' },
-    include: { vendedor: { select: { name: true } } },
+    include: includeRelations,
   });
   return serialize(negocio);
 }
@@ -242,7 +258,71 @@ export async function ganarNegocio(id: string, input: GanarNegocioInput, registe
     return tx.negocio.update({
       where: { id },
       data: { etapa: 'GANADO', eventoId: evento.id },
-      include: { vendedor: { select: { name: true } } },
+      include: includeRelations,
+    });
+  });
+
+  return serialize(actualizado);
+}
+
+// Edita un negocio ya "Ganado" — el cliente pide cambios (invitados,
+// valor, fecha, hora, dirección) después de aprobar la cotización. A
+// diferencia de la edición normal (solo Cotizado), esta actualiza a la
+// vez el Negocio, la Venta (Evento del Módulo 3, incluyendo el
+// recálculo del valor después de impuestos con la tarifa ya asignada) y
+// la Agenda operativa — en una sola transacción, para que ningún módulo
+// se quede desactualizado. Cartera, Dashboard y Estado de Resultados no
+// necesitan tocarse aparte: leen el valor del Evento en vivo.
+export async function updateNegocioGanado(id: string, input: NegocioGanadoUpdateInput) {
+  const negocio = await prisma.negocio.findUnique({ where: { id } });
+  if (!negocio) {
+    throw new HttpError(404, 'Negocio no encontrado');
+  }
+  if (negocio.etapa !== 'GANADO' || !negocio.eventoId) {
+    throw new HttpError(409, 'Solo se puede editar así un negocio ya ganado, con venta asociada');
+  }
+
+  const evento = await prisma.evento.findUnique({ where: { id: negocio.eventoId } });
+  if (!evento) {
+    throw new HttpError(404, 'La venta asociada a este negocio no existe');
+  }
+
+  const fechaEvento = new Date(input.fechaEvento);
+  let valorDespuesImpuestos = input.valorAntesImpuestos;
+  if (evento.taxRateId) {
+    const taxRate = await prisma.taxRate.findUnique({ where: { id: evento.taxRateId } });
+    if (taxRate) {
+      valorDespuesImpuestos = calcularValorDespuesImpuestos(
+        input.valorAntesImpuestos,
+        Number(taxRate.rate),
+      );
+    }
+  }
+
+  const eventoId = negocio.eventoId;
+  const actualizado = await prisma.$transaction(async (tx) => {
+    await tx.evento.update({
+      where: { id: eventoId },
+      data: {
+        fecha: fechaEvento,
+        numeroPersonas: input.numeroPersonas,
+        valorAntesImpuestos: input.valorAntesImpuestos,
+        valorDespuesImpuestos,
+      },
+    });
+
+    // updateMany (no update) porque el registro de Agenda pudo haberse
+    // borrado por separado desde ese módulo — si no existe, simplemente
+    // no hay nada que sincronizar ahí.
+    await tx.agendaEvento.updateMany({
+      where: { eventoId },
+      data: { horaServicio: input.horaServicio, direccion: input.direccion },
+    });
+
+    return tx.negocio.update({
+      where: { id },
+      data: { fechaEvento, valorAntesImpuestos: input.valorAntesImpuestos },
+      include: includeRelations,
     });
   });
 

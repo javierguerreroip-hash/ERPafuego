@@ -3,10 +3,12 @@ import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recha
 import {
   ETAPAS_NEGOCIO,
   ETAPA_NEGOCIO_LABELS,
+  negocioGanadoUpdateSchema,
   negocioSchema,
   type CrmResumenDTO,
   type EtapaNegocio,
   type NegocioDTO,
+  type NegocioGanadoUpdateInput,
   type NegocioInput,
   type OpcionMenuDTO,
   type TaxRateDTO,
@@ -64,6 +66,11 @@ export function CRMPage() {
 
   const [ganarFor, setGanarFor] = useState<NegocioDTO | null>(null);
   const [deletingNegocio, setDeletingNegocio] = useState<NegocioDTO | null>(null);
+
+  const [editingGanado, setEditingGanado] = useState<NegocioDTO | null>(null);
+  const [ganadoForm, setGanadoForm] = useState<NegocioGanadoUpdateInput | null>(null);
+  const [ganadoFormError, setGanadoFormError] = useState<string | null>(null);
+  const [ganadoSubmitting, setGanadoSubmitting] = useState(false);
 
   const resumenFilter = usePeriodFilter('MES');
   const { start: resumenStart, end: resumenEnd } = resumenFilter;
@@ -158,6 +165,43 @@ export function CRMPage() {
       setFormError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function openEditGanado(negocio: NegocioDTO) {
+    setEditingGanado(negocio);
+    setGanadoForm({
+      valorAntesImpuestos: negocio.valorAntesImpuestos,
+      numeroPersonas: negocio.numeroPersonas ?? 1,
+      fechaEvento: negocio.fechaEvento.slice(0, 10),
+      horaServicio: negocio.horaServicio ?? '',
+      direccion: negocio.direccion ?? '',
+    });
+    setGanadoFormError(null);
+  }
+
+  async function handleSubmitGanado() {
+    if (!editingGanado || !ganadoForm) return;
+    setGanadoFormError(null);
+    const parsed = negocioGanadoUpdateSchema.safeParse(ganadoForm);
+    if (!parsed.success) {
+      setGanadoFormError(parsed.error.issues[0]?.message ?? 'Datos inválidos');
+      return;
+    }
+    setGanadoSubmitting(true);
+    try {
+      await apiFetch(`/negocios/${editingGanado.id}/venta`, {
+        method: 'PUT',
+        body: parsed.data,
+        token,
+      });
+      setEditingGanado(null);
+      setGanadoForm(null);
+      await loadAll();
+    } catch (err) {
+      setGanadoFormError(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setGanadoSubmitting(false);
     }
   }
 
@@ -297,6 +341,17 @@ export function CRMPage() {
                         </div>
                       )}
 
+                      {etapa === 'GANADO' && (
+                        <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                          <button
+                            onClick={() => openEditGanado(n)}
+                            className="text-orange-600 hover:underline"
+                          >
+                            Editar cambios del cliente
+                          </button>
+                        </div>
+                      )}
+
                       {etapa !== 'GANADO' && (
                         <div className="mt-2 flex gap-3 text-xs">
                           <button
@@ -403,6 +458,87 @@ export function CRMPage() {
                 className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
               >
                 {submitting ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {editingGanado && ganadoForm && (
+        <Modal
+          title="Editar cambios del cliente (negocio ganado)"
+          onClose={() => setEditingGanado(null)}
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-neutral-600">
+              Esto actualiza a la vez la Venta y la Agenda de "{editingGanado.clienteNombre}" — el
+              cliente pidió cambios después de aprobar.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Fecha del evento">
+                <input
+                  type="date"
+                  value={ganadoForm.fechaEvento}
+                  onChange={(e) => setGanadoForm({ ...ganadoForm, fechaEvento: e.target.value })}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Número de personas">
+                <input
+                  type="number"
+                  min={1}
+                  value={ganadoForm.numeroPersonas}
+                  onChange={(e) =>
+                    setGanadoForm({ ...ganadoForm, numeroPersonas: Number(e.target.value) })
+                  }
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+            <Field label="Valor antes de impuestos">
+              <input
+                type="number"
+                min={0}
+                value={ganadoForm.valorAntesImpuestos}
+                onChange={(e) =>
+                  setGanadoForm({ ...ganadoForm, valorAntesImpuestos: Number(e.target.value) })
+                }
+                className={inputClass}
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Hora del servicio">
+                <input
+                  value={ganadoForm.horaServicio}
+                  onChange={(e) => setGanadoForm({ ...ganadoForm, horaServicio: e.target.value })}
+                  className={inputClass}
+                  placeholder="Ej. 6:00 p.m."
+                />
+              </Field>
+              <Field label="Dirección">
+                <input
+                  value={ganadoForm.direccion}
+                  onChange={(e) => setGanadoForm({ ...ganadoForm, direccion: e.target.value })}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+
+            {ganadoFormError && <p className="text-sm text-red-600">{ganadoFormError}</p>}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setEditingGanado(null)}
+                className="rounded-md px-4 py-2 text-sm text-neutral-600"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmitGanado}
+                disabled={ganadoSubmitting}
+                className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+              >
+                {ganadoSubmitting ? 'Guardando…' : 'Guardar cambios'}
               </button>
             </div>
           </div>

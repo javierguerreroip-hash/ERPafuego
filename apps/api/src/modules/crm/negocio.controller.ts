@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { ganarNegocioSchema, negocioSchema } from '@erp-afuego/shared';
+import { ganarNegocioSchema, negocioGanadoUpdateSchema, negocioSchema } from '@erp-afuego/shared';
 import { HttpError } from '../../middleware/error.middleware.js';
 import { assertDeleteAuthorized } from '../../middleware/delete-auth.js';
 import * as negocioService from './negocio.service.js';
@@ -51,6 +51,15 @@ export async function updateHandler(req: Request, res: Response, next: NextFunct
   try {
     const input = negocioSchema.parse(req.body);
     res.json(await negocioService.updateNegocio(req.params.id, input));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateGanadoHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const input = negocioGanadoUpdateSchema.parse(req.body);
+    res.json(await negocioService.updateNegocioGanado(req.params.id, input));
   } catch (error) {
     next(error);
   }
