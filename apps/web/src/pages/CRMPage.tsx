@@ -123,6 +123,15 @@ export function CRMPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Refresco combinado tras crear/editar/ganar/perder/eliminar un negocio:
+  // el Kanban (loadAll) y la gráfica de resumen (loadResumen) son datos
+  // independientes en el servidor, así que una acción que cambia un
+  // negocio debe refrescar ambos — si no, la gráfica se queda mostrando
+  // el estado de antes de la acción hasta que se toque el filtro de período.
+  async function refresh() {
+    await Promise.all([loadAll(), loadResumen()]);
+  }
+
   function openCreate() {
     setEditing(null);
     setForm(emptyForm(user?.id ?? ''));
@@ -160,7 +169,7 @@ export function CRMPage() {
         await apiFetch('/negocios', { method: 'POST', body: parsed.data, token });
       }
       setShowForm(false);
-      await loadAll();
+      await refresh();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
@@ -197,7 +206,7 @@ export function CRMPage() {
       });
       setEditingGanado(null);
       setGanadoForm(null);
-      await loadAll();
+      await refresh();
     } catch (err) {
       setGanadoFormError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
@@ -208,7 +217,7 @@ export function CRMPage() {
   async function handlePerder(negocio: NegocioDTO) {
     try {
       await apiFetch(`/negocios/${negocio.id}/perder`, { method: 'PATCH', token });
-      await loadAll();
+      await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al marcar como perdido');
     }
@@ -551,7 +560,7 @@ export function CRMPage() {
           opcionesMenu={opcionesMenu}
           taxRates={taxRates}
           onClose={() => setGanarFor(null)}
-          onGanado={loadAll}
+          onGanado={refresh}
         />
       )}
 
@@ -566,7 +575,7 @@ export function CRMPage() {
               token,
             });
             setDeletingNegocio(null);
-            await loadAll();
+            await refresh();
           }}
           onClose={() => setDeletingNegocio(null)}
         />
