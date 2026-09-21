@@ -50,6 +50,22 @@ export async function createCompraBatch(input: CompraBatchInput, registeredById:
     throw new HttpError(404, 'Proveedor no encontrado');
   }
 
+  // No se puede repetir un número de factura para el mismo proveedor —
+  // evita registrar la misma factura dos veces por error. No aplica entre
+  // proveedores distintos (cada uno numera sus facturas de forma
+  // independiente). Los varios ítems de ESTA factura (input.items) sí
+  // comparten el mismo número entre sí — eso es correcto, es una sola
+  // factura con varias líneas.
+  const facturaExistente = await prisma.compra.findFirst({
+    where: { proveedorId: input.proveedorId, facturaNumero: input.facturaNumero },
+  });
+  if (facturaExistente) {
+    throw new HttpError(
+      409,
+      `Ya existe una compra registrada con la factura "${input.facturaNumero}" para este proveedor.`,
+    );
+  }
+
   const fecha = new Date(input.fecha);
   const fechaVencimiento =
     input.condicionPago === 'CREDITO' && input.fechaVencimiento
