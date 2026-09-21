@@ -1,9 +1,12 @@
 import { z } from 'zod';
 
-// Módulo — CRM de Ventas (docs/spec_erp_afuego.md). "Cliente" aquí es
-// texto libre (nombre, identificación opcional, teléfono) porque el CRM
-// gestiona prospectos que todavía pueden no existir como Cliente
-// registrado en el Módulo 1 — se busca/crea automáticamente al ganar.
+// Módulo — CRM de Ventas (docs/spec_erp_afuego.md). El cliente de un
+// negocio se selecciona entre los ya creados en el Módulo 1 (Clientes) —
+// no se puede escribir uno nuevo desde el CRM (decisión 2026-09-21, para
+// evitar duplicados/errores de digitación). clienteNombre/
+// clienteIdentificacion/telefono en el DTO son una copia tomada del
+// Cliente al crear/editar el negocio (se recalculan si cambias el
+// cliente seleccionado).
 export const ETAPAS_NEGOCIO = ['COTIZADO', 'GANADO', 'PERDIDO'] as const;
 
 export type EtapaNegocio = (typeof ETAPAS_NEGOCIO)[number];
@@ -15,9 +18,7 @@ export const ETAPA_NEGOCIO_LABELS: Record<EtapaNegocio, string> = {
 };
 
 export const negocioSchema = z.object({
-  clienteNombre: z.string().min(1, 'El nombre o razón social es requerido').max(200),
-  clienteIdentificacion: z.string().max(50).default(''),
-  telefono: z.string().max(50).default(''),
+  clienteId: z.string().min(1, 'Selecciona un cliente'),
   nombreEvento: z.string().min(1, 'Describe el evento').max(200),
   fechaEvento: z.string().min(1, 'La fecha del evento es requerida'),
   valorAntesImpuestos: z.number().nonnegative('El valor no puede ser negativo'),
@@ -26,8 +27,18 @@ export const negocioSchema = z.object({
 
 export type NegocioInput = z.infer<typeof negocioSchema>;
 
-export interface NegocioDTO extends NegocioInput {
+export interface NegocioDTO {
   id: string;
+  // Null solo en negocios creados antes de exigir clienteId
+  // (2026-09-21) que aún no se han editado — todo negocio nuevo lo trae.
+  clienteId: string | null;
+  clienteNombre: string;
+  clienteIdentificacion: string;
+  telefono: string;
+  nombreEvento: string;
+  fechaEvento: string;
+  valorAntesImpuestos: number;
+  vendedorId: string;
   etapa: EtapaNegocio;
   eventoId: string | null;
   vendedorNombre: string;

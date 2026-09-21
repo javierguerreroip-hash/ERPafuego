@@ -27,6 +27,7 @@ type NegocioWithRelations = Negocio & {
 function serialize(negocio: NegocioWithRelations) {
   return {
     id: negocio.id,
+    clienteId: negocio.clienteId,
     clienteNombre: negocio.clienteNombre,
     clienteIdentificacion: negocio.clienteIdentificacion,
     telefono: negocio.telefono,
@@ -61,6 +62,20 @@ async function findVendedorOrThrow(vendedorId: string) {
     throw new HttpError(404, 'Vendedor no encontrado o inactivo');
   }
   return vendedor;
+}
+
+// El CRM solo permite seleccionar clientes ya creados en el Módulo 1 —
+// no se puede escribir uno nuevo desde aquí (decisión 2026-09-21, evita
+// duplicados y errores de digitación como el de identificación "n/a").
+async function findClienteOrThrow(clienteId: string) {
+  const cliente = await prisma.cliente.findUnique({ where: { id: clienteId } });
+  if (!cliente || !cliente.active) {
+    throw new HttpError(
+      404,
+      'Cliente no encontrado o inactivo. Créalo primero en el módulo de Clientes.',
+    );
+  }
+  return cliente;
 }
 
 // Resumen para la gráfica circular del CRM: valor + cantidad por etapa
@@ -105,11 +120,13 @@ export async function listNegocios() {
 
 export async function createNegocio(input: NegocioInput) {
   await findVendedorOrThrow(input.vendedorId);
+  const cliente = await findClienteOrThrow(input.clienteId);
   const negocio = await prisma.negocio.create({
     data: {
-      clienteNombre: input.clienteNombre,
-      clienteIdentificacion: input.clienteIdentificacion,
-      telefono: input.telefono,
+      clienteId: cliente.id,
+      clienteNombre: cliente.name,
+      clienteIdentificacion: cliente.identificacion,
+      telefono: cliente.telefono,
       nombreEvento: input.nombreEvento,
       fechaEvento: new Date(input.fechaEvento),
       valorAntesImpuestos: input.valorAntesImpuestos,
@@ -134,12 +151,14 @@ async function findNegocioCotizadoOrThrow(id: string) {
 export async function updateNegocio(id: string, input: NegocioInput) {
   await findNegocioCotizadoOrThrow(id);
   await findVendedorOrThrow(input.vendedorId);
+  const cliente = await findClienteOrThrow(input.clienteId);
   const negocio = await prisma.negocio.update({
     where: { id },
     data: {
-      clienteNombre: input.clienteNombre,
-      clienteIdentificacion: input.clienteIdentificacion,
-      telefono: input.telefono,
+      clienteId: cliente.id,
+      clienteNombre: cliente.name,
+      clienteIdentificacion: cliente.identificacion,
+      telefono: cliente.telefono,
       nombreEvento: input.nombreEvento,
       fechaEvento: new Date(input.fechaEvento),
       valorAntesImpuestos: input.valorAntesImpuestos,
@@ -173,11 +192,12 @@ function esIdentificacionValida(identificacion: string): boolean {
   return !IDENTIFICACIONES_NO_VALIDAS.has(identificacion.trim().toLowerCase());
 }
 
-// Busca un Cliente existente por identificación (si se dio y es un dato
-// real, no un placeholder tipo "n/a") o por nombre exacto; si no existe
-// ninguno, lo crea — evita doble digitación y evita duplicar clientes ya
-// registrados en el Módulo 1. Recibe `tx` porque corre dentro de la
-// transacción de ganarNegocio.
+// Respaldo SOLO para negocios creados antes de exigir clienteId
+// (2026-09-21): busca un Cliente existente por identificación (si se dio
+// y es un dato real, no un placeholder tipo "n/a") o por nombre exacto;
+// si no existe ninguno, lo crea. Los negocios nuevos ya traen clienteId
+// directo (ver ganarNegocio) y no pasan por aquí. Recibe `tx` porque
+// corre dentro de la transacción de ganarNegocio.
 async function resolverOCrearCliente(
   tx: Prisma.TransactionClient,
   input: { clienteNombre: string; clienteIdentificacion: string; telefono: string },
@@ -203,22 +223,30 @@ async function resolverOCrearCliente(
   });
 }
 
-// Al ganar: resuelve/crea el Cliente, crea el Evento del Módulo 3 con los
-// campos que sí trae el CRM + los 2 que faltan (opción de menú, número de
-// personas — ver decisión documentada en el README), crea el registro en
-// la Agenda de Eventos (Fase 11, precargando el vendedor del negocio) y
-// vincula el negocio al evento resultante — todo en una sola transacción,
-// para no dejar un negocio "ganado" sin su evento/agenda (o registros
-// huérfanos) si algo falla a mitad de camino.
+// Al ganar: toma el Cliente ya vinculado (clienteId), crea el Evento del
+// Módulo 3 con los campos que sí trae el CRM + los 2 que faltan (opción
+// de menú, número de personas — ver decisión documentada en el README),
+// crea el registro en la Agenda de Eventos (Fase 11, precargando el
+// vendedor del negocio) y vincula el negocio al evento resultante — todo
+// en una sola transacción, para no dejar un negocio "ganado" sin su
+// evento/agenda (o registros huérfanos) si algo falla a mitad de camino.
 export async function ganarNegocio(id: string, input: GanarNegocioInput, registeredById: string) {
   const negocio = await findNegocioCotizadoOrThrow(id);
 
   const actualizado = await prisma.$transaction(async (tx) => {
-    const cliente = await resolverOCrearCliente(tx, {
-      clienteNombre: negocio.clienteNombre,
-      clienteIdentificacion: negocio.clienteIdentificacion,
-      telefono: negocio.telefono,
-    });
+    // negocio.clienteId puede ser null solo en negocios que ya existían
+    // antes de exigir la selección de cliente — para esos, se conserva el
+    // comportamiento anterior de buscar/crear por nombre/identificación.
+    const cliente = negocio.clienteId
+      ? await tx.cliente.findUnique({ where: { id: negocio.clienteId } })
+      : await resolverOCrearCliente(tx, {
+          clienteNombre: negocio.clienteNombre,
+          clienteIdentificacion: negocio.clienteIdentificacion,
+          telefono: negocio.telefono,
+        });
+    if (!cliente) {
+      throw new HttpError(404, 'Cliente no encontrado');
+    }
 
     const opcionMenu = await tx.opcionMenu.findUnique({ where: { id: input.opcionMenuId } });
     if (!opcionMenu) {

@@ -680,6 +680,15 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
 - **Auditoría:** cada compra guarda quién la registró
   (`registeredById` → `User`), siguiendo el requisito transversal de
   "historial/auditoría de cambios (quién y cuándo)".
+- **Actualización post-lanzamiento (2026-09-21):** no se puede repetir un
+  número de factura para el mismo proveedor (evita registrar la misma
+  factura dos veces por error) — la validación es por
+  `(proveedorId, facturaNumero)`, no global, porque distintos
+  proveedores numeran sus facturas de forma independiente. No es una
+  restricción a nivel de base de datos porque una factura real puede
+  traer varios artículos (varias filas de `Compra` comparten a propósito
+  el mismo número dentro de un mismo registro/lote) — la validación
+  corre antes de crear el lote, contra compras ya existentes.
 
 ### Decisiones de la Fase 3 (confirmadas contigo antes de construir)
 
@@ -937,6 +946,21 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
   Parámetros Fiscales (antes solo Administrador/Operación), porque el
   diálogo de "Ganar" los necesita para elegir la opción de menú y la
   tasa de impuesto — sin poder crear/editar ninguno de los dos.
+- **Actualización post-lanzamiento (2026-09-21):** se revirtió la
+  decisión de "cliente = texto libre" de arriba — el negocio pidió que el
+  CRM solo permita seleccionar clientes ya creados en el Módulo 1 (evita
+  duplicados y errores de digitación como el que fusionó dos clientes
+  distintos con identificación "n/a"). Se agregó `Negocio.clienteId`
+  (FK a Cliente, nullable para no romper negocios ya existentes) —
+  `clienteNombre`/`clienteIdentificacion`/`telefono` se conservan como
+  copia tomada del Cliente al crear/editar, para no tener que tocar el
+  resto del CRM, el PDF de cotización, etc. Al ganar un negocio con
+  `clienteId`, ya no se busca/crea el Cliente por nombre — se usa
+  directamente. La Cotización (ver más abajo) sigue capturando el
+  cliente como texto libre y no pasa por esta validación: sigue siendo
+  válido cotizar a alguien que todavía no es Cliente registrado; si esa
+  cotización se gana, el Cliente se resuelve con el flujo anterior
+  (busca por identificación/nombre o lo crea).
 
 ### Decisiones de la Fase 11
 

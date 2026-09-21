@@ -5,6 +5,7 @@ import {
   ETAPA_NEGOCIO_LABELS,
   negocioGanadoUpdateSchema,
   negocioSchema,
+  type ClienteDTO,
   type CrmResumenDTO,
   type EtapaNegocio,
   type NegocioDTO,
@@ -33,9 +34,7 @@ const ETAPA_COLORS: Record<EtapaNegocio, string> = {
 
 function emptyForm(vendedorId: string): NegocioInput {
   return {
-    clienteNombre: '',
-    clienteIdentificacion: '',
-    telefono: '',
+    clienteId: '',
     nombreEvento: '',
     fechaEvento: new Date().toISOString().slice(0, 10),
     valorAntesImpuestos: 0,
@@ -52,6 +51,7 @@ const COLUMN_STYLES: Record<EtapaNegocio, string> = {
 export function CRMPage() {
   const { token, user } = useAuth();
   const [negocios, setNegocios] = useState<NegocioDTO[]>([]);
+  const [clientes, setClientes] = useState<ClienteDTO[]>([]);
   const [opcionesMenu, setOpcionesMenu] = useState<OpcionMenuDTO[]>([]);
   const [taxRates, setTaxRates] = useState<TaxRateDTO[]>([]);
   const [vendedores, setVendedores] = useState<VendedorDisponibleDTO[]>([]);
@@ -101,13 +101,16 @@ export function CRMPage() {
     setLoading(true);
     setError(null);
     try {
-      const [negociosData, opcionesData, taxRatesData, vendedoresData] = await Promise.all([
-        apiFetch<NegocioDTO[]>('/negocios', { token }),
-        apiFetch<OpcionMenuDTO[]>('/opciones-menu', { token }),
-        apiFetch<TaxRateDTO[]>('/tax-rates', { token }),
-        apiFetch<VendedorDisponibleDTO[]>('/negocios/vendedores', { token }),
-      ]);
+      const [negociosData, clientesData, opcionesData, taxRatesData, vendedoresData] =
+        await Promise.all([
+          apiFetch<NegocioDTO[]>('/negocios', { token }),
+          apiFetch<ClienteDTO[]>('/clientes', { token }),
+          apiFetch<OpcionMenuDTO[]>('/opciones-menu', { token }),
+          apiFetch<TaxRateDTO[]>('/tax-rates', { token }),
+          apiFetch<VendedorDisponibleDTO[]>('/negocios/vendedores', { token }),
+        ]);
       setNegocios(negociosData);
+      setClientes(clientesData.filter((c) => c.active));
       setOpcionesMenu(opcionesData.filter((o) => o.active));
       setTaxRates(taxRatesData.filter((t) => t.active));
       setVendedores(vendedoresData);
@@ -142,9 +145,7 @@ export function CRMPage() {
   function openEdit(negocio: NegocioDTO) {
     setEditing(negocio);
     setForm({
-      clienteNombre: negocio.clienteNombre,
-      clienteIdentificacion: negocio.clienteIdentificacion,
-      telefono: negocio.telefono,
+      clienteId: negocio.clienteId ?? '',
       nombreEvento: negocio.nombreEvento,
       fechaEvento: negocio.fechaEvento.slice(0, 10),
       valorAntesImpuestos: negocio.valorAntesImpuestos,
@@ -383,29 +384,27 @@ export function CRMPage() {
       {showForm && (
         <Modal title={editing ? 'Editar negocio' : 'Nuevo negocio'} onClose={() => setShowForm(false)}>
           <div className="space-y-3">
-            <Field label="Nombre o razón social del cliente">
-              <input
-                value={form.clienteNombre}
-                onChange={(e) => setForm({ ...form, clienteNombre: e.target.value })}
+            <Field label="Cliente">
+              <select
+                value={form.clienteId}
+                onChange={(e) => setForm({ ...form, clienteId: e.target.value })}
                 className={inputClass}
-              />
+              >
+                <option value="" disabled>
+                  Selecciona un cliente…
+                </option>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {clientes.length === 0 && (
+                <p className="mt-1 text-xs text-neutral-400">
+                  No hay clientes creados todavía — créalo primero en el módulo de Clientes.
+                </p>
+              )}
             </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Cédula/NIT (opcional)">
-                <input
-                  value={form.clienteIdentificacion}
-                  onChange={(e) => setForm({ ...form, clienteIdentificacion: e.target.value })}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Teléfono">
-                <input
-                  value={form.telefono}
-                  onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                  className={inputClass}
-                />
-              </Field>
-            </div>
             <Field label="Evento">
               <input
                 value={form.nombreEvento}
