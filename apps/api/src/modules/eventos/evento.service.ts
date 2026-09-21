@@ -5,6 +5,7 @@ import { HttpError } from '../../middleware/error.middleware.js';
 import {
   calcularCostoPorcentaje,
   calcularCostoTotal,
+  calcularCostoUnitarioPromedio,
   calcularSubtotalConsumo,
   calcularUtilidadOperacional,
   calcularValorDespuesImpuestos,
@@ -181,7 +182,17 @@ export async function addConsumo(eventoId: string, input: EventoConsumoInput) {
     throw new HttpError(404, 'Artículo no encontrado');
   }
 
-  const unitCost = Number(articulo.lastPurchasePrice);
+  // Costo del consumo = promedio entre el último precio de compra y el
+  // costo del inventario inicial más reciente ingresado para el artículo
+  // (pedido por el negocio, ver evento.calculations.ts).
+  const ultimoInventario = await prisma.inventarioInicial.findFirst({
+    where: { articuloId: input.articuloId },
+    orderBy: { fecha: 'desc' },
+  });
+  const unitCost = calcularCostoUnitarioPromedio(
+    Number(articulo.lastPurchasePrice),
+    ultimoInventario ? Number(ultimoInventario.unitCost) : null,
+  );
   const subtotal = calcularSubtotalConsumo(input.quantity, unitCost);
 
   const consumo = await prisma.eventoConsumo.create({

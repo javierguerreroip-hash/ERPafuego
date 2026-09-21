@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calcularCostoPorcentaje,
   calcularCostoTotal,
+  calcularCostoUnitarioPromedio,
   calcularSubtotalConsumo,
   calcularUtilidadOperacional,
   calcularValorDespuesImpuestos,
@@ -82,5 +83,23 @@ describe('calcularSubtotalConsumo', () => {
 
   it('devuelve 0 si el artículo aún no tiene precio de compra registrado', () => {
     expect(calcularSubtotalConsumo(10, 0)).toBe(0);
+  });
+});
+
+describe('calcularCostoUnitarioPromedio', () => {
+  it('promedia el último precio de compra con el costo del inventario inicial', () => {
+    expect(calcularCostoUnitarioPromedio(10000, 12000)).toBe(11000);
+  });
+
+  it('usa solo el último precio de compra si el artículo no tiene inventario inicial registrado', () => {
+    expect(calcularCostoUnitarioPromedio(10000, null)).toBe(10000);
+  });
+
+  it('redondea a 2 decimales', () => {
+    expect(calcularCostoUnitarioPromedio(10000, 10001)).toBe(10000.5);
+  });
+
+  it('funciona cuando ambos precios son iguales (el promedio no cambia el costo)', () => {
+    expect(calcularCostoUnitarioPromedio(8000, 8000)).toBe(8000);
   });
 });
