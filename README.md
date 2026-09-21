@@ -248,11 +248,6 @@ Acceso restringido a los roles Administrador y Operación.
   inmediato en el tablero del CRM sin doble digitación. El flujo
   Cotizado → Ganado sigue siendo el mismo de la Fase 10 (con su
   integración a Agenda de la Fase 11, ver arriba).
-- **`vendedorNombre` (quién firma el PDF) es independiente de
-  `vendedorId` del Negocio** (quién lo registró en el sistema): la firma
-  es una lista fija de 3 vendedores (Carlina Duque, Javier Guerrero,
-  Sergio Restrepo) pedida explícitamente por el negocio, no
-  necesariamente los mismos usuarios que inician sesión en el ERP.
 - **`items`/`logistica` se guardan como JSON**, no como tablas
   relacionales: son líneas libres propias de cada cotización (el cliente
   puede pedir algo que todavía no existe en el catálogo de Artículo/
@@ -267,6 +262,33 @@ Acceso restringido a los roles Administrador y Operación.
   pruebas unitarias en
   `apps/api/src/modules/cotizaciones/cotizacion.calculations.ts`,
   verificada contra el ejemplo exacto de la plantilla de referencia.
+- **Actualización post-lanzamiento (2026-09-21):** tres cambios pedidos
+  juntos por el negocio.
+  1. **Cliente restringido al Módulo 1**, igual que se hizo en el CRM: ya
+     no se escribe libremente, se selecciona `clienteId` entre los
+     clientes ya creados. `Cotizacion.clienteId` es FK a `Cliente`
+     (nullable, para no romper cotizaciones ya existentes);
+     `clienteNombre`/`clienteIdentificacion`/`telefono` se conservan como
+     copia tomada del Cliente, para no tocar el PDF ni el resto del
+     módulo.
+  2. **`vendedorNombre` deja de ser una lista fija de 3 nombres y pasa a
+     ser el mismo `vendedorId` (FK a `User`) que usa el CRM** — los
+     mismos vendedores (Carolina Duque, Sergio Restrepo, Oscar Guerrero,
+     Javier Guerrero, o quien más se cree con rol Ventas/Administrador)
+     sirven para firmar el PDF y para la trazabilidad. El `vendedorId`
+     del Negocio creado automáticamente ahora es ese mismo vendedor — ya
+     no siempre "quien registró la cotización en el sistema" como antes,
+     así el CRM y la Agenda (que hereda el vendedor del Negocio al
+     ganar) muestran al vendedor real de cada evento.
+  3. **Los ítems del menú (no la logística) se seleccionan de un
+     desplegable de `OpcionMenu`** en vez de escribir la descripción a
+     mano — al elegir la opción se autocompleta el valor unitario con su
+     precio configurado (sigue siendo editable, por si se negocia un
+     precio especial). La logística (cocinero, transporte, meseros…)
+     sigue siendo texto libre porque no es un ítem del catálogo de menú.
+     No fue necesario ningún cambio de esquema para esto: `items` sigue
+     guardándose como el mismo JSON de siempre, la restricción es solo
+     de interfaz.
 
 ## Eliminar ventas y artículos (post-lanzamiento, 2026-09-10)
 

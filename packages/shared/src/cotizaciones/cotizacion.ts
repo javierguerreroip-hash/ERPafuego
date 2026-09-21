@@ -3,10 +3,10 @@ import { z } from 'zod';
 // Módulo — Cotizaciones (post-lanzamiento, 2026-09-10). Genera el
 // documento comercial exportable a PDF con el diseño de la plantilla de
 // A Fuego, e integra con el CRM (Fase 10): al guardar una cotización se
-// crea automáticamente un Negocio en etapa COTIZADO.
-export const COTIZACION_VENDEDORES = ['Carlina Duque', 'Javier Guerrero', 'Sergio Restrepo'] as const;
-
-export type CotizacionVendedor = (typeof COTIZACION_VENDEDORES)[number];
+// crea automáticamente un Negocio en etapa COTIZADO. Desde 2026-09-21,
+// el cliente y el vendedor se seleccionan entre los ya creados en
+// Clientes y Usuarios (mismos vendedores que el CRM) — ya no son texto
+// libre ni una lista fija (ver decisión en el README).
 
 // Ilustraciones esquemáticas (blanco y negro, sin fondo) que se pueden
 // mostrar en el PDF de la cotización — mismo estilo que la plantilla de
@@ -49,14 +49,12 @@ export const cotizacionSchema = z.object({
   asunto: z.string().min(1, 'El asunto es requerido').max(200),
   lugar: z.string().min(1, 'El lugar es requerido').max(200),
   numeroPersonas: z.number().int().positive('El número de invitados debe ser mayor a 0'),
-  clienteNombre: z.string().min(1, 'El nombre del cliente es requerido').max(200),
-  clienteIdentificacion: z.string().max(50).default(''),
-  telefono: z.string().max(50).default(''),
+  clienteId: z.string().min(1, 'Selecciona un cliente'),
   items: z.array(cotizacionLineaSchema).min(1, 'Agrega al menos un ítem'),
   logistica: z.array(cotizacionLineaSchema).default([]),
   taxRateId: z.string().nullable().optional(),
   condicionesComerciales: z.string().max(2000).default(COTIZACION_CONDICIONES_DEFAULT),
-  vendedorNombre: z.enum(COTIZACION_VENDEDORES),
+  vendedorId: z.string().min(1, 'Selecciona un vendedor'),
   icono: z.enum(COTIZACION_ICONOS).nullable().optional(),
 });
 
@@ -71,10 +69,27 @@ export interface CotizacionTotales {
   total: number;
 }
 
-export interface CotizacionDTO extends CotizacionInput {
+export interface CotizacionDTO {
   id: string;
-  totales: CotizacionTotales;
+  fecha: string;
+  asunto: string;
+  lugar: string;
+  numeroPersonas: number;
+  // Null solo en cotizaciones creadas antes de exigir clienteId/vendedorId
+  // (2026-09-21) — toda cotización nueva los trae.
+  clienteId: string | null;
+  clienteNombre: string;
+  clienteIdentificacion: string;
+  telefono: string;
+  items: CotizacionLineaInput[];
+  logistica: CotizacionLineaInput[];
+  taxRateId: string | null;
   taxRateNombre: string | null;
+  condicionesComerciales: string;
+  vendedorId: string | null;
+  vendedorNombre: string;
+  icono: CotizacionIcono | null;
+  totales: CotizacionTotales;
   negocioId: string | null;
   registeredByName: string;
   createdAt: string;

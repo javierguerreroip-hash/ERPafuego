@@ -66,6 +66,7 @@ model User {
   agendaComoVendedor    AgendaEvento[]          @relation("AgendaEventoVendedor")
   abonosRegistrados    Abono[]                 @relation("AbonoRegisteredBy")
   cotizacionesRegistradas Cotizacion[]         @relation("CotizacionRegisteredBy")
+  cotizacionesComoVendedor Cotizacion[]        @relation("CotizacionVendedor")
   incapacidades           Incapacidad[]        @relation("IncapacidadEmpleado")
   incapacidadesRegistradas Incapacidad[]       @relation("IncapacidadRegisteredBy")
 
@@ -162,6 +163,7 @@ model Cliente {
   updatedAt      DateTime    @updatedAt
   eventos        Evento[]
   negocios       Negocio[]
+  cotizaciones   Cotizacion[]
 
   @@map("clientes")
 }
@@ -562,11 +564,14 @@ model Abono {
 // como JSON porque son líneas libres propias de esta cotización (no
 // referencian Articulo/OpcionMenu — el cliente puede pedir algo que
 // todavía no existe en el catálogo), no un catálogo que otro módulo
-// deba consultar. vendedorNombre es solo el nombre que firma el
-// documento (lista fija: Carlina Duque, Javier Guerrero, Sergio
-// Restrepo) — independiente de vendedorId en Negocio, que sigue
-// significando "qué usuario del sistema registró el negocio" igual que
-// en el resto del CRM.
+// deba consultar. clienteId/vendedorId son la fuente de verdad desde
+// 2026-09-21 (ver decisión en el README) — clienteNombre/
+// clienteIdentificacion/telefono/vendedorNombre quedan como copia
+// tomada del Cliente/User seleccionado, por compatibilidad con el PDF y
+// reportes existentes. vendedorId ahora es el mismo usuario que queda
+// como vendedor del Negocio (antes era siempre quien registraba,
+// independiente de quién firmaba) — así la trazabilidad del CRM
+// muestra al vendedor real.
 model Cotizacion {
   id                     String      @id @default(uuid())
   fecha                  DateTime
@@ -576,12 +581,16 @@ model Cotizacion {
   clienteNombre          String
   clienteIdentificacion  String      @default("")
   telefono               String      @default("")
+  clienteId              String?
+  cliente                 Cliente?    @relation(fields: [clienteId], references: [id])
   items                  Json
   logistica              Json
   taxRateId              String?
   taxRate                TaxRate?    @relation(fields: [taxRateId], references: [id])
   condicionesComerciales String      @default("")
   vendedorNombre         String
+  vendedorId              String?
+  vendedor                 User?       @relation("CotizacionVendedor", fields: [vendedorId], references: [id])
   icono                  String?
   negocioId              String?     @unique
   negocio                Negocio?    @relation(fields: [negocioId], references: [id])

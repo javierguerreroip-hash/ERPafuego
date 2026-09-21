@@ -3,13 +3,15 @@ import {
   COTIZACION_CONDICIONES_DEFAULT,
   COTIZACION_ICONOS,
   COTIZACION_ICONO_LABELS,
-  COTIZACION_VENDEDORES,
   cotizacionSchema,
+  type ClienteDTO,
   type CotizacionDTO,
   type CotizacionIcono,
   type CotizacionInput,
   type CotizacionLineaInput,
+  type OpcionMenuDTO,
   type TaxRateDTO,
+  type VendedorDisponibleDTO,
 } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -27,14 +29,12 @@ function emptyForm(): CotizacionInput {
     asunto: '',
     lugar: '',
     numeroPersonas: 1,
-    clienteNombre: '',
-    clienteIdentificacion: '',
-    telefono: '',
+    clienteId: '',
     items: [emptyLinea()],
     logistica: [],
     taxRateId: null,
     condicionesComerciales: COTIZACION_CONDICIONES_DEFAULT,
-    vendedorNombre: COTIZACION_VENDEDORES[0],
+    vendedorId: '',
     icono: null,
   };
 }
@@ -52,6 +52,9 @@ export function CotizacionesPage() {
   const [view, setView] = useState<'list' | 'form'>('list');
   const [cotizaciones, setCotizaciones] = useState<CotizacionDTO[]>([]);
   const [taxRates, setTaxRates] = useState<TaxRateDTO[]>([]);
+  const [clientes, setClientes] = useState<ClienteDTO[]>([]);
+  const [vendedores, setVendedores] = useState<VendedorDisponibleDTO[]>([]);
+  const [opcionesMenu, setOpcionesMenu] = useState<OpcionMenuDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,12 +67,19 @@ export function CotizacionesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [cotizacionesData, taxRatesData] = await Promise.all([
-        apiFetch<CotizacionDTO[]>('/cotizaciones', { token }),
-        apiFetch<TaxRateDTO[]>('/tax-rates', { token }),
-      ]);
+      const [cotizacionesData, taxRatesData, clientesData, vendedoresData, opcionesData] =
+        await Promise.all([
+          apiFetch<CotizacionDTO[]>('/cotizaciones', { token }),
+          apiFetch<TaxRateDTO[]>('/tax-rates', { token }),
+          apiFetch<ClienteDTO[]>('/clientes', { token }),
+          apiFetch<VendedorDisponibleDTO[]>('/negocios/vendedores', { token }),
+          apiFetch<OpcionMenuDTO[]>('/opciones-menu', { token }),
+        ]);
       setCotizaciones(cotizacionesData);
       setTaxRates(taxRatesData.filter((t) => t.active));
+      setClientes(clientesData.filter((c) => c.active));
+      setVendedores(vendedoresData);
+      setOpcionesMenu(opcionesData.filter((o) => o.active));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar las cotizaciones');
     } finally {
@@ -129,12 +139,14 @@ export function CotizacionesPage() {
   }
 
   async function handleDownloadFromForm() {
+    const clienteSeleccionado = clientes.find((c) => c.id === form.clienteId);
+    const vendedorSeleccionado = vendedores.find((v) => v.id === form.vendedorId);
     await generateCotizacionPDF({
       fecha: form.fecha,
       asunto: form.asunto || 'Cotización',
       lugar: form.lugar,
       numeroPersonas: form.numeroPersonas,
-      clienteNombre: form.clienteNombre || 'cliente',
+      clienteNombre: clienteSeleccionado?.name || 'cliente',
       items: form.items,
       logistica: form.logistica,
       totales: {
@@ -146,7 +158,7 @@ export function CotizacionesPage() {
         total,
       },
       condicionesComerciales: form.condicionesComerciales,
-      vendedorNombre: form.vendedorNombre,
+      vendedorNombre: vendedorSeleccionado?.name || '',
       taxRateNombre: taxRateSeleccionada?.name ?? null,
       icono: form.icono,
     });
@@ -234,29 +246,27 @@ export function CotizacionesPage() {
 
             <div className="rounded-lg border bg-white p-4">
               <h2 className="mb-3 text-sm font-medium text-neutral-700">Cliente</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Nombre o razón social">
-                  <input
-                    value={form.clienteNombre}
-                    onChange={(e) => setForm({ ...form, clienteNombre: e.target.value })}
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Teléfono">
-                  <input
-                    value={form.telefono}
-                    onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Identificación (opcional)">
-                  <input
-                    value={form.clienteIdentificacion}
-                    onChange={(e) => setForm({ ...form, clienteIdentificacion: e.target.value })}
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
+              <Field label="Cliente">
+                <select
+                  value={form.clienteId}
+                  onChange={(e) => setForm({ ...form, clienteId: e.target.value })}
+                  className={inputClass}
+                >
+                  <option value="" disabled>
+                    Selecciona un cliente…
+                  </option>
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {clientes.length === 0 && (
+                  <p className="mt-1 text-xs text-neutral-400">
+                    No hay clientes creados todavía — créalo primero en el módulo de Clientes.
+                  </p>
+                )}
+              </Field>
             </div>
 
             <div className="rounded-lg border bg-white p-4">
@@ -270,15 +280,30 @@ export function CotizacionesPage() {
                 </button>
               </div>
               <div className="space-y-2">
-                {form.items.map((item, index) => (
+                {form.items.map((item, index) => {
+                  const opcionSeleccionada = opcionesMenu.find((o) => o.name === item.descripcion);
+                  return (
                   <div key={index} className="grid grid-cols-12 items-end gap-2">
                     <div className="col-span-6">
-                      <input
-                        value={item.descripcion}
-                        onChange={(e) => updateItem(index, { descripcion: e.target.value })}
+                      <select
+                        value={opcionSeleccionada?.id ?? ''}
+                        onChange={(e) => {
+                          const opcion = opcionesMenu.find((o) => o.id === e.target.value);
+                          if (opcion) {
+                            updateItem(index, { descripcion: opcion.name, valorUnitario: opcion.price });
+                          }
+                        }}
                         className={inputClass}
-                        placeholder="Descripción"
-                      />
+                      >
+                        <option value="" disabled>
+                          Selecciona una opción de menú…
+                        </option>
+                        {opcionesMenu.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.name} ({formatCOP(o.price)})
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="col-span-2">
                       <input
@@ -314,7 +339,8 @@ export function CotizacionesPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               <p className="mt-3 text-right text-sm font-medium text-neutral-700">
                 Sub-total: {formatCOP(subtotalItems)}
@@ -413,18 +439,16 @@ export function CotizacionesPage() {
               <div className="space-y-3">
                 <Field label="Vendedor (firma)">
                   <select
-                    value={form.vendedorNombre}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        vendedorNombre: e.target.value as CotizacionInput['vendedorNombre'],
-                      })
-                    }
+                    value={form.vendedorId}
+                    onChange={(e) => setForm({ ...form, vendedorId: e.target.value })}
                     className={inputClass}
                   >
-                    {COTIZACION_VENDEDORES.map((v) => (
-                      <option key={v} value={v}>
-                        {v}
+                    <option value="" disabled>
+                      Selecciona un vendedor…
+                    </option>
+                    {vendedores.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
                       </option>
                     ))}
                   </select>

@@ -1,4 +1,4 @@
-import type { Cotizacion, TaxRate, User } from '@prisma/client';
+import type { Cliente, Cotizacion, TaxRate, User } from '@prisma/client';
 import type { CotizacionInput, CotizacionLineaInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
@@ -20,6 +20,7 @@ function serialize(cotizacion: CotizacionWithRelations) {
     asunto: cotizacion.asunto,
     lugar: cotizacion.lugar,
     numeroPersonas: cotizacion.numeroPersonas,
+    clienteId: cotizacion.clienteId,
     clienteNombre: cotizacion.clienteNombre,
     clienteIdentificacion: cotizacion.clienteIdentificacion,
     telefono: cotizacion.telefono,
@@ -28,6 +29,7 @@ function serialize(cotizacion: CotizacionWithRelations) {
     taxRateId: cotizacion.taxRateId,
     taxRateNombre: cotizacion.taxRate?.name ?? null,
     condicionesComerciales: cotizacion.condicionesComerciales,
+    vendedorId: cotizacion.vendedorId,
     vendedorNombre: cotizacion.vendedorNombre,
     icono: cotizacion.icono as CotizacionInput['icono'],
     negocioId: cotizacion.negocioId,
@@ -57,13 +59,35 @@ export async function getCotizacion(id: string) {
   return serialize(cotizacion);
 }
 
+// El cliente y el vendedor de una cotización solo pueden ser los ya
+// creados en Clientes y Usuarios — no se escriben libremente (misma
+// decisión aplicada al CRM, 2026-09-21).
+async function findClienteOrThrow(clienteId: string): Promise<Cliente> {
+  const cliente = await prisma.cliente.findUnique({ where: { id: clienteId } });
+  if (!cliente || !cliente.active) {
+    throw new HttpError(
+      404,
+      'Cliente no encontrado o inactivo. Créalo primero en el módulo de Clientes.',
+    );
+  }
+  return cliente;
+}
+
+async function findVendedorOrThrow(vendedorId: string): Promise<User> {
+  const vendedor = await prisma.user.findUnique({ where: { id: vendedorId } });
+  if (!vendedor || !vendedor.active) {
+    throw new HttpError(404, 'Vendedor no encontrado o inactivo');
+  }
+  return vendedor;
+}
+
 // Crea la cotización y, en la misma transacción, un Negocio en etapa
 // COTIZADO vinculado a ella — así toda cotización queda visible de
-// inmediato en el CRM (integración pedida por el negocio, 2026-09-10). El
-// vendedorId del Negocio es quien está registrando la cotización en el
-// sistema (igual que en el resto del CRM); vendedorNombre en la
-// cotización es solo el nombre que firma el documento, independiente de
-// eso.
+// inmediato en el CRM (integración pedida por el negocio, 2026-09-10).
+// Desde 2026-09-21 el vendedorId del Negocio es el mismo vendedor
+// seleccionado para firmar la cotización (antes era siempre quien la
+// registraba en el sistema) — así la trazabilidad del CRM muestra al
+// vendedor real, no a quien digitó la cotización.
 export async function createCotizacion(input: CotizacionInput, registeredById: string) {
   if (input.taxRateId) {
     const taxRate = await prisma.taxRate.findUnique({ where: { id: input.taxRateId } });
@@ -71,6 +95,9 @@ export async function createCotizacion(input: CotizacionInput, registeredById: s
       throw new HttpError(404, 'Tarifa de impuesto no encontrada');
     }
   }
+
+  const cliente = await findClienteOrThrow(input.clienteId);
+  const vendedor = await findVendedorOrThrow(input.vendedorId);
 
   const totales = calcularTotalesCotizacion(
     input.items,
@@ -81,13 +108,14 @@ export async function createCotizacion(input: CotizacionInput, registeredById: s
   const cotizacion = await prisma.$transaction(async (tx) => {
     const negocio = await tx.negocio.create({
       data: {
-        clienteNombre: input.clienteNombre,
-        clienteIdentificacion: input.clienteIdentificacion,
-        telefono: input.telefono,
+        clienteId: cliente.id,
+        clienteNombre: cliente.name,
+        clienteIdentificacion: cliente.identificacion,
+        telefono: cliente.telefono,
         nombreEvento: input.asunto,
         fechaEvento: new Date(input.fecha),
         valorAntesImpuestos: totales.subtotal,
-        vendedorId: registeredById,
+        vendedorId: vendedor.id,
       },
     });
 
@@ -97,14 +125,16 @@ export async function createCotizacion(input: CotizacionInput, registeredById: s
         asunto: input.asunto,
         lugar: input.lugar,
         numeroPersonas: input.numeroPersonas,
-        clienteNombre: input.clienteNombre,
-        clienteIdentificacion: input.clienteIdentificacion,
-        telefono: input.telefono,
+        clienteId: cliente.id,
+        clienteNombre: cliente.name,
+        clienteIdentificacion: cliente.identificacion,
+        telefono: cliente.telefono,
         items: input.items,
         logistica: input.logistica,
         taxRateId: input.taxRateId ?? null,
         condicionesComerciales: input.condicionesComerciales,
-        vendedorNombre: input.vendedorNombre,
+        vendedorId: vendedor.id,
+        vendedorNombre: vendedor.name,
         icono: input.icono ?? null,
         negocioId: negocio.id,
         registeredById,
