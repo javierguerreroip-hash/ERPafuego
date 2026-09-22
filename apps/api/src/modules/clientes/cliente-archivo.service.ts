@@ -82,7 +82,13 @@ export async function getArchivoConContenido(clienteId: string, archivoId: strin
   }
   return {
     ...serialize(archivo),
-    contenidoBase64: archivo.contenido.toString('base64'),
+    // Buffer.from(...) explícito: en el entorno empaquetado de la función
+    // serverless, Prisma puede devolver la columna Bytes como Uint8Array
+    // en vez de un Buffer real — .toString('base64') en un Uint8Array
+    // plano no hace lo que parece (usa el toString() genérico del array,
+    // "137,80,78,71,..." en vez de base64), lo que rompía la descarga en
+    // el navegador (atob: "string no está correctamente codificado").
+    contenidoBase64: Buffer.from(archivo.contenido).toString('base64'),
   };
 }
 
