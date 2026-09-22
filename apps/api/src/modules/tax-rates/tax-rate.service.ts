@@ -2,6 +2,7 @@ import type { TaxRate } from '@prisma/client';
 import type { TaxRateInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { registrarCambio } from '../auditoria/auditoria.service.js';
 
 function serialize(taxRate: TaxRate) {
   return {
@@ -19,22 +20,45 @@ export async function listTaxRates() {
   return taxRates.map(serialize);
 }
 
-export async function createTaxRate(input: TaxRateInput) {
+export async function createTaxRate(input: TaxRateInput, userId: string) {
   await assertNameAvailable(input.name);
   const taxRate = await prisma.taxRate.create({ data: input });
+  await registrarCambio({
+    modelo: 'TaxRate',
+    registroId: taxRate.id,
+    registroNombre: taxRate.name,
+    accion: 'CREATE',
+    detalle: input,
+    userId,
+  });
   return serialize(taxRate);
 }
 
-export async function updateTaxRate(id: string, input: TaxRateInput) {
+export async function updateTaxRate(id: string, input: TaxRateInput, userId: string) {
   await findTaxRateOrThrow(id);
   await assertNameAvailable(input.name, id);
   const taxRate = await prisma.taxRate.update({ where: { id }, data: input });
+  await registrarCambio({
+    modelo: 'TaxRate',
+    registroId: taxRate.id,
+    registroNombre: taxRate.name,
+    accion: 'UPDATE',
+    detalle: input,
+    userId,
+  });
   return serialize(taxRate);
 }
 
-export async function setTaxRateActive(id: string, active: boolean) {
+export async function setTaxRateActive(id: string, active: boolean, userId: string) {
   await findTaxRateOrThrow(id);
   const taxRate = await prisma.taxRate.update({ where: { id }, data: { active } });
+  await registrarCambio({
+    modelo: 'TaxRate',
+    registroId: taxRate.id,
+    registroNombre: taxRate.name,
+    accion: active ? 'ACTIVATE' : 'DEACTIVATE',
+    userId,
+  });
   return serialize(taxRate);
 }
 

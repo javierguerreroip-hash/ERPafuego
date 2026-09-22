@@ -3,6 +3,7 @@ import type { User } from '@prisma/client';
 import type { UserCreateInput, UserUpdateInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { registrarCambio } from '../auditoria/auditoria.service.js';
 
 // Nunca se expone passwordHash en las respuestas de la API.
 function serialize(user: User) {
@@ -22,19 +23,36 @@ export async function listUsers() {
   return users.map(serialize);
 }
 
-export async function createUser(input: UserCreateInput) {
+export async function createUser(input: UserCreateInput, userId: string) {
   const passwordHash = await bcrypt.hash(input.password, 10);
   const user = await prisma.user.create({
     data: { name: input.name, email: input.email, role: input.role, passwordHash },
   });
+  // Nunca la contraseña en el detalle del log de auditoría, ni siquiera hasheada.
+  await registrarCambio({
+    modelo: 'Usuario',
+    registroId: user.id,
+    registroNombre: `${user.name} (${user.email})`,
+    accion: 'CREATE',
+    detalle: { name: input.name, email: input.email, role: input.role },
+    userId,
+  });
   return serialize(user);
 }
 
-export async function updateUser(id: string, input: UserUpdateInput) {
+export async function updateUser(id: string, input: UserUpdateInput, userId: string) {
   await findUserOrThrow(id);
   const user = await prisma.user.update({
     where: { id },
     data: { name: input.name, role: input.role },
+  });
+  await registrarCambio({
+    modelo: 'Usuario',
+    registroId: user.id,
+    registroNombre: `${user.name} (${user.email})`,
+    accion: 'UPDATE',
+    detalle: input,
+    userId,
   });
   return serialize(user);
 }
@@ -47,6 +65,13 @@ export async function setUserActive(id: string, active: boolean, requestedById: 
   }
   await findUserOrThrow(id);
   const user = await prisma.user.update({ where: { id }, data: { active } });
+  await registrarCambio({
+    modelo: 'Usuario',
+    registroId: user.id,
+    registroNombre: `${user.name} (${user.email})`,
+    accion: active ? 'ACTIVATE' : 'DEACTIVATE',
+    userId: requestedById,
+  });
   return serialize(user);
 }
 

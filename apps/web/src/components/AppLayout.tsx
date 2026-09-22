@@ -36,6 +36,7 @@ const NAV_ITEMS: { to: string; label: string; roles: UserRole[] }[] = [
   { to: '/agenda', label: 'Agenda de Eventos', roles: FULL_ACCESS },
   { to: '/cartera', label: 'Cartera', roles: FULL_ACCESS },
   { to: '/usuarios', label: 'Usuarios', roles: ['ADMINISTRADOR'] },
+  { to: '/auditoria', label: 'Auditoría', roles: ['ADMINISTRADOR'] },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {

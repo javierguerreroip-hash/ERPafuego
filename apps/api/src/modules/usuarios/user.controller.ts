@@ -13,7 +13,7 @@ export async function listHandler(_req: Request, res: Response, next: NextFuncti
 export async function createHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const input = userCreateSchema.parse(req.body);
-    res.status(201).json(await userService.createUser(input));
+    res.status(201).json(await userService.createUser(input, req.user!.sub));
   } catch (error) {
     next(error);
   }
@@ -22,7 +22,7 @@ export async function createHandler(req: Request, res: Response, next: NextFunct
 export async function updateHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const input = userUpdateSchema.parse(req.body);
-    res.json(await userService.updateUser(req.params.id, input));
+    res.json(await userService.updateUser(req.params.id, input, req.user!.sub));
   } catch (error) {
     next(error);
   }

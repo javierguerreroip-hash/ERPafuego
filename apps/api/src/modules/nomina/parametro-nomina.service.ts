@@ -1,6 +1,7 @@
 import type { ParametroNomina } from '@prisma/client';
 import type { ParametroNominaInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
+import { registrarCambio } from '../auditoria/auditoria.service.js';
 
 const SINGLETON_ID = 'singleton';
 
@@ -61,11 +62,19 @@ export async function getParametrosRaw() {
   });
 }
 
-export async function updateParametros(input: ParametroNominaInput) {
+export async function updateParametros(input: ParametroNominaInput, userId: string) {
   const p = await prisma.parametroNomina.upsert({
     where: { id: SINGLETON_ID },
     update: input,
     create: { id: SINGLETON_ID, ...input },
+  });
+  await registrarCambio({
+    modelo: 'ParametroNomina',
+    registroId: p.id,
+    registroNombre: 'Parámetros de nómina',
+    accion: 'UPDATE',
+    detalle: input,
+    userId,
   });
   return serialize(p);
 }

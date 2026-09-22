@@ -412,18 +412,26 @@ correcciones y una auditoría de qué falta para producción.
 **Pendiente antes de producción — hallazgos de esta auditoría que
 requieren una decisión tuya, no se corrigieron unilateralmente:**
 
-1. **Auditoría de ediciones incompleta.** Todos los registros
-   transaccionales (`Compra`, `Evento`, `Abono`, `Turno`...) guardan
-   quién los **creó**. Pero varios modelos de configuración financiera
-   (`ParametroNomina`, `TaxRate`, `DiaFestivo`) y los maestros
-   (`Articulo`, `Cliente`, `Proveedor`, `OpcionMenu`) no guardan quién
-   hizo la **última edición** — solo Prisma registra automáticamente
-   *cuándo* (`updatedAt`), no *quién*. Es un hueco real frente al
-   requisito transversal "historial/auditoría de cambios (quién y
-   cuándo)". Agregar esto a los ~15 modelos que faltan es una migración
-   de esquema no trivial — se dejó fuera de este pulido para no hacer un
-   cambio grande sin tu aprobación explícita. Si quieres, lo hago como
-   tarea aparte.
+1. ~~**Auditoría de ediciones incompleta.**~~ **Resuelto (2026-09-23).**
+   Se agregó un historial de auditoría (`AuditLog`, módulo
+   `/auditoria`, panel exclusivo de Administrador en el menú) que cubre
+   exactamente el hueco descrito: `Articulo`, `Cliente`, `Proveedor`,
+   `OpcionMenu`, `TaxRate`, `ParametroNomina`, `DiaFestivo` y `Usuario`
+   ahora registran quién creó, editó, activó/desactivó o eliminó cada
+   registro, no solo cuándo. Se implementó como llamadas explícitas a
+   `registrarCambio()` desde cada servicio afectado — se evaluó un
+   interceptor automático a nivel de Prisma (`$extends`) que capturara
+   todos los modelos sin tocar cada servicio uno por uno, pero se
+   descartó: además de duplicar lo que ya cubren `registeredById`/
+   `uploadedById` en los modelos transaccionales, un audit log escrito
+   fuera de la transacción de negocio (necesario para que el
+   interceptor funcionara igual dentro y fuera de `$transaction`)
+   podría quedar inconsistente si esa transacción fallara a mitad de
+   camino — las llamadas explícitas, aunque piden tocar más archivos,
+   se pueden verificar leyendo el código y siempre corren en el mismo
+   punto exacto donde ya se sabe que la operación tuvo éxito. Un
+   registro de auditoría que a su vez fallara nunca tumba la operación
+   real (se registra en la consola del servidor y sigue).
 2. **Verificación real pendiente.** Como se ha mencionado en cada fase:
    Node.js/PostgreSQL nunca se instalaron con éxito en esta máquina, así
    que ninguna de las 13 fases se ha probado corriendo de verdad —

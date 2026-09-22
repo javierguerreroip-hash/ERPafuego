@@ -2,6 +2,7 @@ import type { OpcionMenu } from '@prisma/client';
 import type { OpcionMenuInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { registrarCambio } from '../auditoria/auditoria.service.js';
 
 function serialize(opcion: OpcionMenu) {
   return {
@@ -24,22 +25,45 @@ export async function listOpcionesMenu() {
   return opciones.map(serialize);
 }
 
-export async function createOpcionMenu(input: OpcionMenuInput) {
+export async function createOpcionMenu(input: OpcionMenuInput, userId: string) {
   await assertNameAvailable(input.name);
   const opcion = await prisma.opcionMenu.create({ data: input });
+  await registrarCambio({
+    modelo: 'OpcionMenu',
+    registroId: opcion.id,
+    registroNombre: opcion.name,
+    accion: 'CREATE',
+    detalle: input,
+    userId,
+  });
   return serialize(opcion);
 }
 
-export async function updateOpcionMenu(id: string, input: OpcionMenuInput) {
+export async function updateOpcionMenu(id: string, input: OpcionMenuInput, userId: string) {
   await findOpcionOrThrow(id);
   await assertNameAvailable(input.name, id);
   const opcion = await prisma.opcionMenu.update({ where: { id }, data: input });
+  await registrarCambio({
+    modelo: 'OpcionMenu',
+    registroId: opcion.id,
+    registroNombre: opcion.name,
+    accion: 'UPDATE',
+    detalle: input,
+    userId,
+  });
   return serialize(opcion);
 }
 
-export async function setOpcionMenuActive(id: string, active: boolean) {
+export async function setOpcionMenuActive(id: string, active: boolean, userId: string) {
   await findOpcionOrThrow(id);
   const opcion = await prisma.opcionMenu.update({ where: { id }, data: { active } });
+  await registrarCambio({
+    modelo: 'OpcionMenu',
+    registroId: opcion.id,
+    registroNombre: opcion.name,
+    accion: active ? 'ACTIVATE' : 'DEACTIVATE',
+    userId,
+  });
   return serialize(opcion);
 }
 

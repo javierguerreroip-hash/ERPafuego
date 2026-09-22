@@ -2,6 +2,7 @@ import type { Articulo } from '@prisma/client';
 import type { ArticuloInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { registrarCambio } from '../auditoria/auditoria.service.js';
 
 function serialize(articulo: Articulo) {
   return {
@@ -24,22 +25,45 @@ export async function listArticulos() {
   return articulos.map(serialize);
 }
 
-export async function createArticulo(input: ArticuloInput) {
+export async function createArticulo(input: ArticuloInput, userId: string) {
   await assertCodeAvailable(input.code);
   const articulo = await prisma.articulo.create({ data: input });
+  await registrarCambio({
+    modelo: 'Articulo',
+    registroId: articulo.id,
+    registroNombre: `${articulo.name} (${articulo.code})`,
+    accion: 'CREATE',
+    detalle: input,
+    userId,
+  });
   return serialize(articulo);
 }
 
-export async function updateArticulo(id: string, input: ArticuloInput) {
+export async function updateArticulo(id: string, input: ArticuloInput, userId: string) {
   await findArticuloOrThrow(id);
   await assertCodeAvailable(input.code, id);
   const articulo = await prisma.articulo.update({ where: { id }, data: input });
+  await registrarCambio({
+    modelo: 'Articulo',
+    registroId: articulo.id,
+    registroNombre: `${articulo.name} (${articulo.code})`,
+    accion: 'UPDATE',
+    detalle: input,
+    userId,
+  });
   return serialize(articulo);
 }
 
-export async function setArticuloActive(id: string, active: boolean) {
+export async function setArticuloActive(id: string, active: boolean, userId: string) {
   await findArticuloOrThrow(id);
   const articulo = await prisma.articulo.update({ where: { id }, data: { active } });
+  await registrarCambio({
+    modelo: 'Articulo',
+    registroId: articulo.id,
+    registroNombre: `${articulo.name} (${articulo.code})`,
+    accion: active ? 'ACTIVATE' : 'DEACTIVATE',
+    userId,
+  });
   return serialize(articulo);
 }
 
@@ -50,8 +74,8 @@ export async function setArticuloActive(id: string, active: boolean) {
 // rompería la trazabilidad de esos registros — se pide desactivarlo en
 // su lugar (ver README, "cada compra/consumo debe quedar vinculado a su
 // origen").
-export async function deleteArticulo(id: string) {
-  await findArticuloOrThrow(id);
+export async function deleteArticulo(id: string, userId: string) {
+  const articulo = await findArticuloOrThrow(id);
 
   const [compras, consumos, inventarioInicial, inventarioFinalFisico] = await Promise.all([
     prisma.compra.count({ where: { articuloId: id } }),
@@ -68,6 +92,13 @@ export async function deleteArticulo(id: string) {
   }
 
   await prisma.articulo.delete({ where: { id } });
+  await registrarCambio({
+    modelo: 'Articulo',
+    registroId: articulo.id,
+    registroNombre: `${articulo.name} (${articulo.code})`,
+    accion: 'DELETE',
+    userId,
+  });
 }
 
 async function assertCodeAvailable(code: string, excludeId?: string) {

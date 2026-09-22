@@ -14,7 +14,7 @@ export async function listHandler(_req: Request, res: Response, next: NextFuncti
 export async function createHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const input = articuloSchema.parse(req.body);
-    res.status(201).json(await articuloService.createArticulo(input));
+    res.status(201).json(await articuloService.createArticulo(input, req.user!.sub));
   } catch (error) {
     next(error);
   }
@@ -23,7 +23,7 @@ export async function createHandler(req: Request, res: Response, next: NextFunct
 export async function updateHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const input = articuloSchema.parse(req.body);
-    res.json(await articuloService.updateArticulo(req.params.id, input));
+    res.json(await articuloService.updateArticulo(req.params.id, input, req.user!.sub));
   } catch (error) {
     next(error);
   }
@@ -31,7 +31,9 @@ export async function updateHandler(req: Request, res: Response, next: NextFunct
 
 export async function setActiveHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    res.json(await articuloService.setArticuloActive(req.params.id, Boolean(req.body.active)));
+    res.json(
+      await articuloService.setArticuloActive(req.params.id, Boolean(req.body.active), req.user!.sub),
+    );
   } catch (error) {
     next(error);
   }
@@ -40,7 +42,7 @@ export async function setActiveHandler(req: Request, res: Response, next: NextFu
 export async function deleteHandler(req: Request, res: Response, next: NextFunction) {
   try {
     assertDeleteAuthorized(req);
-    await articuloService.deleteArticulo(req.params.id);
+    await articuloService.deleteArticulo(req.params.id, req.user!.sub);
     res.status(204).send();
   } catch (error) {
     next(error);

@@ -2,6 +2,7 @@ import type { Cliente } from '@prisma/client';
 import type { ClienteInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { registrarCambio } from '../auditoria/auditoria.service.js';
 
 function serialize(cliente: Cliente) {
   return {
@@ -24,20 +25,43 @@ export async function listClientes() {
   return clientes.map(serialize);
 }
 
-export async function createCliente(input: ClienteInput) {
+export async function createCliente(input: ClienteInput, userId: string) {
   const cliente = await prisma.cliente.create({ data: input });
+  await registrarCambio({
+    modelo: 'Cliente',
+    registroId: cliente.id,
+    registroNombre: cliente.name,
+    accion: 'CREATE',
+    detalle: input,
+    userId,
+  });
   return serialize(cliente);
 }
 
-export async function updateCliente(id: string, input: ClienteInput) {
+export async function updateCliente(id: string, input: ClienteInput, userId: string) {
   await findClienteOrThrow(id);
   const cliente = await prisma.cliente.update({ where: { id }, data: input });
+  await registrarCambio({
+    modelo: 'Cliente',
+    registroId: cliente.id,
+    registroNombre: cliente.name,
+    accion: 'UPDATE',
+    detalle: input,
+    userId,
+  });
   return serialize(cliente);
 }
 
-export async function setClienteActive(id: string, active: boolean) {
+export async function setClienteActive(id: string, active: boolean, userId: string) {
   await findClienteOrThrow(id);
   const cliente = await prisma.cliente.update({ where: { id }, data: { active } });
+  await registrarCambio({
+    modelo: 'Cliente',
+    registroId: cliente.id,
+    registroNombre: cliente.name,
+    accion: active ? 'ACTIVATE' : 'DEACTIVATE',
+    userId,
+  });
   return serialize(cliente);
 }
 

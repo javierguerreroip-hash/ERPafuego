@@ -1,6 +1,7 @@
 import type { DiaFestivoInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { registrarCambio } from '../auditoria/auditoria.service.js';
 
 function serialize(f: { id: string; fecha: Date; nombre: string }) {
   return { id: f.id, fecha: f.fecha.toISOString().slice(0, 10), nombre: f.nombre };
@@ -11,22 +12,37 @@ export async function listFestivos() {
   return festivos.map(serialize);
 }
 
-export async function createFestivo(input: DiaFestivoInput) {
+export async function createFestivo(input: DiaFestivoInput, userId: string) {
   const fecha = new Date(`${input.fecha}T00:00:00.000Z`);
   const existing = await prisma.diaFestivo.findUnique({ where: { fecha } });
   if (existing) {
     throw new HttpError(409, `Ya existe un festivo registrado para el ${input.fecha}`);
   }
   const festivo = await prisma.diaFestivo.create({ data: { fecha, nombre: input.nombre } });
+  await registrarCambio({
+    modelo: 'DiaFestivo',
+    registroId: festivo.id,
+    registroNombre: `${festivo.fecha.toISOString().slice(0, 10)}${festivo.nombre ? ` — ${festivo.nombre}` : ''}`,
+    accion: 'CREATE',
+    detalle: input,
+    userId,
+  });
   return serialize(festivo);
 }
 
-export async function deleteFestivo(id: string) {
+export async function deleteFestivo(id: string, userId: string) {
   const festivo = await prisma.diaFestivo.findUnique({ where: { id } });
   if (!festivo) {
     throw new HttpError(404, 'Día festivo no encontrado');
   }
   await prisma.diaFestivo.delete({ where: { id } });
+  await registrarCambio({
+    modelo: 'DiaFestivo',
+    registroId: festivo.id,
+    registroNombre: `${festivo.fecha.toISOString().slice(0, 10)}${festivo.nombre ? ` — ${festivo.nombre}` : ''}`,
+    accion: 'DELETE',
+    userId,
+  });
 }
 
 // Devuelve un set de fechas ISO (YYYY-MM-DD) para chequeo O(1) en la

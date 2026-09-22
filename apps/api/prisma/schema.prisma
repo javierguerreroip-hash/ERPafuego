@@ -71,6 +71,7 @@ model User {
   incapacidades           Incapacidad[]        @relation("IncapacidadEmpleado")
   incapacidadesRegistradas Incapacidad[]       @relation("IncapacidadRegisteredBy")
   archivosClienteSubidos  ClienteArchivo[]     @relation("ClienteArchivoUploadedBy")
+  auditLogs               AuditLog[]           @relation("AuditLogUser")
 
   @@map("users")
 }
@@ -629,4 +630,32 @@ model Cotizacion {
   updatedAt              DateTime    @updatedAt
 
   @@map("cotizaciones")
+}
+
+// Historial de auditoría (post-lanzamiento, 2026-09-22) — cubre el hueco
+// que quedó documentado desde el Pulido general (Fase 13): los
+// maestros/catálogos y los parámetros de configuración financiera
+// guardaban CUÁNDO se editaban (Prisma lo hace solo, updatedAt) pero no
+// QUIÉN. No se implementó como un interceptor automático de todos los
+// modelos (habría registrado también las operaciones internas de cada
+// transacción, sin distinguir la acción real que hizo el usuario, y
+// duplicaría lo que ya cubre `registeredById`/`uploadedById` en Compra,
+// Evento, Abono, Turno, etc.) — en su lugar, cada servicio de los
+// modelos que SÍ tenían el hueco llama a `registrarCambio()` de forma
+// explícita en sus create/update/activar-desactivar/eliminar. Solo lo
+// puede consultar Administrador (ver auditoria.routes.ts).
+model AuditLog {
+  id             String   @id @default(uuid())
+  modelo         String
+  registroId     String
+  registroNombre String
+  accion         String
+  detalle        Json?
+  userId         String?
+  user           User?    @relation("AuditLogUser", fields: [userId], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@index([modelo])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

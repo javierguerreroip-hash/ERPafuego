@@ -26,7 +26,7 @@ export async function getParametrosHandler(_req: Request, res: Response, next: N
 export async function updateParametrosHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const input = parametroNominaSchema.parse(req.body);
-    res.json(await parametroService.updateParametros(input));
+    res.json(await parametroService.updateParametros(input, req.user!.sub));
   } catch (error) {
     next(error);
   }
@@ -45,7 +45,7 @@ export async function listFestivosHandler(_req: Request, res: Response, next: Ne
 export async function createFestivoHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const input = diaFestivoSchema.parse(req.body);
-    res.status(201).json(await festivoService.createFestivo(input));
+    res.status(201).json(await festivoService.createFestivo(input, req.user!.sub));
   } catch (error) {
     next(error);
   }
@@ -53,7 +53,7 @@ export async function createFestivoHandler(req: Request, res: Response, next: Ne
 
 export async function deleteFestivoHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    await festivoService.deleteFestivo(req.params.id);
+    await festivoService.deleteFestivo(req.params.id, req.user!.sub);
     res.status(204).send();
   } catch (error) {
     next(error);

@@ -20,6 +20,7 @@ import { CotizacionesPage } from './pages/CotizacionesPage';
 import { AgendaPage } from './pages/AgendaPage';
 import { CarteraPage } from './pages/CarteraPage';
 import { UsuariosPage } from './pages/UsuariosPage';
+import { AuditoriaPage } from './pages/AuditoriaPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { AppLayout } from './components/AppLayout';
 import { useAuth } from './context/AuthContext';
@@ -66,6 +67,7 @@ export default function App() {
                 <Route path="/agenda" element={<AgendaPage />} />
                 <Route path="/cartera" element={<CarteraPage />} />
                 <Route path="/usuarios" element={<UsuariosPage />} />
+                <Route path="/auditoria" element={<AuditoriaPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </AppLayout>
