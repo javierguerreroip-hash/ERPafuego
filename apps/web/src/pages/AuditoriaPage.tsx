@@ -8,7 +8,7 @@ import {
 } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { FilterChip, inputClass } from '../components/Field';
+import { inputClass } from '../components/Field';
 
 const ACCION_COLORS: Record<AuditAccion, string> = {
   CREATE: 'bg-green-100 text-green-700',
@@ -67,8 +67,8 @@ export function AuditoriaPage() {
       <div className="mb-4">
         <h1 className="text-xl font-semibold text-neutral-900">Auditoría — Historial de cambios</h1>
         <p className="text-sm text-neutral-500">
-          Quién creó, editó, activó/desactivó o eliminó registros en catálogos y parámetros de
-          configuración. Visible solo para Administrador.
+          Quién creó, editó, activó/desactivó o eliminó cada registro, en todos los módulos del
+          sistema. Visible solo para Administrador.
         </p>
       </div>
 
@@ -79,21 +79,18 @@ export function AuditoriaPage() {
           placeholder="Buscar por registro o usuario…"
           className={`${inputClass} max-w-sm`}
         />
-        <div className="flex flex-wrap gap-2">
-          <FilterChip
-            label="Todos"
-            active={modeloFilter === 'TODOS'}
-            onClick={() => setModeloFilter('TODOS')}
-          />
+        <select
+          value={modeloFilter}
+          onChange={(e) => setModeloFilter(e.target.value)}
+          className={`${inputClass} max-w-xs`}
+        >
+          <option value="TODOS">Todos los módulos</option>
           {AUDIT_MODELOS.map((m) => (
-            <FilterChip
-              key={m}
-              label={AUDIT_MODELO_LABELS[m]}
-              active={modeloFilter === m}
-              onClick={() => setModeloFilter(m)}
-            />
+            <option key={m} value={m}>
+              {AUDIT_MODELO_LABELS[m]}
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}

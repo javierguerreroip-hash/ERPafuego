@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import type { UserRole } from '@erp-afuego/shared';
 import { env } from '../config/env.js';
+import { runWithRequestContext } from '../lib/request-context.js';
 
 export interface AuthTokenPayload {
   sub: string;
@@ -27,8 +28,12 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    req.user = jwt.verify(token, env.JWT_SECRET) as AuthTokenPayload;
-    next();
+    const payload = jwt.verify(token, env.JWT_SECRET) as AuthTokenPayload;
+    req.user = payload;
+    // El resto de la petición (handler + cualquier llamada a Prisma,
+    // incluso dentro de una transacción) corre con el userId disponible
+    // para el interceptor de auditoría — ver lib/request-context.ts.
+    runWithRequestContext({ userId: payload.sub }, next);
   } catch {
     res.status(401).json({ message: 'Token inválido o expirado' });
   }

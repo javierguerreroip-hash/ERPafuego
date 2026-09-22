@@ -412,26 +412,34 @@ correcciones y una auditoría de qué falta para producción.
 **Pendiente antes de producción — hallazgos de esta auditoría que
 requieren una decisión tuya, no se corrigieron unilateralmente:**
 
-1. ~~**Auditoría de ediciones incompleta.**~~ **Resuelto (2026-09-23).**
-   Se agregó un historial de auditoría (`AuditLog`, módulo
-   `/auditoria`, panel exclusivo de Administrador en el menú) que cubre
-   exactamente el hueco descrito: `Articulo`, `Cliente`, `Proveedor`,
-   `OpcionMenu`, `TaxRate`, `ParametroNomina`, `DiaFestivo` y `Usuario`
-   ahora registran quién creó, editó, activó/desactivó o eliminó cada
-   registro, no solo cuándo. Se implementó como llamadas explícitas a
-   `registrarCambio()` desde cada servicio afectado — se evaluó un
-   interceptor automático a nivel de Prisma (`$extends`) que capturara
-   todos los modelos sin tocar cada servicio uno por uno, pero se
-   descartó: además de duplicar lo que ya cubren `registeredById`/
-   `uploadedById` en los modelos transaccionales, un audit log escrito
-   fuera de la transacción de negocio (necesario para que el
-   interceptor funcionara igual dentro y fuera de `$transaction`)
-   podría quedar inconsistente si esa transacción fallara a mitad de
-   camino — las llamadas explícitas, aunque piden tocar más archivos,
-   se pueden verificar leyendo el código y siempre corren en el mismo
-   punto exacto donde ya se sabe que la operación tuvo éxito. Un
-   registro de auditoría que a su vez fallara nunca tumba la operación
-   real (se registra en la consola del servidor y sigue).
+1. ~~**Auditoría de ediciones incompleta.**~~ **Resuelto (2026-09-23),
+   ampliado a todos los módulos el mismo día.** Se agregó un historial
+   de auditoría (`AuditLog`, módulo `/auditoria`, panel exclusivo de
+   Administrador en el menú). Primero se implementó acotado a los 8
+   modelos que tenían el hueco (`Articulo`, `Cliente`, `Proveedor`,
+   `OpcionMenu`, `TaxRate`, `ParametroNomina`, `DiaFestivo`, `User`),
+   con llamadas explícitas a `registrarCambio()` desde cada servicio.
+   El negocio pidió que cubriera **todos** los módulos ("quiero ver
+   quién hace qué"), así que se agregó además un interceptor automático
+   de Prisma (`lib/prisma.ts`, `$extends`) que audita cualquier
+   `create`/`update`/`upsert`/`delete` en el resto de modelos (Compra,
+   Evento, Negocio, Cotización, Agenda, Cartera, Inventario, Turnos,
+   Incapacidades, Gastos, Archivos de cliente...) sin tener que tocar
+   cada servicio uno por uno. Los 8 modelos ya cubiertos a mano quedan
+   excluidos de este interceptor para no duplicar cada cambio. Para
+   saber "quién" sin pasar el `userId` a mano por cada llamada, se
+   agregó contexto de petición con `AsyncLocalStorage`
+   (`lib/request-context.ts`), poblado una sola vez en `requireAuth`.
+   **Limitación aceptada:** el interceptor automático escribe el log
+   con el cliente base de Prisma, fuera de la transacción de negocio
+   cuando la operación ocurre dentro de un `prisma.$transaction` (la
+   API de `$extends` no expone el cliente `tx` ambiente dentro de
+   `$allOperations`) — si esa transacción fallara después de que esta
+   escritura puntual ya corrió, podría quedar una entrada de auditoría
+   para un cambio que en la práctica no se completó. Riesgo aceptado
+   para el volumen de este negocio; un fallo al guardar el log nunca
+   tumba la operación real (try/catch, solo queda en la consola del
+   servidor).
 2. **Verificación real pendiente.** Como se ha mencionado en cada fase:
    Node.js/PostgreSQL nunca se instalaron con éxito en esta máquina, así
    que ninguna de las 13 fases se ha probado corriendo de verdad —

@@ -36,7 +36,7 @@ export async function listarAuditoria(filters: { modelo?: string; userId?: strin
     where: { modelo: filters.modelo, userId: filters.userId },
     include: { user: { select: { name: true } } },
     orderBy: { createdAt: 'desc' },
-    take: 300,
+    take: 500,
   });
   return logs.map((l) => ({
     id: l.id,

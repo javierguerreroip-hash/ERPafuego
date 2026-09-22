@@ -15,15 +15,33 @@ export const AUDIT_ACCION_LABELS: Record<AuditAccion, string> = {
   DEACTIVATE: 'Desactivó',
 };
 
+// Todos los modelos que se pueden crear/editar/eliminar desde la
+// aplicación (coincide 1 a 1 con los nombres de modelo de
+// schema.prisma — el interceptor automático de lib/prisma.ts emite ese
+// mismo nombre literal). AuditLog no aparece: no se audita a sí mismo.
 export const AUDIT_MODELOS = [
   'Articulo',
   'Cliente',
+  'ClienteArchivo',
   'Proveedor',
   'OpcionMenu',
   'TaxRate',
   'ParametroNomina',
   'DiaFestivo',
-  'Usuario',
+  'User',
+  'Compra',
+  'Evento',
+  'EventoConsumo',
+  'Negocio',
+  'Cotizacion',
+  'AgendaEvento',
+  'InventarioInicial',
+  'InventarioFinalFisico',
+  'GastoAdministrativo',
+  'Turno',
+  'Incapacidad',
+  'Abono',
+  'CuentaPorPagar',
 ] as const;
 
 export type AuditModelo = (typeof AUDIT_MODELOS)[number];
@@ -31,12 +49,26 @@ export type AuditModelo = (typeof AUDIT_MODELOS)[number];
 export const AUDIT_MODELO_LABELS: Record<AuditModelo, string> = {
   Articulo: 'Artículo',
   Cliente: 'Cliente',
+  ClienteArchivo: 'Archivo de cliente',
   Proveedor: 'Proveedor',
   OpcionMenu: 'Opción de menú',
   TaxRate: 'Tarifa de impuesto',
   ParametroNomina: 'Parámetros de nómina',
   DiaFestivo: 'Día festivo',
-  Usuario: 'Usuario',
+  User: 'Usuario',
+  Compra: 'Compra',
+  Evento: 'Venta (evento)',
+  EventoConsumo: 'Consumo de evento',
+  Negocio: 'Negocio (CRM)',
+  Cotizacion: 'Cotización',
+  AgendaEvento: 'Agenda de eventos',
+  InventarioInicial: 'Inventario inicial',
+  InventarioFinalFisico: 'Inventario final físico',
+  GastoAdministrativo: 'Gasto administrativo',
+  Turno: 'Turno (nómina)',
+  Incapacidad: 'Incapacidad',
+  Abono: 'Abono / pago',
+  CuentaPorPagar: 'Cuenta por pagar',
 };
 
 export interface AuditLogDTO {

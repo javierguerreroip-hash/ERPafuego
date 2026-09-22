@@ -30,7 +30,7 @@ export async function createUser(input: UserCreateInput, userId: string) {
   });
   // Nunca la contraseña en el detalle del log de auditoría, ni siquiera hasheada.
   await registrarCambio({
-    modelo: 'Usuario',
+    modelo: 'User',
     registroId: user.id,
     registroNombre: `${user.name} (${user.email})`,
     accion: 'CREATE',
@@ -47,7 +47,7 @@ export async function updateUser(id: string, input: UserUpdateInput, userId: str
     data: { name: input.name, role: input.role },
   });
   await registrarCambio({
-    modelo: 'Usuario',
+    modelo: 'User',
     registroId: user.id,
     registroNombre: `${user.name} (${user.email})`,
     accion: 'UPDATE',
@@ -66,7 +66,7 @@ export async function setUserActive(id: string, active: boolean, requestedById: 
   await findUserOrThrow(id);
   const user = await prisma.user.update({ where: { id }, data: { active } });
   await registrarCambio({
-    modelo: 'Usuario',
+    modelo: 'User',
     registroId: user.id,
     registroNombre: `${user.name} (${user.email})`,
     accion: active ? 'ACTIVATE' : 'DEACTIVATE',
