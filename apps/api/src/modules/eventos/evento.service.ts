@@ -15,6 +15,7 @@ const includeSummary = {
   cliente: true,
   opcionMenu: true,
   taxRate: true,
+  vendedor: true,
   registeredBy: true,
   consumos: true,
 } satisfies Prisma.EventoInclude;
@@ -47,6 +48,8 @@ function serializeSummary(evento: EventoWithSummary) {
     valorDespuesImpuestos: Number(evento.valorDespuesImpuestos),
     taxRateId: evento.taxRateId,
     taxRateNombre: evento.taxRate?.name ?? null,
+    vendedorId: evento.vendedorId,
+    vendedorNombre: evento.vendedor?.name ?? null,
     costoTotal,
     costoTotalPorcentaje: calcularCostoPorcentaje(costoTotal, valorAntesImpuestos),
     utilidadOperacional: utilidad.valor,
@@ -94,6 +97,16 @@ export async function getEvento(id: string) {
   return serializeDetail(evento);
 }
 
+// Trazabilidad: quién vendió el evento, no solo quién lo digitó en el
+// sistema (registeredById) — mismo criterio que Negocio/Cotización.
+async function findVendedorOrThrow(vendedorId: string) {
+  const vendedor = await prisma.user.findUnique({ where: { id: vendedorId } });
+  if (!vendedor || !vendedor.active) {
+    throw new HttpError(404, 'Vendedor no encontrado o inactivo');
+  }
+  return vendedor;
+}
+
 async function resolveValorDespuesImpuestos(
   valorAntesImpuestos: number,
   taxRateId: string | null | undefined,
@@ -120,6 +133,7 @@ export async function createEvento(input: EventoInput, registeredById: string) {
   if (!opcionMenu) {
     throw new HttpError(404, 'Opción de menú no encontrada');
   }
+  const vendedor = await findVendedorOrThrow(input.vendedorId);
 
   const { valorDespuesImpuestos, taxRateId } = await resolveValorDespuesImpuestos(
     input.valorAntesImpuestos,
@@ -135,6 +149,7 @@ export async function createEvento(input: EventoInput, registeredById: string) {
       valorAntesImpuestos: input.valorAntesImpuestos,
       taxRateId,
       valorDespuesImpuestos,
+      vendedorId: vendedor.id,
       registeredById,
     },
     include: includeSummary,
@@ -153,6 +168,7 @@ export async function updateEvento(id: string, input: EventoInput) {
   if (!opcionMenu) {
     throw new HttpError(404, 'Opción de menú no encontrada');
   }
+  const vendedor = await findVendedorOrThrow(input.vendedorId);
 
   const { valorDespuesImpuestos, taxRateId } = await resolveValorDespuesImpuestos(
     input.valorAntesImpuestos,
@@ -169,6 +185,7 @@ export async function updateEvento(id: string, input: EventoInput) {
       valorAntesImpuestos: input.valorAntesImpuestos,
       taxRateId,
       valorDespuesImpuestos,
+      vendedorId: vendedor.id,
     },
     include: includeSummary,
   });

@@ -7,6 +7,7 @@ import {
   type OpcionMenuDTO,
   type RankingOpcionesReporteDTO,
   type TaxRateDTO,
+  type VendedorDisponibleDTO,
 } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,7 @@ function emptyForm(): EventoInput {
     numeroPersonas: 1,
     valorAntesImpuestos: 0,
     taxRateId: null,
+    vendedorId: '',
   };
 }
 
@@ -35,6 +37,7 @@ export function EventosPage() {
   const [clientes, setClientes] = useState<ClienteDTO[]>([]);
   const [opcionesMenu, setOpcionesMenu] = useState<OpcionMenuDTO[]>([]);
   const [taxRates, setTaxRates] = useState<TaxRateDTO[]>([]);
+  const [vendedores, setVendedores] = useState<VendedorDisponibleDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,16 +78,19 @@ export function EventosPage() {
     setLoading(true);
     setError(null);
     try {
-      const [eventosData, clientesData, opcionesData, taxRatesData] = await Promise.all([
-        apiFetch<EventoDTO[]>('/eventos', { token }),
-        apiFetch<ClienteDTO[]>('/clientes', { token }),
-        apiFetch<OpcionMenuDTO[]>('/opciones-menu', { token }),
-        apiFetch<TaxRateDTO[]>('/tax-rates', { token }),
-      ]);
+      const [eventosData, clientesData, opcionesData, taxRatesData, vendedoresData] =
+        await Promise.all([
+          apiFetch<EventoDTO[]>('/eventos', { token }),
+          apiFetch<ClienteDTO[]>('/clientes', { token }),
+          apiFetch<OpcionMenuDTO[]>('/opciones-menu', { token }),
+          apiFetch<TaxRateDTO[]>('/tax-rates', { token }),
+          apiFetch<VendedorDisponibleDTO[]>('/negocios/vendedores', { token }),
+        ]);
       setEventos(eventosData);
       setClientes(clientesData);
       setOpcionesMenu(opcionesData);
       setTaxRates(taxRatesData);
+      setVendedores(vendedoresData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar los eventos');
     } finally {
@@ -199,6 +205,7 @@ export function EventosPage() {
               <th className="px-4 py-2">Cliente</th>
               <th className="px-4 py-2">Opción de menú</th>
               <th className="px-4 py-2">Personas</th>
+              <th className="px-4 py-2">Vendedor</th>
               <th className="px-4 py-2">Valor antes de imp.</th>
               <th className="px-4 py-2">Valor después de imp.</th>
               <th className="px-4 py-2">Costo total</th>
@@ -209,13 +216,13 @@ export function EventosPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={10} className="px-4 py-6 text-center text-neutral-400">
                   Cargando…
                 </td>
               </tr>
             ) : eventos.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={10} className="px-4 py-6 text-center text-neutral-400">
                   Todavía no hay eventos registrados.
                 </td>
               </tr>
@@ -231,6 +238,7 @@ export function EventosPage() {
                   <td className="px-4 py-2">{evento.clienteNombre}</td>
                   <td className="px-4 py-2">{evento.opcionMenuNombre}</td>
                   <td className="px-4 py-2">{evento.numeroPersonas}</td>
+                  <td className="px-4 py-2">{evento.vendedorNombre ?? '—'}</td>
                   <td className="px-4 py-2">{formatCOP(evento.valorAntesImpuestos)}</td>
                   <td className="px-4 py-2">{formatCOP(evento.valorDespuesImpuestos)}</td>
                   <td className="px-4 py-2">
@@ -342,6 +350,22 @@ export function EventosPage() {
                 </select>
               </Field>
             </div>
+            <Field label="Vendedor">
+              <select
+                value={form.vendedorId}
+                onChange={(e) => setForm({ ...form, vendedorId: e.target.value })}
+                className={inputClass}
+              >
+                <option value="" disabled>
+                  Selecciona un vendedor…
+                </option>
+                {vendedores.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
 
             {formError && <p className="text-sm text-red-600">{formError}</p>}
 

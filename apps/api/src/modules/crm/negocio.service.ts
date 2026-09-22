@@ -272,6 +272,7 @@ export async function ganarNegocio(id: string, input: GanarNegocioInput, registe
         valorAntesImpuestos,
         taxRateId: input.taxRateId ?? null,
         valorDespuesImpuestos,
+        vendedorId: negocio.vendedorId,
         registeredById,
       },
     });

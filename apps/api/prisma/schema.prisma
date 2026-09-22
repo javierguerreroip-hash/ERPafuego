@@ -58,6 +58,7 @@ model User {
   updatedAt          DateTime @updatedAt
   comprasRegistradas Compra[]            @relation("CompraRegisteredBy")
   eventosRegistrados Evento[]            @relation("EventoRegisteredBy")
+  eventosComoVendedor Evento[]           @relation("EventoVendedor")
   inventarioInicial  InventarioInicial[] @relation("InventarioInicialRegisteredBy")
   gastosRegistrados  GastoAdministrativo[] @relation("GastoAdministrativoRegisteredBy")
   inventarioFinalFisico InventarioFinalFisico[] @relation("InventarioFinalFisicoRegisteredBy")
@@ -254,6 +255,11 @@ model Evento {
   taxRateId             String?
   taxRate               TaxRate?        @relation(fields: [taxRateId], references: [id])
   valorDespuesImpuestos Decimal         @db.Decimal(14, 2)
+  // Vendedor de la venta (trazabilidad, post-lanzamiento 2026-09-22) —
+  // nullable para no romper eventos ya existentes; al ganar un negocio
+  // desde el CRM se autocompleta con el vendedor del negocio.
+  vendedorId            String?
+  vendedor               User?           @relation("EventoVendedor", fields: [vendedorId], references: [id])
   registeredById        String
   registeredBy          User            @relation("EventoRegisteredBy", fields: [registeredById], references: [id])
   createdAt             DateTime        @default(now())

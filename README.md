@@ -741,6 +741,19 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
   operacional, valor después de impuestos, subtotal de consumo) están
   aisladas en `evento.calculations.ts` y probadas con Vitest — primer
   framework de pruebas del proyecto, agregado en esta fase.
+- **Actualización post-lanzamiento (2026-09-22):** se agregó
+  `Evento.vendedorId` (FK a `User`, nullable) — el negocio pidió poder
+  elegir vendedor también al crear una venta directamente en este
+  módulo (antes solo existía en Negocio/Cotización/AgendaEvento). Al
+  ganar un negocio desde el CRM, el Evento que se crea automáticamente
+  hereda el vendedor del negocio en vez de quedar sin asignar.
+- **Actualización post-lanzamiento (2026-09-22):** `unitCost` de un
+  consumo dejó de ser solo "el último precio de compra" — ahora es el
+  promedio entre el último precio de compra y el costo del inventario
+  inicial más reciente ingresado para el artículo (ver
+  `calcularCostoUnitarioPromedio` en `evento.calculations.ts`); sin
+  inventario inicial registrado, se sigue usando solo el último precio
+  de compra.
 
 ### Decisiones de la Fase 4
 

@@ -15,6 +15,7 @@ export const eventoSchema = z.object({
   numeroPersonas: z.number().int().positive('El número de personas debe ser mayor a 0'),
   valorAntesImpuestos: z.number().nonnegative('El valor no puede ser negativo'),
   taxRateId: z.string().nullable().optional(),
+  vendedorId: z.string().min(1, 'Selecciona un vendedor'),
 });
 
 export type EventoInput = z.infer<typeof eventoSchema>;
@@ -31,6 +32,10 @@ export interface EventoDTO {
   valorDespuesImpuestos: number;
   taxRateId: string | null;
   taxRateNombre: string | null;
+  // Null solo en eventos creados antes de exigir vendedorId
+  // (2026-09-22) que aún no se han editado.
+  vendedorId: string | null;
+  vendedorNombre: string | null;
   costoTotal: number;
   costoTotalPorcentaje: number;
   utilidadOperacional: number;
