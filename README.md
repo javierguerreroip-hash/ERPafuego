@@ -725,9 +725,11 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
   historial" se cumple consultando los registros de `Compra` por
   `articuloId` (cada uno ya tiene fecha + precio + proveedor) en vez de
   duplicar esos mismos datos en una segunda tabla.
-- **Las compras no se editan ni se eliminan** una vez guardadas — son un
-  hecho contable histórico; una compra mal digitada se corrige con un
-  nuevo registro, no sobrescribiendo el anterior.
+- **Las compras no se editan** una vez guardadas — son un hecho contable
+  histórico; una compra mal digitada por lo demás se corrige con un
+  nuevo registro, no sobrescribiendo el anterior. (Ver más abajo:
+  aunque siguen sin poder editarse, desde el 2026-09-22 sí se pueden
+  eliminar, restringido a Administrador.)
 - **Auditoría:** cada compra guarda quién la registró
   (`registeredById` → `User`), siguiendo el requisito transversal de
   "historial/auditoría de cambios (quién y cuándo)".
@@ -740,6 +742,19 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
   traer varios artículos (varias filas de `Compra` comparten a propósito
   el mismo número dentro de un mismo registro/lote) — la validación
   corre antes de crear el lote, contra compras ya existentes.
+- **Actualización post-lanzamiento (2026-09-22):** se agregó "Eliminar"
+  para poder corregir compras de prueba — a diferencia del resto del
+  módulo (abierto a Administrador/Operación/Ventas), borrar una compra
+  **solo lo puede hacer Administrador**, protegido además con la misma
+  contraseña de autorización que ya se usa para eliminar ventas y
+  artículos. Al eliminar, se recalcula el "último precio de compra" del
+  artículo (toma la compra más reciente que quede, o $0 si no queda
+  ninguna) y, si la compra era a crédito y era la última de su factura,
+  se borra también la Cuenta por Pagar asociada — igual que ya se venía
+  haciendo a mano por SQL para corregir compras de un proveedor
+  completo. Se bloquea si esa factura ya tiene abonos/pagos registrados
+  en Cartera (mismo criterio que bloquear el borrado de una venta con
+  abonos).
 
 ### Decisiones de la Fase 3 (confirmadas contigo antes de construir)
 

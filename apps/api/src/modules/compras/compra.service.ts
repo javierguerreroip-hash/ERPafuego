@@ -129,3 +129,70 @@ export async function createCompraBatch(input: CompraBatchInput, registeredById:
 
   return created.map(serialize);
 }
+
+// Borrado real de una compra — pedido por el negocio para poder corregir
+// compras de prueba/mal digitadas (solo Administrador, ver
+// compra.routes.ts). Recalcula el "último precio de compra" del
+// artículo tomando la compra más reciente que quede (o $0 si no queda
+// ninguna) y, si era a crédito y era la última compra de esa factura,
+// limpia la Cuenta por Pagar asociada — mismo criterio que ya se usó
+// manualmente por SQL para corregir las compras de un proveedor.
+export async function deleteCompra(id: string) {
+  const compra = await prisma.compra.findUnique({ where: { id } });
+  if (!compra) {
+    throw new HttpError(404, 'Compra no encontrada');
+  }
+
+  if (compra.condicionPago === 'CREDITO') {
+    const otrasCompras = await prisma.compra.count({
+      where: {
+        proveedorId: compra.proveedorId,
+        facturaNumero: compra.facturaNumero,
+        id: { not: id },
+      },
+    });
+    if (otrasCompras === 0) {
+      const cxp = await prisma.cuentaPorPagar.findUnique({
+        where: {
+          proveedorId_facturaNumero: {
+            proveedorId: compra.proveedorId,
+            facturaNumero: compra.facturaNumero,
+          },
+        },
+      });
+      if (cxp) {
+        const abonos = await prisma.abono.count({ where: { cuentaPorPagarId: cxp.id } });
+        if (abonos > 0) {
+          throw new HttpError(
+            409,
+            'No se puede eliminar: la factura de este proveedor ya tiene abonos/pagos registrados en Cartera.',
+          );
+        }
+      }
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.compra.delete({ where: { id } });
+
+    const ultimaRestante = await tx.compra.findFirst({
+      where: { articuloId: compra.articuloId },
+      orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
+    });
+    await tx.articulo.update({
+      where: { id: compra.articuloId },
+      data: { lastPurchasePrice: ultimaRestante ? ultimaRestante.unitPrice : 0 },
+    });
+
+    if (compra.condicionPago === 'CREDITO') {
+      const quedanCompras = await tx.compra.count({
+        where: { proveedorId: compra.proveedorId, facturaNumero: compra.facturaNumero },
+      });
+      if (quedanCompras === 0) {
+        await tx.cuentaPorPagar.deleteMany({
+          where: { proveedorId: compra.proveedorId, facturaNumero: compra.facturaNumero },
+        });
+      }
+    }
+  });
+}

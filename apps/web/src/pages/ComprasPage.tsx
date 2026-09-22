@@ -12,6 +12,7 @@ import {
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { Field, inputClass } from '../components/Field';
 import { formatCOP, formatDateOnly } from '../lib/format';
 
@@ -34,7 +35,7 @@ function emptyHeader() {
 }
 
 export function ComprasPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [compras, setCompras] = useState<CompraDTO[]>([]);
   const [articulos, setArticulos] = useState<ArticuloDTO[]>([]);
   const [proveedores, setProveedores] = useState<ProveedorDTO[]>([]);
@@ -46,6 +47,8 @@ export function ComprasPage() {
   const [items, setItems] = useState<ItemRow[]>([{ ...EMPTY_ITEM }]);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [deletingCompra, setDeletingCompra] = useState<CompraDTO | null>(null);
 
   async function loadAll() {
     setLoading(true);
@@ -173,18 +176,19 @@ export function ComprasPage() {
               <th className="px-4 py-2">Factura</th>
               <th className="px-4 py-2">Condición</th>
               <th className="px-4 py-2">Vencimiento</th>
+              {user?.role === 'ADMINISTRADOR' && <th className="px-4 py-2" />}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={10} className="px-4 py-6 text-center text-neutral-400">
                   Cargando…
                 </td>
               </tr>
             ) : compras.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={10} className="px-4 py-6 text-center text-neutral-400">
                   Todavía no hay compras registradas.
                 </td>
               </tr>
@@ -207,6 +211,16 @@ export function ComprasPage() {
                   <td className="px-4 py-2">
                     {compra.fechaVencimiento ? formatDateOnly(compra.fechaVencimiento) : '—'}
                   </td>
+                  {user?.role === 'ADMINISTRADOR' && (
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        onClick={() => setDeletingCompra(compra)}
+                        className="text-red-600 hover:underline"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -357,6 +371,23 @@ export function ComprasPage() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {deletingCompra && (
+        <ConfirmDeleteModal
+          title="Eliminar compra"
+          message={`Vas a eliminar definitivamente la compra de "${deletingCompra.articuloNombre}" a ${deletingCompra.proveedorNombre} (factura ${deletingCompra.facturaNumero}, ${formatDateOnly(deletingCompra.fecha)}). El último precio de compra del artículo se recalcula automáticamente.`}
+          onConfirm={async (password) => {
+            await apiFetch(`/compras/${deletingCompra.id}`, {
+              method: 'DELETE',
+              body: { password },
+              token,
+            });
+            setDeletingCompra(null);
+            await loadAll();
+          }}
+          onClose={() => setDeletingCompra(null)}
+        />
       )}
     </div>
   );
