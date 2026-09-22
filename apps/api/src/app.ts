@@ -7,7 +7,11 @@ import { env } from './config/env.js';
 export const app = express();
 
 app.use(cors({ origin: env.CORS_ORIGIN }));
-app.use(express.json());
+// Límite subido de 100kb (default de Express) a 6mb — los adjuntos de
+// Cliente viajan como base64 dentro del mismo JSON (ver
+// CLIENTE_ARCHIVO_MAX_SIZE_BYTES en packages/shared), y un archivo de
+// 3MB codificado en base64 pesa ~4MB.
+app.use(express.json({ limit: '6mb' }));
 
 app.use('/api', router);
 

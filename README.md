@@ -532,6 +532,18 @@ git push -u origin main
 5. Cuando termine, Netlify te da un link tipo
    `https://tu-sitio.netlify.app` — esa es tu app publicada.
 
+> **Nota (2026-09-22):** cada migración nueva se aplica sola en el
+> siguiente deploy — **no hace falta correr el SQL a mano en Supabase**.
+> Confirmado revisando la tabla `_prisma_migrations` en producción: las
+> migraciones de vendedor/cliente de esta semana quedaron con
+> `finished_at` poblado, es decir que `prisma migrate deploy` sí las
+> aplicó automáticamente en el build. Aun así, durante esta sesión se le
+> pidió al usuario correrlas manualmente por precaución (dejando el SQL
+> como respaldo, con `IF NOT EXISTS`) — eso fue trabajo de más, no un
+> paso requerido. Alcanza con: push a `main` → Trigger deploy en
+> Netlify. Solo si algo no aparece después de un deploy exitoso vale la
+> pena revisar `_prisma_migrations` directamente para confirmar.
+
 ### 4. Cargar los usuarios iniciales (una sola vez)
 
 El build **no** ejecuta el seed automáticamente (para no resetear
@@ -672,6 +684,23 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
   especificación las menciona ("x2 variantes adicionales según carta")
   sin describir su contenido — se pueden agregar desde la interfaz
   cuando se conozca la composición real.
+- **Actualización post-lanzamiento (2026-09-22): adjuntos de Cliente
+  (cédula, RUT, contrato…).** Se guardan directo en la base de datos
+  (tabla `cliente_archivos`, columna `contenido` tipo `bytea`), no en un
+  servicio de almacenamiento externo tipo Supabase Storage — decisión
+  confirmada con el negocio para no sumar una pieza más de
+  infraestructura que configurar (bucket, llave de servicio) dado el
+  volumen esperado (documentos puntuales por cliente, no cientos de
+  archivos pesados). El archivo viaja codificado en base64 dentro del
+  mismo cuerpo JSON de la petición (no `multipart/form-data`) — evita
+  cualquier problema de parseo binario a través de la función
+  serverless de Netlify, reutilizando exactamente el mismo mecanismo
+  (`express.json()`) que ya usa el resto de la API. Límite de 3MB por
+  archivo (`CLIENTE_ARCHIVO_MAX_SIZE_BYTES`), pensado para no acercarse
+  al límite de payload de las funciones de Netlify una vez el archivo
+  crece ~33% al codificarse en base64. Solo se puede adjuntar a un
+  cliente ya guardado (necesita un `clienteId` real), así que la
+  sección de archivos no aparece en "Nuevo cliente", solo en "Editar".
 
 ### Decisiones de la Fase 2
 

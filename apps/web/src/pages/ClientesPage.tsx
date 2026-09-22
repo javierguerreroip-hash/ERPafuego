@@ -10,6 +10,7 @@ import {
 import { useResource } from '../hooks/useResource';
 import { Modal } from '../components/Modal';
 import { BulkImportModal, type ImportColumn } from '../components/BulkImportModal';
+import { ClienteArchivosSection } from '../components/ClienteArchivosSection';
 import { Field, FilterChip, inputClass } from '../components/Field';
 
 const EMPTY_FORM: ClienteInput = {
@@ -298,6 +299,14 @@ export function ClientesPage() {
                 className={inputClass}
               />
             </Field>
+
+            {editing ? (
+              <ClienteArchivosSection clienteId={editing.id} />
+            ) : (
+              <p className="text-xs text-neutral-400">
+                Podrás adjuntar archivos (cédula, RUT, contrato…) después de guardar el cliente.
+              </p>
+            )}
 
             {formError && <p className="text-sm text-red-600">{formError}</p>}
 

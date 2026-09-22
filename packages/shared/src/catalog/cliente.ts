@@ -34,3 +34,35 @@ export interface ClienteDTO extends ClienteInput {
   createdAt: string;
   updatedAt: string;
 }
+
+// Adjuntos del cliente (post-lanzamiento, 2026-09-22): cédula, RUT,
+// contrato, etc. El archivo viaja codificado en base64 dentro del mismo
+// cuerpo JSON de la petición (no multipart/form-data) — el backend lo
+// guarda directamente en la base de datos, sin servicio de
+// almacenamiento aparte. 3MB de límite: suficiente para un documento
+// escaneado o un contrato en PDF de varias páginas, y deja margen bajo
+// el límite de payload de las funciones de Netlify (una vez
+// codificado en base64, el tamaño crece ~33%).
+export const CLIENTE_ARCHIVO_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+
+export const clienteArchivoUploadSchema = z.object({
+  nombreArchivo: z.string().min(1, 'El nombre del archivo es requerido').max(255),
+  mimeType: z.string().min(1, 'El tipo de archivo es requerido').max(150),
+  contenidoBase64: z.string().min(1, 'El archivo está vacío'),
+});
+
+export type ClienteArchivoUploadInput = z.infer<typeof clienteArchivoUploadSchema>;
+
+export interface ClienteArchivoDTO {
+  id: string;
+  clienteId: string;
+  nombreArchivo: string;
+  mimeType: string;
+  size: number;
+  uploadedByName: string;
+  createdAt: string;
+}
+
+export interface ClienteArchivoContenidoDTO extends ClienteArchivoDTO {
+  contenidoBase64: string;
+}

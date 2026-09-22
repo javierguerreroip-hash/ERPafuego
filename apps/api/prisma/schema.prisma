@@ -70,6 +70,7 @@ model User {
   cotizacionesComoVendedor Cotizacion[]        @relation("CotizacionVendedor")
   incapacidades           Incapacidad[]        @relation("IncapacidadEmpleado")
   incapacidadesRegistradas Incapacidad[]       @relation("IncapacidadRegisteredBy")
+  archivosClienteSubidos  ClienteArchivo[]     @relation("ClienteArchivoUploadedBy")
 
   @@map("users")
 }
@@ -165,8 +166,30 @@ model Cliente {
   eventos        Evento[]
   negocios       Negocio[]
   cotizaciones   Cotizacion[]
+  archivos       ClienteArchivo[]
 
   @@map("clientes")
+}
+
+// Adjuntos del cliente (post-lanzamiento, 2026-09-22) — cédula, RUT,
+// contrato, etc. El archivo se guarda directamente en la base de datos
+// (columna "contenido", bytea), no en un servicio de almacenamiento
+// aparte (decisión tomada con el negocio: menos piezas que configurar,
+// suficiente para el volumen de una empresa de este tamaño). Límite de
+// tamaño en CLIENTE_ARCHIVO_MAX_SIZE_BYTES (packages/shared).
+model ClienteArchivo {
+  id            String   @id @default(uuid())
+  clienteId     String
+  cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  nombreArchivo String
+  mimeType      String
+  size          Int
+  contenido     Bytes
+  uploadedById  String
+  uploadedBy    User     @relation("ClienteArchivoUploadedBy", fields: [uploadedById], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@map("cliente_archivos")
 }
 
 // La categoría reutiliza ArticuloCategoria: "categoría de lo que provee"
