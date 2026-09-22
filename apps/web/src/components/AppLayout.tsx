@@ -45,8 +45,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-neutral-50">
       <aside className="flex w-64 flex-col bg-stone-900">
-        <div className="border-b border-stone-800 px-5 py-6">
-          <img src="/logo-white.png" alt="A Fuego Catering" className="h-16 w-auto" />
+        <div className="border-b border-stone-800 px-3 py-4">
+          <img src="/logo-white.png" alt="A Fuego Catering" className="h-auto w-full" />
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {items.length === 0 && (
