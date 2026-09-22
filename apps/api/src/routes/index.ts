@@ -20,6 +20,7 @@ import { carteraRouter } from '../modules/cartera/cartera.routes.js';
 import { userRouter } from '../modules/usuarios/user.routes.js';
 import { cotizacionRouter } from '../modules/cotizaciones/cotizacion.routes.js';
 import { auditoriaRouter } from '../modules/auditoria/auditoria.routes.js';
+import { notificacionRouter } from '../modules/notificaciones/notificacion.routes.js';
 
 export const router = Router();
 
@@ -44,3 +45,4 @@ router.use('/cartera', carteraRouter);
 router.use('/usuarios', userRouter);
 router.use('/cotizaciones', cotizacionRouter);
 router.use('/auditoria', auditoriaRouter);
+router.use('/notificaciones', notificacionRouter);

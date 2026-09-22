@@ -37,7 +37,7 @@ export async function listVendedoresHandler(_req: Request, res: Response, next: 
 export async function createHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const input = agendaEventoSchema.parse(req.body);
-    res.status(201).json(await agendaService.createAgendaEvento(input));
+    res.status(201).json(await agendaService.createAgendaEvento(input, req.user!.sub));
   } catch (error) {
     next(error);
   }
@@ -46,7 +46,7 @@ export async function createHandler(req: Request, res: Response, next: NextFunct
 export async function updateHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const input = agendaEventoUpdateSchema.parse(req.body);
-    res.json(await agendaService.updateAgendaEvento(req.params.id, input));
+    res.json(await agendaService.updateAgendaEvento(req.params.id, input, req.user!.sub));
   } catch (error) {
     next(error);
   }
@@ -54,7 +54,7 @@ export async function updateHandler(req: Request, res: Response, next: NextFunct
 
 export async function deleteHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    await agendaService.deleteAgendaEvento(req.params.id);
+    await agendaService.deleteAgendaEvento(req.params.id, req.user!.sub);
     res.status(204).send();
   } catch (error) {
     next(error);

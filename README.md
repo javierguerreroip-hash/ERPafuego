@@ -231,6 +231,20 @@ Acceso restringido a los roles Administrador y Operación.
 - También se puede crear manualmente para un Evento existente que no
   vino del CRM (selector de "eventos disponibles" — los que aún no
   tienen registro de agenda).
+- **Actualización post-lanzamiento (2026-09-23) — notificaciones dentro
+  de la app (Etapa 2 del plan de mejoras):** crear, editar o eliminar un
+  registro de la Agenda genera una notificación visible para todo el
+  equipo con acceso (Administrador, Operación, Ventas) — sin correo
+  electrónico, pedido explícito del negocio. Un ícono de campana en el
+  menú lateral muestra el número de notificaciones no leídas (se
+  consulta cada 30 segundos, no hay WebSockets); al abrir el panel se
+  marcan todas como leídas para ese usuario. El estado de "leído" es
+  simple a propósito: un solo `notificacionesVistasHasta` por usuario
+  (no una fila de lectura por notificación) — con el volumen esperado no
+  hace falta más, y es mucho más fácil de mantener. El modelo
+  `Notificacion` quedó genérico (`tipo` como string libre) para poder
+  disparar otros avisos más adelante sin otra migración, aunque hoy solo
+  la Agenda los genera.
 
 ## Cotizaciones (post-lanzamiento, 2026-09-10)
 

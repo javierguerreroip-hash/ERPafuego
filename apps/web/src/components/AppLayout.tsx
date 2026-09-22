@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { USER_ROLE_LABELS, type UserRole } from '@erp-afuego/shared';
 import { useAuth } from '../context/AuthContext';
+import { NotificacionesBell } from './NotificacionesBell';
 
 // roles: quién ve el enlace en el menú — debe reflejar exactamente lo que
 // el backend permite (requireRole en cada *.routes.ts), para que nadie
@@ -42,6 +43,7 @@ const NAV_ITEMS: { to: string; label: string; roles: UserRole[] }[] = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const items = NAV_ITEMS.filter((item) => user && item.roles.includes(user.role));
+  const showNotificaciones = user && FULL_ACCESS.includes(user.role);
 
   return (
     <div className="flex min-h-screen bg-neutral-50">
@@ -49,6 +51,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div className="border-b border-stone-800 px-3 py-4">
           <img src="/logo-white.png" alt="A Fuego Catering" className="h-auto w-full" />
         </div>
+        {showNotificaciones && (
+          <div className="border-b border-stone-800 px-3 py-2">
+            <NotificacionesBell />
+          </div>
+        )}
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {items.length === 0 && (
             <p className="px-3 py-2 text-sm text-stone-400">

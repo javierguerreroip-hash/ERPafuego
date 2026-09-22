@@ -20,3 +20,4 @@ export * from './agenda/agenda-evento.js';
 export * from './cartera/cartera.js';
 export * from './cotizaciones/cotizacion.js';
 export * from './auditoria/auditoria.js';
+export * from './notificaciones/notificacion.js';

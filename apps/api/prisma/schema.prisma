@@ -54,6 +54,11 @@ model User {
   passwordHash       String
   role               UserRole
   active             Boolean  @default(true)
+  // Notificaciones (post-lanzamiento, 2026-09-23): marca de tiempo hasta
+  // donde este usuario ya revisó — no leído/no leído por notificación
+  // individual, alcanza con un solo timestamp por usuario y es mucho
+  // más simple. null = nunca las ha abierto (todo cuenta como no leído).
+  notificacionesVistasHasta DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   comprasRegistradas Compra[]            @relation("CompraRegisteredBy")
@@ -72,6 +77,7 @@ model User {
   incapacidadesRegistradas Incapacidad[]       @relation("IncapacidadRegisteredBy")
   archivosClienteSubidos  ClienteArchivo[]     @relation("ClienteArchivoUploadedBy")
   auditLogs               AuditLog[]           @relation("AuditLogUser")
+  notificacionesCreadas   Notificacion[]       @relation("NotificacionCreatedBy")
 
   @@map("users")
 }
@@ -658,4 +664,26 @@ model AuditLog {
   @@index([modelo])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// Notificaciones dentro de la aplicación (Etapa 2, post-lanzamiento
+// 2026-09-23) — sin correo electrónico, solo visibles al entrar al
+// sistema (pedido explícito del negocio). Por ahora solo las genera la
+// Agenda de Eventos (creación/edición/eliminación de un registro), pero
+// `tipo` queda genérico para poder disparar otros tipos de aviso más
+// adelante sin otra migración. `agendaEventoId` es una referencia
+// informativa (no FK): si el registro de Agenda se elimina, la
+// notificación de "se eliminó" debe sobrevivir para poder avisar del
+// hecho — igual que `registroId` en AuditLog.
+model Notificacion {
+  id             String   @id @default(uuid())
+  tipo           String
+  mensaje        String
+  agendaEventoId String?
+  createdById    String?
+  createdBy      User?    @relation("NotificacionCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("notificaciones")
 }
