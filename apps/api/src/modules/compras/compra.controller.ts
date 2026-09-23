@@ -8,7 +8,14 @@ export async function listHandler(req: Request, res: Response, next: NextFunctio
     const articuloId = typeof req.query.articuloId === 'string' ? req.query.articuloId : undefined;
     const proveedorId =
       typeof req.query.proveedorId === 'string' ? req.query.proveedorId : undefined;
-    res.json(await compraService.listCompras({ articuloId, proveedorId }));
+    // start/end son opcionales (a diferencia de los reportes de período
+    // como Inventario/Dashboard) — sin ellos se listan todas las compras,
+    // igual que antes de este filtro.
+    const startParam = typeof req.query.start === 'string' ? req.query.start : undefined;
+    const endParam = typeof req.query.end === 'string' ? req.query.end : undefined;
+    const startDate = startParam ? new Date(`${startParam}T00:00:00.000Z`) : undefined;
+    const endDate = endParam ? new Date(`${endParam}T23:59:59.999Z`) : undefined;
+    res.json(await compraService.listCompras({ articuloId, proveedorId, startDate, endDate }));
   } catch (error) {
     next(error);
   }

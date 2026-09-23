@@ -14,8 +14,11 @@ import {
 } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { usePeriodFilter } from '../hooks/usePeriodFilter';
+import { PeriodPickerControls } from '../components/PeriodPickerControls';
 import { Modal } from '../components/Modal';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
+import { KpiCard } from '../components/KpiCard';
 import { Field, inputClass } from '../components/Field';
 import { formatCOP, formatDateOnly } from '../lib/format';
 
@@ -45,6 +48,8 @@ function emptyHeader() {
 export function ComprasPage() {
   const { token, user } = useAuth();
   const readOnly = user?.role === 'CONSULTA';
+  const filter = usePeriodFilter('MES');
+  const { start, end } = filter;
   const [compras, setCompras] = useState<CompraDTO[]>([]);
   const [articulos, setArticulos] = useState<ArticuloDTO[]>([]);
   const [proveedores, setProveedores] = useState<ProveedorDTO[]>([]);
@@ -65,7 +70,7 @@ export function ComprasPage() {
     setError(null);
     try {
       const [comprasData, articulosData, proveedoresData] = await Promise.all([
-        apiFetch<CompraDTO[]>('/compras', { token }),
+        apiFetch<CompraDTO[]>(`/compras?start=${start}&end=${end}`, { token }),
         apiFetch<ArticuloDTO[]>('/articulos', { token }),
         apiFetch<ProveedorDTO[]>('/proveedores', { token }),
       ]);
@@ -82,7 +87,7 @@ export function ComprasPage() {
   useEffect(() => {
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [start, end]);
 
   const activeArticulos = articulos.filter((a) => a.active);
   const activeProveedores = proveedores.filter((p) => p.active);
@@ -96,6 +101,8 @@ export function ComprasPage() {
       c.facturaNumero.toLowerCase().includes(q)
     );
   });
+
+  const totalCompras = filteredCompras.reduce((sum, c) => sum + c.totalValue, 0);
 
   function openCreate() {
     setHeader(emptyHeader());
@@ -183,7 +190,13 @@ export function ComprasPage() {
         )}
       </div>
 
+      <PeriodPickerControls filter={filter} />
+
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+      <div className="mb-4 max-w-xs">
+        <KpiCard label="Total de compras" value={totalCompras} highlight />
+      </div>
 
       <div className="mb-4">
         <input

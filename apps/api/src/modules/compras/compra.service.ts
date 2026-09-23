@@ -32,11 +32,20 @@ function serialize(compra: CompraWithRelations) {
   };
 }
 
-export async function listCompras(filters: { articuloId?: string; proveedorId?: string }) {
+export async function listCompras(filters: {
+  articuloId?: string;
+  proveedorId?: string;
+  startDate?: Date;
+  endDate?: Date;
+}) {
   const compras = await prisma.compra.findMany({
     where: {
       articuloId: filters.articuloId,
       proveedorId: filters.proveedorId,
+      fecha:
+        filters.startDate && filters.endDate
+          ? { gte: filters.startDate, lte: filters.endDate }
+          : undefined,
     },
     include: includeRelations,
     orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],

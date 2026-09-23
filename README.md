@@ -75,6 +75,16 @@ Acceso restringido a los roles Administrador y Operación.
   utensilios en la misma factura) y la lista completa de artículos era
   difícil de navegar. Es solo un filtro de UI: no se envía al backend, la
   categoría real siempre es la del artículo elegido.
+- **Actualización post-lanzamiento (2026-09-24) — filtro de período y
+  total:** se agregó el mismo selector de período (día/semana/quincena/
+  mes/personalizado) que usan Inventario, Dashboard, etc.
+  (`usePeriodFilter` + `PeriodPickerControls`) — por defecto muestra el
+  mes actual, en vez de absolutamente todas las compras históricas como
+  antes. `GET /compras` acepta `start`/`end` opcionales (si no vienen,
+  sigue devolviendo todo, para no romper el histórico de precios por
+  artículo del botón "Ver histórico"). Se agregó también una tarjeta
+  **"Total de compras"** con la suma de lo que se ve en pantalla (respeta
+  tanto el período como el buscador de texto).
 
 ## Módulo 3 — Ventas y costos por evento (Fase 3)
 
