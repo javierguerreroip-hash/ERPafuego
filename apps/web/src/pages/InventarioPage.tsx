@@ -263,6 +263,7 @@ export function InventarioPage() {
             articuloId: d.articuloId,
             articuloCodigo: d.articuloCodigo,
             articuloNombre: d.articuloNombre,
+            unit: d.unit,
           }))}
           fecha={end}
           onSaveRow={handleImportRow}

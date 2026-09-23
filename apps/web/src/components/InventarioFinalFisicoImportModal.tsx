@@ -14,6 +14,7 @@ interface ArticuloParaConteo {
   articuloId: string;
   articuloCodigo: string;
   articuloNombre: string;
+  unit: string;
 }
 
 interface RowResult {
@@ -49,9 +50,15 @@ export function InventarioFinalFisicoImportModal({
       [
         { key: 'codigo', label: 'Código' },
         { key: 'nombre', label: 'Artículo' },
+        { key: 'unidad', label: 'Unidad' },
         { key: 'cantidad', label: 'Cantidad contada' },
       ],
-      articulos.map((a) => ({ codigo: a.articuloCodigo, nombre: a.articuloNombre, cantidad: '' })),
+      articulos.map((a) => ({
+        codigo: a.articuloCodigo,
+        nombre: a.articuloNombre,
+        unidad: a.unit,
+        cantidad: '',
+      })),
     );
   }
 
@@ -140,10 +147,11 @@ export function InventarioFinalFisicoImportModal({
     >
       <div className="space-y-3">
         <p className="text-sm text-neutral-600">
-          Descarga la plantilla con todos los artículos de materia prima, diligencia la columna
-          "Cantidad contada" con el conteo físico de cierre (
-          {new Date(`${fecha}T00:00:00`).toLocaleDateString('es-CO')}) y vuelve a cargarla aquí. El
-          costo unitario se calcula automático con el último precio de compra.
+          Descarga la plantilla con todos los artículos de materia prima (con su unidad de
+          medida) y diligencia la columna "Cantidad contada" con el conteo físico de cierre (
+          {new Date(`${fecha}T00:00:00`).toLocaleDateString('es-CO')}) en esa misma unidad; luego
+          vuelve a cargarla aquí. El costo unitario se calcula automático con el último precio de
+          compra.
         </p>
         <button
           type="button"
