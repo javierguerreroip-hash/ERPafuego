@@ -7,6 +7,7 @@ import { PeriodPickerControls } from '../components/PeriodPickerControls';
 import { InventarioFinalFisicoModal } from '../components/InventarioFinalFisicoModal';
 import { KpiCard } from '../components/KpiCard';
 import { ExportButtons } from '../components/ExportButtons';
+import { inputClass } from '../components/Field';
 import { formatCOP } from '../lib/format';
 
 const EXPORT_COLUMNS = [
@@ -30,6 +31,7 @@ export function JuegoInventariosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [finalFisicoFor, setFinalFisicoFor] = useState<JuegoInventariosDetalleDTO | null>(null);
+  const [search, setSearch] = useState('');
 
   async function load() {
     setLoading(true);
@@ -51,6 +53,15 @@ export function JuegoInventariosPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [start, end]);
+
+  const filteredDetalle = (reporte?.detalle ?? []).filter((item) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.articuloNombre.toLowerCase().includes(q) ||
+      item.articuloCodigo.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div>
@@ -87,6 +98,15 @@ export function JuegoInventariosPage() {
       <PeriodPickerControls filter={filter} />
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+      <div className="mb-4">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nombre o código de artículo…"
+          className={`${inputClass} max-w-sm`}
+        />
+      </div>
 
       {reporte && (
         <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -139,8 +159,14 @@ export function JuegoInventariosPage() {
                   No hay artículos de materia prima activos.
                 </td>
               </tr>
+            ) : filteredDetalle.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
+                  Ningún artículo coincide con la búsqueda.
+                </td>
+              </tr>
             ) : (
-              reporte.detalle.map((item) => (
+              filteredDetalle.map((item) => (
                 <tr key={item.articuloId} className="border-t align-top">
                   <td className="px-4 py-2">
                     {item.articuloNombre}{' '}

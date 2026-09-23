@@ -50,15 +50,21 @@ export function ProveedoresPage() {
   >('/proveedores');
   const [showImport, setShowImport] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<ArticuloCategoria | 'TODAS'>('TODAS');
+  const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<ProveedorDTO | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<ProveedorInput>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const filtered = items.filter(
-    (item) => categoryFilter === 'TODAS' || item.categoria === categoryFilter,
-  );
+  const filtered = items.filter((item) => {
+    if (categoryFilter !== 'TODAS' && item.categoria !== categoryFilter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.name.toLowerCase().includes(q) || item.identificacion.toLowerCase().includes(q)
+    );
+  });
 
   function openCreate() {
     setEditing(null);
@@ -129,20 +135,28 @@ export function ProveedoresPage() {
         )}
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <FilterChip
-          label="Todas"
-          active={categoryFilter === 'TODAS'}
-          onClick={() => setCategoryFilter('TODAS')}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nombre o NIT…"
+          className={`${inputClass} max-w-sm`}
         />
-        {ARTICULO_CATEGORIAS.map((cat) => (
+        <div className="flex flex-wrap gap-2">
           <FilterChip
-            key={cat}
-            label={ARTICULO_CATEGORIA_LABELS[cat]}
-            active={categoryFilter === cat}
-            onClick={() => setCategoryFilter(cat)}
+            label="Todas"
+            active={categoryFilter === 'TODAS'}
+            onClick={() => setCategoryFilter('TODAS')}
           />
-        ))}
+          {ARTICULO_CATEGORIAS.map((cat) => (
+            <FilterChip
+              key={cat}
+              label={ARTICULO_CATEGORIA_LABELS[cat]}
+              active={categoryFilter === cat}
+              onClick={() => setCategoryFilter(cat)}
+            />
+          ))}
+        </div>
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}

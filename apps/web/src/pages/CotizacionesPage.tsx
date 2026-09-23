@@ -62,6 +62,7 @@ export function CotizacionesPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   async function loadAll() {
     setLoading(true);
@@ -111,6 +112,16 @@ export function CotizacionesPage() {
       logistica: form.logistica.map((item, i) => (i === index ? { ...item, ...patch } : item)),
     });
   }
+
+  const filteredCotizaciones = cotizaciones.filter((c) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      c.clienteNombre.toLowerCase().includes(q) ||
+      c.asunto.toLowerCase().includes(q) ||
+      c.vendedorNombre.toLowerCase().includes(q)
+    );
+  });
 
   const subtotalItems = sumaLineas(form.items);
   const subtotalLogistica = sumaLineas(form.logistica);
@@ -550,6 +561,15 @@ export function CotizacionesPage() {
         </button>
       </div>
 
+      <div className="mb-4">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por cliente, asunto o vendedor…"
+          className={`${inputClass} max-w-sm`}
+        />
+      </div>
+
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       <div className="overflow-hidden rounded-lg border bg-white">
@@ -571,14 +591,16 @@ export function CotizacionesPage() {
                   Cargando…
                 </td>
               </tr>
-            ) : cotizaciones.length === 0 ? (
+            ) : filteredCotizaciones.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-neutral-400">
-                  Todavía no hay cotizaciones.
+                  {cotizaciones.length === 0
+                    ? 'Todavía no hay cotizaciones.'
+                    : 'Ninguna cotización coincide con la búsqueda.'}
                 </td>
               </tr>
             ) : (
-              cotizaciones.map((c) => (
+              filteredCotizaciones.map((c) => (
                 <tr key={c.id} className="border-t">
                   <td className="px-4 py-2">
                     {new Date(`${c.fecha.slice(0, 10)}T00:00:00`).toLocaleDateString('es-CO')}

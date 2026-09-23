@@ -55,6 +55,7 @@ export function CarteraPage() {
   const [clienteId, setClienteId] = useState('');
   const [proveedorId, setProveedorId] = useState('');
   const [estado, setEstado] = useState('');
+  const [search, setSearch] = useState('');
 
   const [totales, setTotales] = useState<CarteraTotalesDTO | null>(null);
   const [cxc, setCxc] = useState<CuentaPorCobrarDTO[]>([]);
@@ -122,6 +123,19 @@ export function CarteraPage() {
     loadTab();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, start, end, clienteId, proveedorId, estado]);
+
+  const filteredCxc = cxc.filter((r) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return r.clienteNombre.toLowerCase().includes(q);
+  });
+  const filteredCxp = cxp.filter((r) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      r.proveedorNombre.toLowerCase().includes(q) || r.facturaNumero.toLowerCase().includes(q)
+    );
+  });
 
   async function handleAbono(input: AbonoInput) {
     if (!abonoFor) return;
@@ -235,6 +249,12 @@ export function CarteraPage() {
             </option>
           ))}
         </select>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={tab === 'CXC' ? 'Buscar por cliente…' : 'Buscar por proveedor o factura…'}
+          className={`${inputClass} max-w-sm`}
+        />
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
@@ -257,14 +277,14 @@ export function CarteraPage() {
               </tr>
             </thead>
             <tbody>
-              {cxc.length === 0 ? (
+              {filteredCxc.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
                     No hay cuentas por cobrar para este filtro.
                   </td>
                 </tr>
               ) : (
-                cxc.map((r) => (
+                filteredCxc.map((r) => (
                   <Fragment key={r.eventoId}>
                     <tr
                       onClick={() => setExpandedId(expandedId === r.eventoId ? null : r.eventoId)}
@@ -338,14 +358,14 @@ export function CarteraPage() {
               </tr>
             </thead>
             <tbody>
-              {cxp.length === 0 ? (
+              {filteredCxp.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
                     No hay cuentas por pagar para este filtro.
                   </td>
                 </tr>
               ) : (
-                cxp.map((r) => (
+                filteredCxp.map((r) => (
                   <Fragment key={r.id}>
                     <tr
                       onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}

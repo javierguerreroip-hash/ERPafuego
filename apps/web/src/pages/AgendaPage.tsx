@@ -62,6 +62,7 @@ export function AgendaPage() {
 
   const [vendedorId, setVendedorId] = useState('');
   const [estado, setEstado] = useState('');
+  const [search, setSearch] = useState('');
 
   const [registros, setRegistros] = useState<AgendaEventoDTO[]>([]);
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
@@ -125,8 +126,19 @@ export function AgendaPage() {
     await Promise.all([loadRegistros(), loadAuxiliares()]);
   }
 
+  const filteredRegistros = registros.filter((r) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      r.clienteNombre.toLowerCase().includes(q) ||
+      r.opcionMenuNombre.toLowerCase().includes(q) ||
+      (r.personaContacto ?? '').toLowerCase().includes(q) ||
+      (r.vendedorNombre ?? '').toLowerCase().includes(q)
+    );
+  });
+
   const registrosPorDia = new Map<string, AgendaEventoDTO[]>();
-  for (const r of registros) {
+  for (const r of filteredRegistros) {
     const dia = r.fecha.slice(0, 10);
     const prev = registrosPorDia.get(dia) ?? [];
     prev.push(r);
@@ -185,6 +197,12 @@ export function AgendaPage() {
             </option>
           ))}
         </select>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por cliente, menú o contacto…"
+          className={`${inputClass} max-w-sm`}
+        />
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
@@ -208,14 +226,14 @@ export function AgendaPage() {
               </tr>
             </thead>
             <tbody>
-              {registros.length === 0 ? (
+              {filteredRegistros.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
                     No hay eventos en la agenda para este filtro.
                   </td>
                 </tr>
               ) : (
-                registros.map((r) => (
+                filteredRegistros.map((r) => (
                   <tr
                     key={r.id}
                     onClick={() => openEdit(r)}

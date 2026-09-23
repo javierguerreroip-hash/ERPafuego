@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { FULL_ACCESS_ROLES, READ_ACCESS_ROLES, USER_ROLE_LABELS, type UserRole } from '@erp-afuego/shared';
 import { useAuth } from '../context/AuthContext';
@@ -48,12 +48,50 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const items = NAV_ITEMS.filter((item) => user && item.roles.includes(user.role));
   const showNotificaciones = user && FULL_ACCESS.includes(user.role);
+  // El equipo consulta la Agenda desde el celular en el sitio del evento
+  // — en pantallas angostas el menú se oculta por defecto y se abre como
+  // un panel encima del contenido, en vez de empujar todo a un costado.
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-neutral-50">
-      <aside className="flex w-64 flex-col bg-stone-900">
-        <div className="border-b border-stone-800 px-3 py-4">
+      <div className="fixed inset-x-0 top-0 z-30 flex items-center gap-3 border-b border-stone-800 bg-stone-900 px-3 py-2 md:hidden">
+        <button
+          onClick={() => setMobileOpen(true)}
+          aria-label="Abrir menú"
+          className="rounded-md p-2 text-stone-300 hover:bg-stone-800 hover:text-white"
+        >
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <img src="/logo-white.png" alt="A Fuego Catering" className="h-8 w-auto" />
+      </div>
+
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-stone-900 transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2 border-b border-stone-800 px-3 py-4">
           <img src="/logo-white.png" alt="A Fuego Catering" className="h-auto w-full" />
+          <button
+            onClick={() => setMobileOpen(false)}
+            aria-label="Cerrar menú"
+            className="shrink-0 rounded-md p-1 text-stone-300 hover:bg-stone-800 hover:text-white md:hidden"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
         </div>
         {showNotificaciones && (
           <div className="border-b border-stone-800 px-3 py-2">
@@ -71,6 +109,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
                 `block rounded-md px-3 py-2 text-sm transition-colors ${
                   isActive
@@ -91,7 +130,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      <main className="flex-1 overflow-y-auto p-6 pt-20 md:pt-6">{children}</main>
     </div>
   );
 }

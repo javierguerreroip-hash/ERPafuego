@@ -24,6 +24,7 @@ export function UsuariosPage() {
   const [items, setItems] = useState<UserDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE);
@@ -89,6 +90,12 @@ export function UsuariosPage() {
     }
   }
 
+  const filteredItems = items.filter((item) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return item.name.toLowerCase().includes(q) || item.email.toLowerCase().includes(q);
+  });
+
   async function toggleActive(item: UserDTO) {
     try {
       await apiFetch(`/usuarios/${item.id}/active`, {
@@ -120,6 +127,15 @@ export function UsuariosPage() {
         </button>
       </div>
 
+      <div className="mb-4">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nombre o correo…"
+          className={`${inputClass} max-w-sm`}
+        />
+      </div>
+
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       <div className="overflow-hidden rounded-lg border bg-white">
@@ -140,14 +156,16 @@ export function UsuariosPage() {
                   Cargando…
                 </td>
               </tr>
-            ) : items.length === 0 ? (
+            ) : filteredItems.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-neutral-400">
-                  No hay usuarios registrados.
+                  {items.length === 0
+                    ? 'No hay usuarios registrados.'
+                    : 'Ningún usuario coincide con la búsqueda.'}
                 </td>
               </tr>
             ) : (
-              items.map((item) => (
+              filteredItems.map((item) => (
                 <tr key={item.id} className="border-t">
                   <td className="px-4 py-2">{item.name}</td>
                   <td className="px-4 py-2">{item.email}</td>

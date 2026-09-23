@@ -66,6 +66,7 @@ export function CRMPage() {
 
   const [ganarFor, setGanarFor] = useState<NegocioDTO | null>(null);
   const [deletingNegocio, setDeletingNegocio] = useState<NegocioDTO | null>(null);
+  const [search, setSearch] = useState('');
 
   const [editingGanado, setEditingGanado] = useState<NegocioDTO | null>(null);
   const [ganadoForm, setGanadoForm] = useState<NegocioGanadoUpdateInput | null>(null);
@@ -241,6 +242,15 @@ export function CRMPage() {
         </button>
       </div>
 
+      <div className="mb-4">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por cliente, evento o vendedor…"
+          className={`${inputClass} max-w-sm`}
+        />
+      </div>
+
       <div className="mb-4 rounded-lg border bg-white p-4">
         <h2 className="mb-3 text-sm font-medium text-neutral-700">
           Resumen comercial — Cotizado, Ganado y Perdido
@@ -311,7 +321,16 @@ export function CRMPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {ETAPAS_NEGOCIO.map((etapa) => {
-            const items = negocios.filter((n) => n.etapa === etapa);
+            const q = search.trim().toLowerCase();
+            const items = negocios.filter((n) => {
+              if (n.etapa !== etapa) return false;
+              if (!q) return true;
+              return (
+                n.clienteNombre.toLowerCase().includes(q) ||
+                n.nombreEvento.toLowerCase().includes(q) ||
+                n.vendedorNombre.toLowerCase().includes(q)
+              );
+            });
             return (
               <div key={etapa} className={`rounded-lg border-2 bg-neutral-50 p-3 ${COLUMN_STYLES[etapa]}`}>
                 <h2 className="mb-3 text-sm font-semibold text-neutral-700">
@@ -319,7 +338,9 @@ export function CRMPage() {
                 </h2>
                 <div className="space-y-2">
                   {items.length === 0 && (
-                    <p className="text-xs text-neutral-400">Sin negocios en esta etapa.</p>
+                    <p className="text-xs text-neutral-400">
+                      {q ? 'Ninguno coincide con la búsqueda.' : 'Sin negocios en esta etapa.'}
+                    </p>
                   )}
                   {items.map((n) => (
                     <div key={n.id} className="rounded-md border bg-white p-3 shadow-sm">

@@ -273,6 +273,35 @@ Acceso restringido a los roles Administrador y Operación.
   para que quede un solo lugar donde ajustar quién tiene acceso de
   lectura vs. edición.
 
+## Menú adaptado a celular (post-lanzamiento, 2026-09-23, Etapa 4 del plan de mejoras)
+
+- El menú lateral (`AppLayout.tsx`) ahora es un panel deslizante en
+  pantallas angostas (< 768px): se oculta por defecto detrás de un botón
+  de hamburguesa en una barra superior fija, y se abre como overlay
+  encima del contenido (con fondo semitransparente que lo cierra al
+  tocarlo) en vez de empujar la página a un costado. En escritorio el
+  comportamiento no cambia — el menú sigue siempre visible a la
+  izquierda. Pensado para el equipo que consulta la Agenda de Eventos
+  desde el celular en el sitio del evento.
+- Elegir un módulo en el celular cierra el panel automáticamente, para
+  no tener que cerrarlo a mano después de cada clic.
+
+## Búsqueda por palabras clave en cada módulo (post-lanzamiento, 2026-09-23, Etapa 5 del plan de mejoras)
+
+- Se agregó una caja de búsqueda de texto libre (nombre, código,
+  cliente, proveedor, factura, vendedor, etc., según lo que tenga
+  sentido en cada listado) en Artículos, Proveedores, Opciones de Menú,
+  Compras, Ventas y Costos por Evento, Inventario, Juego de Inventarios,
+  Cartera, CRM, Agenda de Eventos, Cotizaciones y Usuarios. Clientes y
+  Auditoría ya tenían la suya desde antes.
+- Es un filtro que corre en el navegador sobre los datos ya cargados del
+  período/filtro actual (no una llamada nueva al backend) — coincide
+  contra varios campos a la vez con `includes()` case-insensitive, sin
+  distinguir tildes. No se agregó a Gastos Administrativos, Estado de
+  Resultados, Parámetros Fiscales, Parámetros de Nómina ni Dashboard
+  porque son reportes de un solo período o catálogos demasiado cortos
+  para necesitarla.
+
 ## Cotizaciones (post-lanzamiento, 2026-09-10)
 
 - **Cotizaciones** (`/cotizaciones`): genera el documento comercial con el

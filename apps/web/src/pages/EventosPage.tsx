@@ -49,6 +49,7 @@ export function EventosPage() {
 
   const [openEventoId, setOpenEventoId] = useState<string | null>(null);
   const [deletingEvento, setDeletingEvento] = useState<EventoDTO | null>(null);
+  const [search, setSearch] = useState('');
 
   const rankingFilter = usePeriodFilter('MES');
   const { start: rankingStart, end: rankingEnd } = rankingFilter;
@@ -107,6 +108,16 @@ export function EventosPage() {
   const activeClientes = clientes.filter((c) => c.active);
   const activeOpciones = opcionesMenu.filter((o) => o.active);
   const activeTaxRates = taxRates.filter((t) => t.active);
+
+  const filteredEventos = eventos.filter((ev) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      ev.clienteNombre.toLowerCase().includes(q) ||
+      ev.opcionMenuNombre.toLowerCase().includes(q) ||
+      (ev.vendedorNombre ?? '').toLowerCase().includes(q)
+    );
+  });
 
   function openCreate() {
     setForm(emptyForm());
@@ -200,6 +211,15 @@ export function EventosPage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
+      <div className="mb-4">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por cliente, opción de menú o vendedor…"
+          className={`${inputClass} max-w-sm`}
+        />
+      </div>
+
       <div className="overflow-x-auto rounded-lg border bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-neutral-50 text-neutral-500">
@@ -223,14 +243,16 @@ export function EventosPage() {
                   Cargando…
                 </td>
               </tr>
-            ) : eventos.length === 0 ? (
+            ) : filteredEventos.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-4 py-6 text-center text-neutral-400">
-                  Todavía no hay eventos registrados.
+                  {eventos.length === 0
+                    ? 'Todavía no hay eventos registrados.'
+                    : 'Ningún evento coincide con la búsqueda.'}
                 </td>
               </tr>
             ) : (
-              eventos.map((evento) => (
+              filteredEventos.map((evento) => (
                 <tr
                   key={evento.id}
                   onDoubleClick={() => setOpenEventoId(evento.id)}

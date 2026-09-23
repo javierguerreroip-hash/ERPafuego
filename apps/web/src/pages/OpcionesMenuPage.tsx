@@ -29,15 +29,21 @@ export function OpcionesMenuPage() {
     OpcionMenuInput
   >('/opciones-menu');
   const [categoryFilter, setCategoryFilter] = useState<OpcionMenuCategoria | 'TODAS'>('TODAS');
+  const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<OpcionMenuDTO | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<OpcionMenuInput>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const filtered = items.filter(
-    (item) => categoryFilter === 'TODAS' || item.category === categoryFilter,
-  );
+  const filtered = items.filter((item) => {
+    if (categoryFilter !== 'TODAS' && item.category !== categoryFilter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.name.toLowerCase().includes(q) || item.description.toLowerCase().includes(q)
+    );
+  });
 
   function openCreate() {
     setEditing(null);
@@ -96,20 +102,28 @@ export function OpcionesMenuPage() {
         </button>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <FilterChip
-          label="Todas"
-          active={categoryFilter === 'TODAS'}
-          onClick={() => setCategoryFilter('TODAS')}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nombre o descripción…"
+          className={`${inputClass} max-w-sm`}
         />
-        {OPCION_MENU_CATEGORIAS.map((cat) => (
+        <div className="flex flex-wrap gap-2">
           <FilterChip
-            key={cat}
-            label={OPCION_MENU_CATEGORIA_LABELS[cat]}
-            active={categoryFilter === cat}
-            onClick={() => setCategoryFilter(cat)}
+            label="Todas"
+            active={categoryFilter === 'TODAS'}
+            onClick={() => setCategoryFilter('TODAS')}
           />
-        ))}
+          {OPCION_MENU_CATEGORIAS.map((cat) => (
+            <FilterChip
+              key={cat}
+              label={OPCION_MENU_CATEGORIA_LABELS[cat]}
+              active={categoryFilter === cat}
+              onClick={() => setCategoryFilter(cat)}
+            />
+          ))}
+        </div>
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
