@@ -32,7 +32,8 @@ function emptyForm(): EventoInput {
 }
 
 export function EventosPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const [eventos, setEventos] = useState<EventoDTO[]>([]);
   const [clientes, setClientes] = useState<ClienteDTO[]>([]);
   const [opcionesMenu, setOpcionesMenu] = useState<OpcionMenuDTO[]>([]);
@@ -141,12 +142,14 @@ export function EventosPage() {
             Doble clic sobre un evento para cargar sus consumos de materia prima y servicios.
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          Nuevo evento
-        </button>
+        {!readOnly && (
+          <button
+            onClick={openCreate}
+            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          >
+            Nuevo evento
+          </button>
+        )}
       </div>
 
       <div className="mb-4 rounded-lg border bg-white p-4">
@@ -256,15 +259,17 @@ export function EventosPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingEvento(evento);
-                      }}
-                      className="text-red-600 hover:underline"
-                    >
-                      Eliminar
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingEvento(evento);
+                        }}
+                        className="text-red-600 hover:underline"
+                      >
+                        Eliminar
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

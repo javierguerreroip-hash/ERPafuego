@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { taxRateSchema, type TaxRateDTO, type TaxRateInput } from '@erp-afuego/shared';
+import { FULL_ACCESS_ROLES, taxRateSchema, type TaxRateDTO, type TaxRateInput } from '@erp-afuego/shared';
 import { useResource } from '../hooks/useResource';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
@@ -10,8 +10,9 @@ const EMPTY_FORM: TaxRateInput = { name: '', rate: 0 };
 export function TaxRatesPage() {
   const { user } = useAuth();
   // Administrador, Operación y Ventas tienen acceso completo (decisión del
-  // negocio); solo Cocina/Nómina no ve este módulo (ni el enlace en el menú).
-  const isAdmin = user?.role !== 'COCINA_NOMINA';
+  // negocio); Cocina/Nómina no ve este módulo (ni el enlace en el menú);
+  // Consulta externa lo ve pero en modo solo lectura.
+  const isAdmin = !!user && (FULL_ACCESS_ROLES as readonly string[]).includes(user.role);
   const { items, loading, error, create, update, setActive } = useResource<
     TaxRateDTO,
     TaxRateInput

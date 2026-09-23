@@ -62,6 +62,10 @@ export function NominaLiquidacionPage() {
   // userId de la URL para este rol), pero además ocultamos el selector de
   // empleado y la gestión de turnos de otras personas, que no le sirven.
   const isSelfService = user?.role === 'COCINA_NOMINA';
+  // Consulta externa puede ver la liquidación de cualquier empleado (como
+  // los roles administrativos) pero nunca puede registrar/editar/borrar
+  // turnos ni incapacidades.
+  const canManage = !isSelfService && user?.role !== 'CONSULTA';
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [empleadoId, setEmpleadoId] = useState(isSelfService ? (user?.id ?? '') : '');
   const filter = usePeriodFilter('QUINCENA');
@@ -266,13 +270,15 @@ export function NominaLiquidacionPage() {
               ))}
             </select>
           </div>
-          <button
-            onClick={openNewTurno}
-            disabled={!empleadoId}
-            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
-          >
-            Registrar/corregir turno
-          </button>
+          {canManage && (
+            <button
+              onClick={openNewTurno}
+              disabled={!empleadoId}
+              className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+            >
+              Registrar/corregir turno
+            </button>
+          )}
         </div>
       )}
 
@@ -334,13 +340,13 @@ export function NominaLiquidacionPage() {
                   <th className="px-3 py-2">Entrada</th>
                   <th className="px-3 py-2">Salida</th>
                   <th className="px-3 py-2">Horas</th>
-                  {!isSelfService && <th className="px-3 py-2" />}
+                  {canManage && <th className="px-3 py-2" />}
                 </tr>
               </thead>
               <tbody>
                 {liquidacion.turnos.length === 0 ? (
                   <tr>
-                    <td colSpan={isSelfService ? 3 : 4} className="px-3 py-4 text-center text-neutral-400">
+                    <td colSpan={canManage ? 4 : 3} className="px-3 py-4 text-center text-neutral-400">
                       Sin turnos en este período.
                     </td>
                   </tr>
@@ -352,7 +358,7 @@ export function NominaLiquidacionPage() {
                         {t.horaSalida ? new Date(t.horaSalida).toLocaleString('es-CO') : '—'}
                       </td>
                       <td className="px-3 py-2">{t.horasTrabajadas ?? '—'}</td>
-                      {!isSelfService && (
+                      {canManage && (
                         <td className="space-x-2 px-3 py-2 text-right">
                           <button
                             onClick={() => openEditTurno(t.id, t.horaEntrada, t.horaSalida)}
@@ -380,7 +386,7 @@ export function NominaLiquidacionPage() {
               <h2 className="text-sm font-medium text-neutral-700">
                 Incapacidades en el período (se liquidan al % configurado en Parámetros de Nómina)
               </h2>
-              {!isSelfService && (
+              {canManage && (
                 <button
                   onClick={openNewIncapacidad}
                   disabled={!empleadoId}
@@ -401,7 +407,7 @@ export function NominaLiquidacionPage() {
                     <th className="px-3 py-2">Fecha</th>
                     <th className="px-3 py-2">Observaciones</th>
                     <th className="px-3 py-2">Registrado por</th>
-                    {!isSelfService && <th className="px-3 py-2" />}
+                    {canManage && <th className="px-3 py-2" />}
                   </tr>
                 </thead>
                 <tbody>
@@ -412,7 +418,7 @@ export function NominaLiquidacionPage() {
                       </td>
                       <td className="px-3 py-2">{i.observaciones || '—'}</td>
                       <td className="px-3 py-2">{i.registeredByName}</td>
-                      {!isSelfService && (
+                      {canManage && (
                         <td className="px-3 py-2 text-right">
                           <button
                             onClick={() => handleDeleteIncapacidad(i.id)}

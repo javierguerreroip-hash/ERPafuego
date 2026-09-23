@@ -246,6 +246,33 @@ Acceso restringido a los roles Administrador y Operación.
   disparar otros avisos más adelante sin otra migración, aunque hoy solo
   la Agenda los genera.
 
+## Rol de Consulta externa — solo lectura (post-lanzamiento, 2026-09-23, Etapa 3 del plan de mejoras)
+
+- **Nuevo rol `CONSULTA`** (`packages/shared/src/roles.ts`, migración
+  `20260923130000_user_role_consulta`): pensado para personas externas al
+  equipo (ej. un contador o un socio) que necesitan revisar el sistema
+  sin poder crear, editar ni eliminar nada.
+- **Ve en modo solo lectura**: Dashboard, Artículos y Servicios,
+  Clientes, Proveedores, Compras, Ventas y Costos por Evento (incluido
+  el detalle de consumos de cada evento), Inventario, Juego de
+  Inventarios, Gastos Administrativos, Estado de Resultados, Parámetros
+  Fiscales, Liquidación de Nómina (de cualquier empleado) y Cartera.
+- **No ve en absoluto**: CRM de Ventas, Agenda de Eventos, Opciones de
+  Menú, Cotizaciones, Usuarios ni Auditoría — pedido explícito del
+  negocio (los dos últimos ya eran exclusivos de Administrador desde
+  antes).
+- **Aplicado en dos capas, no solo en el menú**: el backend (`requireRole`
+  en cada `*.routes.ts`) es quien realmente bloquea — el menú lateral y
+  los botones de "Nuevo/Editar/Eliminar/Guardar/Registrar/Abonar" que se
+  ocultan en el frontend son solo para que Consulta no se tope con
+  errores 403; si alguien manipulara la petición igual la rechaza el
+  backend.
+- **Dos constantes compartidas** (`FULL_ACCESS_ROLES` = Administrador,
+  Operación, Ventas; `READ_ACCESS_ROLES` = las anteriores + Consulta)
+  reemplazan los arreglos de roles repetidos que había en cada módulo,
+  para que quede un solo lugar donde ajustar quién tiene acceso de
+  lectura vs. edición.
+
 ## Cotizaciones (post-lanzamiento, 2026-09-10)
 
 - **Cotizaciones** (`/cotizaciones`): genera el documento comercial con el

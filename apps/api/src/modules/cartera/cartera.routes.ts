@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { FULL_ACCESS_ROLES, READ_ACCESS_ROLES } from '@erp-afuego/shared';
 import { requireAuth, requireRole } from '../../middleware/auth.middleware.js';
 import {
   addAbonoCxCHandler,
@@ -10,12 +11,10 @@ import {
 
 export const carteraRouter = Router();
 
-// Cartera es información financiera de back-office — igual que Estado de
-// Resultados y Gastos Administrativos, solo Administrador.
-carteraRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
+carteraRouter.use(requireAuth);
 
-carteraRouter.get('/totales', totalesHandler);
-carteraRouter.get('/cxc', listCxCHandler);
-carteraRouter.post('/cxc/:eventoId/abonos', addAbonoCxCHandler);
-carteraRouter.get('/cxp', listCxPHandler);
-carteraRouter.post('/cxp/:cuentaId/abonos', addAbonoCxPHandler);
+carteraRouter.get('/totales', requireRole(...READ_ACCESS_ROLES), totalesHandler);
+carteraRouter.get('/cxc', requireRole(...READ_ACCESS_ROLES), listCxCHandler);
+carteraRouter.post('/cxc/:eventoId/abonos', requireRole(...FULL_ACCESS_ROLES), addAbonoCxCHandler);
+carteraRouter.get('/cxp', requireRole(...READ_ACCESS_ROLES), listCxPHandler);
+carteraRouter.post('/cxp/:cuentaId/abonos', requireRole(...FULL_ACCESS_ROLES), addAbonoCxPHandler);

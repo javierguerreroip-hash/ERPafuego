@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { USER_ROLE_LABELS, type UserRole } from '@erp-afuego/shared';
+import { FULL_ACCESS_ROLES, READ_ACCESS_ROLES, USER_ROLE_LABELS, type UserRole } from '@erp-afuego/shared';
 import { useAuth } from '../context/AuthContext';
 import { NotificacionesBell } from './NotificacionesBell';
 
@@ -9,33 +9,37 @@ import { NotificacionesBell } from './NotificacionesBell';
 // vea un enlace que solo lleva a un error 403.
 // Administrador, Operación y Ventas tienen acceso a todos los módulos del
 // negocio (decisión del negocio); Cocina/Nómina solo a su propio turno y
-// su propia liquidación de nómina.
-const FULL_ACCESS: UserRole[] = ['ADMINISTRADOR', 'OPERACION', 'VENTAS'];
+// su propia liquidación de nómina; Consulta externa ve en modo lectura
+// todo lo de FULL_ACCESS excepto CRM, Agenda, Opciones de Menú y
+// Cotizaciones (pedido explícito, 2026-09-23) — tampoco Usuarios ni
+// Auditoría, que ya eran exclusivos de Administrador.
+const FULL_ACCESS: UserRole[] = [...FULL_ACCESS_ROLES];
+const READ_ACCESS: UserRole[] = [...READ_ACCESS_ROLES];
 
 const NAV_ITEMS: { to: string; label: string; roles: UserRole[] }[] = [
-  { to: '/', label: 'Dashboard', roles: FULL_ACCESS },
-  { to: '/articulos', label: 'Artículos y Servicios', roles: FULL_ACCESS },
+  { to: '/', label: 'Dashboard', roles: READ_ACCESS },
+  { to: '/articulos', label: 'Artículos y Servicios', roles: READ_ACCESS },
   { to: '/opciones-menu', label: 'Opciones de Menú', roles: FULL_ACCESS },
-  { to: '/clientes', label: 'Clientes', roles: FULL_ACCESS },
-  { to: '/proveedores', label: 'Proveedores', roles: FULL_ACCESS },
-  { to: '/compras', label: 'Compras', roles: FULL_ACCESS },
-  { to: '/eventos', label: 'Ventas y Costos por Evento', roles: FULL_ACCESS },
-  { to: '/inventario', label: 'Inventario', roles: FULL_ACCESS },
-  { to: '/juego-inventarios', label: 'Juego de Inventarios (CMV)', roles: FULL_ACCESS },
-  { to: '/gastos-administrativos', label: 'Gastos Administrativos', roles: FULL_ACCESS },
-  { to: '/estado-resultados', label: 'Estado de Resultados', roles: FULL_ACCESS },
-  { to: '/tax-rates', label: 'Parámetros Fiscales', roles: FULL_ACCESS },
+  { to: '/clientes', label: 'Clientes', roles: READ_ACCESS },
+  { to: '/proveedores', label: 'Proveedores', roles: READ_ACCESS },
+  { to: '/compras', label: 'Compras', roles: READ_ACCESS },
+  { to: '/eventos', label: 'Ventas y Costos por Evento', roles: READ_ACCESS },
+  { to: '/inventario', label: 'Inventario', roles: READ_ACCESS },
+  { to: '/juego-inventarios', label: 'Juego de Inventarios (CMV)', roles: READ_ACCESS },
+  { to: '/gastos-administrativos', label: 'Gastos Administrativos', roles: READ_ACCESS },
+  { to: '/estado-resultados', label: 'Estado de Resultados', roles: READ_ACCESS },
+  { to: '/tax-rates', label: 'Parámetros Fiscales', roles: READ_ACCESS },
   { to: '/mi-turno', label: 'Mi Turno', roles: ['COCINA_NOMINA'] },
   {
     to: '/nomina/liquidacion',
     label: 'Liquidación de Nómina',
-    roles: [...FULL_ACCESS, 'COCINA_NOMINA'],
+    roles: [...READ_ACCESS, 'COCINA_NOMINA'],
   },
-  { to: '/nomina/parametros', label: 'Parámetros de Nómina', roles: FULL_ACCESS },
+  { to: '/nomina/parametros', label: 'Parámetros de Nómina', roles: READ_ACCESS },
   { to: '/cotizaciones', label: 'Cotizaciones', roles: FULL_ACCESS },
   { to: '/crm', label: 'CRM de Ventas', roles: FULL_ACCESS },
   { to: '/agenda', label: 'Agenda de Eventos', roles: FULL_ACCESS },
-  { to: '/cartera', label: 'Cartera', roles: FULL_ACCESS },
+  { to: '/cartera', label: 'Cartera', roles: READ_ACCESS },
   { to: '/usuarios', label: 'Usuarios', roles: ['ADMINISTRADOR'] },
   { to: '/auditoria', label: 'Auditoría', roles: ['ADMINISTRADOR'] },
 ];

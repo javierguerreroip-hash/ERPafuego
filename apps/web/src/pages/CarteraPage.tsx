@@ -46,7 +46,8 @@ const ESTADO_COLORS: Record<string, string> = {
 };
 
 export function CarteraPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const [tab, setTab] = useState<'CXC' | 'CXP'>('CXC');
   const filter = usePeriodFilter('MES');
   const { start, end } = filter;
@@ -281,7 +282,7 @@ export function CarteraPage() {
                         </span>
                       </td>
                       <td className="px-4 py-2 text-right">
-                        {r.estado !== 'PAGADA' && (
+                        {!readOnly && r.estado !== 'PAGADA' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -364,7 +365,7 @@ export function CarteraPage() {
                         </span>
                       </td>
                       <td className="px-4 py-2 text-right">
-                        {r.estado !== 'PAGADA' && (
+                        {!readOnly && r.estado !== 'PAGADA' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

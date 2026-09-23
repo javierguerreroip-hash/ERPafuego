@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { FULL_ACCESS_ROLES, READ_ACCESS_ROLES } from '@erp-afuego/shared';
 import { requireAuth, requireRole } from '../../middleware/auth.middleware.js';
 import {
   createHandler,
@@ -10,12 +11,10 @@ import {
 
 export const articuloRouter = Router();
 
-// Módulo 1 (maestros): solo Administrador y Operación (spec: "Operación —
-// compras, inventario, eventos", que dependen de estos maestros).
-articuloRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
+articuloRouter.use(requireAuth);
 
-articuloRouter.get('/', listHandler);
-articuloRouter.post('/', createHandler);
-articuloRouter.put('/:id', updateHandler);
-articuloRouter.patch('/:id/active', setActiveHandler);
-articuloRouter.delete('/:id', deleteHandler);
+articuloRouter.get('/', requireRole(...READ_ACCESS_ROLES), listHandler);
+articuloRouter.post('/', requireRole(...FULL_ACCESS_ROLES), createHandler);
+articuloRouter.put('/:id', requireRole(...FULL_ACCESS_ROLES), updateHandler);
+articuloRouter.patch('/:id/active', requireRole(...FULL_ACCESS_ROLES), setActiveHandler);
+articuloRouter.delete('/:id', requireRole(...FULL_ACCESS_ROLES), deleteHandler);

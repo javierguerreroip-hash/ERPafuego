@@ -42,7 +42,8 @@ function emptyForm(year: number, month: number): GastoAdministrativoInput {
 }
 
 export function GastosAdministrativosPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const [yearMonth, setYearMonth] = useState(currentYearMonth());
   const [form, setForm] = useState<GastoAdministrativoInput>(() => {
     const [y, m] = currentYearMonth().split('-').map(Number);
@@ -167,10 +168,11 @@ export function GastosAdministrativosPage() {
                     min={0}
                     step="any"
                     value={form[rubro]}
+                    disabled={readOnly}
                     onChange={(e) =>
                       setForm({ ...form, [rubro]: Number(e.target.value) } as GastoAdministrativoInput)
                     }
-                    className={inputClass}
+                    className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                   />
                 </Field>
               ))}
@@ -181,13 +183,15 @@ export function GastosAdministrativosPage() {
             <p className="text-sm font-medium text-neutral-900">
               Total del mes: {formatCOP(total)}
             </p>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || loading}
-              className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
-            >
-              {submitting ? 'Guardando…' : 'Guardar'}
-            </button>
+            {!readOnly && (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || loading}
+                className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+              >
+                {submitting ? 'Guardando…' : 'Guardar'}
+              </button>
+            )}
           </div>
           {saved && <p className="mt-2 text-sm text-green-600">Guardado correctamente.</p>}
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}

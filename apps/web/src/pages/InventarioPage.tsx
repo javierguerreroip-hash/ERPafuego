@@ -13,7 +13,8 @@ import { KpiCard } from '../components/KpiCard';
 import { formatCOP } from '../lib/format';
 
 export function InventarioPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const filter = usePeriodFilter('MES');
   const { start, end } = filter;
 
@@ -124,12 +125,14 @@ export function InventarioPage() {
                     <p className="text-xs text-neutral-400">{formatCOP(item.inventarioFinalValue)}</p>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <button
-                      onClick={() => setInicialFor(item)}
-                      className="text-orange-600 hover:underline"
-                    >
-                      {item.inventarioInicialRegistrado ? 'Editar inicial' : 'Registrar inicial'}
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => setInicialFor(item)}
+                        className="text-orange-600 hover:underline"
+                      >
+                        {item.inventarioInicialRegistrado ? 'Editar inicial' : 'Registrar inicial'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

@@ -21,7 +21,8 @@ const EXPORT_COLUMNS = [
 ];
 
 export function JuegoInventariosPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const filter = usePeriodFilter('MES');
   const { start, end } = filter;
 
@@ -168,12 +169,14 @@ export function JuegoInventariosPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <button
-                      onClick={() => setFinalFisicoFor(item)}
-                      className="text-orange-600 hover:underline"
-                    >
-                      {item.inventarioFinalFisicoRegistrado ? 'Editar' : 'Registrar'}
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => setFinalFisicoFor(item)}
+                        className="text-orange-600 hover:underline"
+                      >
+                        {item.inventarioFinalFisicoRegistrado ? 'Editar' : 'Registrar'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

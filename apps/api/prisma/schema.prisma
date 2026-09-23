@@ -45,6 +45,7 @@ enum UserRole {
   OPERACION
   COCINA_NOMINA
   VENTAS
+  CONSULTA
 }
 
 model User {

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { FULL_ACCESS_ROLES, READ_ACCESS_ROLES } from '@erp-afuego/shared';
 import { requireAuth, requireRole } from '../../middleware/auth.middleware.js';
 import {
   addConsumoHandler,
@@ -14,18 +15,24 @@ import {
 
 export const eventoRouter = Router();
 
-// Administrador, Operación y Ventas tienen acceso completo a todos los
-// módulos (decisión del negocio).
-eventoRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
+eventoRouter.use(requireAuth);
 
-eventoRouter.get('/', listHandler);
-eventoRouter.post('/', createHandler);
+eventoRouter.get('/', requireRole(...READ_ACCESS_ROLES), listHandler);
+eventoRouter.post('/', requireRole(...FULL_ACCESS_ROLES), createHandler);
 // Debe ir antes de "/:id" — si no, Express interpretaría
 // "ranking-opciones" como un id de evento y nunca llegaría aquí.
-eventoRouter.get('/ranking-opciones', getRankingOpcionesHandler);
-eventoRouter.get('/:id', getHandler);
-eventoRouter.put('/:id', updateHandler);
-eventoRouter.post('/:id/consumos', addConsumoHandler);
-eventoRouter.put('/:id/consumos/:consumoId', updateConsumoHandler);
-eventoRouter.delete('/:id/consumos/:consumoId', removeConsumoHandler);
-eventoRouter.delete('/:id', deleteHandler);
+eventoRouter.get('/ranking-opciones', requireRole(...READ_ACCESS_ROLES), getRankingOpcionesHandler);
+eventoRouter.get('/:id', requireRole(...READ_ACCESS_ROLES), getHandler);
+eventoRouter.put('/:id', requireRole(...FULL_ACCESS_ROLES), updateHandler);
+eventoRouter.post('/:id/consumos', requireRole(...FULL_ACCESS_ROLES), addConsumoHandler);
+eventoRouter.put(
+  '/:id/consumos/:consumoId',
+  requireRole(...FULL_ACCESS_ROLES),
+  updateConsumoHandler,
+);
+eventoRouter.delete(
+  '/:id/consumos/:consumoId',
+  requireRole(...FULL_ACCESS_ROLES),
+  removeConsumoHandler,
+);
+eventoRouter.delete('/:id', requireRole(...FULL_ACCESS_ROLES), deleteHandler);

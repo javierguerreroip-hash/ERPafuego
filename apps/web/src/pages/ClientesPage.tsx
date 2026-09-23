@@ -8,6 +8,7 @@ import {
   type ClienteTipo,
 } from '@erp-afuego/shared';
 import { useResource } from '../hooks/useResource';
+import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
 import { BulkImportModal, type ImportColumn } from '../components/BulkImportModal';
 import { ClienteArchivosSection } from '../components/ClienteArchivosSection';
@@ -46,6 +47,8 @@ const IMPORT_COLUMNS: ImportColumn[] = [
 ];
 
 export function ClientesPage() {
+  const { user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const { items, loading, error, create, update, setActive, refresh } = useResource<
     ClienteDTO,
     ClienteInput
@@ -117,20 +120,22 @@ export function ClientesPage() {
           <h1 className="text-xl font-semibold text-neutral-900">Clientes</h1>
           <p className="text-sm text-neutral-500">Personas o empresas a quienes se les cotizan eventos.</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowImport(true)}
-            className="rounded-md border border-orange-600 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
-          >
-            Cargar desde Excel
-          </button>
-          <button
-            onClick={openCreate}
-            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-          >
-            Nuevo cliente
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowImport(true)}
+              className="rounded-md border border-orange-600 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
+            >
+              Cargar desde Excel
+            </button>
+            <button
+              onClick={openCreate}
+              className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+            >
+              Nuevo cliente
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -217,15 +222,19 @@ export function ClientesPage() {
                     </span>
                   </td>
                   <td className="space-x-3 px-4 py-2 text-right">
-                    <button onClick={() => openEdit(item)} className="text-orange-600 hover:underline">
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => setActive(item.id, !item.active)}
-                      className="text-neutral-500 hover:underline"
-                    >
-                      {item.active ? 'Desactivar' : 'Activar'}
-                    </button>
+                    {!readOnly && (
+                      <>
+                        <button onClick={() => openEdit(item)} className="text-orange-600 hover:underline">
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => setActive(item.id, !item.active)}
+                          className="text-neutral-500 hover:underline"
+                        >
+                          {item.active ? 'Desactivar' : 'Activar'}
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))

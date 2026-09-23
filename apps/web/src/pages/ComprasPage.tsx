@@ -36,6 +36,7 @@ function emptyHeader() {
 
 export function ComprasPage() {
   const { token, user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const [compras, setCompras] = useState<CompraDTO[]>([]);
   const [articulos, setArticulos] = useState<ArticuloDTO[]>([]);
   const [proveedores, setProveedores] = useState<ProveedorDTO[]>([]);
@@ -153,12 +154,14 @@ export function ComprasPage() {
             actualiza automáticamente.
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          Nueva compra
-        </button>
+        {!readOnly && (
+          <button
+            onClick={openCreate}
+            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          >
+            Nueva compra
+          </button>
+        )}
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}

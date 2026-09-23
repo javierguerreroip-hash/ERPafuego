@@ -15,7 +15,8 @@ export function EventoDetailModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const [evento, setEvento] = useState<EventoDetailDTO | null>(null);
   const [articulos, setArticulos] = useState<ArticuloDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -184,18 +185,24 @@ export function EventoDetailModal({
                           <span className="text-xs text-neutral-400">({consumo.articuloCodigo})</span>
                         </td>
                         <td className="px-3 py-2">
-                          <input
-                            type="number"
-                            min={0}
-                            step="any"
-                            defaultValue={consumo.quantity}
-                            key={`${consumo.id}-${consumo.quantity}`}
-                            onBlur={(e) =>
-                              handleUpdateQuantity(consumo.id, Number(e.target.value), consumo.quantity)
-                            }
-                            className="w-20 rounded border border-neutral-200 px-1 py-0.5 text-sm"
-                          />{' '}
-                          {consumo.unit}
+                          {readOnly ? (
+                            `${consumo.quantity} ${consumo.unit}`
+                          ) : (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                step="any"
+                                defaultValue={consumo.quantity}
+                                key={`${consumo.id}-${consumo.quantity}`}
+                                onBlur={(e) =>
+                                  handleUpdateQuantity(consumo.id, Number(e.target.value), consumo.quantity)
+                                }
+                                className="w-20 rounded border border-neutral-200 px-1 py-0.5 text-sm"
+                              />{' '}
+                              {consumo.unit}
+                            </>
+                          )}
                         </td>
                         <td className="px-3 py-2">
                           {consumo.unitCost > 0 ? (
@@ -206,12 +213,14 @@ export function EventoDetailModal({
                         </td>
                         <td className="px-3 py-2">{formatCOP(consumo.subtotal)}</td>
                         <td className="px-3 py-2 text-right">
-                          <button
-                            onClick={() => handleRemoveConsumo(consumo.id)}
-                            className="text-neutral-400 hover:text-red-600"
-                          >
-                            Quitar
-                          </button>
+                          {!readOnly && (
+                            <button
+                              onClick={() => handleRemoveConsumo(consumo.id)}
+                              className="text-neutral-400 hover:text-red-600"
+                            >
+                              Quitar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -220,37 +229,41 @@ export function EventoDetailModal({
               </table>
             </div>
 
-            <div className="mt-2 grid grid-cols-12 gap-2">
-              <select
-                value={newArticuloId}
-                onChange={(e) => setNewArticuloId(e.target.value)}
-                className={`${inputClass} col-span-6`}
-              >
-                <option value="">Artículo…</option>
-                {activeArticulos.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.code})
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min={0}
-                step="any"
-                placeholder="Cantidad"
-                value={newQuantity}
-                onChange={(e) => setNewQuantity(e.target.value)}
-                className={`${inputClass} col-span-3`}
-              />
-              <button
-                onClick={handleAddConsumo}
-                disabled={submitting}
-                className="col-span-3 rounded-md bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
-              >
-                Agregar
-              </button>
-            </div>
-            {addError && <p className="mt-1 text-sm text-red-600">{addError}</p>}
+            {!readOnly && (
+              <>
+                <div className="mt-2 grid grid-cols-12 gap-2">
+                  <select
+                    value={newArticuloId}
+                    onChange={(e) => setNewArticuloId(e.target.value)}
+                    className={`${inputClass} col-span-6`}
+                  >
+                    <option value="">Artículo…</option>
+                    {activeArticulos.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} ({a.code})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    placeholder="Cantidad"
+                    value={newQuantity}
+                    onChange={(e) => setNewQuantity(e.target.value)}
+                    className={`${inputClass} col-span-3`}
+                  />
+                  <button
+                    onClick={handleAddConsumo}
+                    disabled={submitting}
+                    className="col-span-3 rounded-md bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+                  >
+                    Agregar
+                  </button>
+                </div>
+                {addError && <p className="mt-1 text-sm text-red-600">{addError}</p>}
+              </>
+            )}
           </div>
         </div>
       ) : null}

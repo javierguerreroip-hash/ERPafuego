@@ -1,12 +1,11 @@
 import { Router } from 'express';
+import { FULL_ACCESS_ROLES, READ_ACCESS_ROLES } from '@erp-afuego/shared';
 import { requireAuth, requireRole } from '../../middleware/auth.middleware.js';
 import { reporteHandler, setInicialHandler } from './inventario.controller.js';
 
 export const inventarioRouter = Router();
 
-// Módulo 4: solo Administrador y Operación (spec: "Operación — compras,
-// inventario, eventos").
-inventarioRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'));
+inventarioRouter.use(requireAuth);
 
-inventarioRouter.get('/', reporteHandler);
-inventarioRouter.post('/inicial', setInicialHandler);
+inventarioRouter.get('/', requireRole(...READ_ACCESS_ROLES), reporteHandler);
+inventarioRouter.post('/inicial', requireRole(...FULL_ACCESS_ROLES), setInicialHandler);

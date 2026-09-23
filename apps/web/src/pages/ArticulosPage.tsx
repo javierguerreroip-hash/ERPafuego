@@ -44,7 +44,8 @@ const IMPORT_COLUMNS: ImportColumn[] = [
 ];
 
 export function ArticulosPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const { items, loading, error, create, update, setActive, refresh } = useResource<
     ArticuloDTO,
     ArticuloInput
@@ -108,20 +109,22 @@ export function ArticulosPage() {
             Materia prima, mano de obra, transporte, servicios artísticos y alquiler de menaje.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowImport(true)}
-            className="rounded-md border border-orange-600 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
-          >
-            Cargar desde Excel
-          </button>
-          <button
-            onClick={openCreate}
-            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-          >
-            Nuevo artículo
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowImport(true)}
+              className="rounded-md border border-orange-600 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
+            >
+              Cargar desde Excel
+            </button>
+            <button
+              onClick={openCreate}
+              className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+            >
+              Nuevo artículo
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -198,21 +201,25 @@ export function ArticulosPage() {
                     >
                       Ver histórico
                     </button>
-                    <button onClick={() => openEdit(item)} className="text-orange-600 hover:underline">
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => setActive(item.id, !item.active)}
-                      className="text-neutral-500 hover:underline"
-                    >
-                      {item.active ? 'Desactivar' : 'Activar'}
-                    </button>
-                    <button
-                      onClick={() => setDeletingArticulo(item)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Eliminar
-                    </button>
+                    {!readOnly && (
+                      <>
+                        <button onClick={() => openEdit(item)} className="text-orange-600 hover:underline">
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => setActive(item.id, !item.active)}
+                          className="text-neutral-500 hover:underline"
+                        >
+                          {item.active ? 'Desactivar' : 'Activar'}
+                        </button>
+                        <button
+                          onClick={() => setDeletingArticulo(item)}
+                          className="text-red-600 hover:underline"
+                        >
+                          Eliminar
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))

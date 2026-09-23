@@ -41,7 +41,8 @@ function toForm(p: ParametroNominaDTO): ParametroNominaInput {
 }
 
 export function NominaParametrosPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const readOnly = user?.role === 'CONSULTA';
   const [parametros, setParametros] = useState<ParametroNominaDTO | null>(null);
   const [form, setForm] = useState<ParametroNominaInput | null>(null);
   const [loading, setLoading] = useState(true);
@@ -158,8 +159,9 @@ export function NominaParametrosPage() {
                     type="number"
                     min={0}
                     value={form.smlv}
+                    disabled={readOnly}
                     onChange={(e) => setForm({ ...form, smlv: Number(e.target.value) })}
-                    className={inputClass}
+                    className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                   />
                 </Field>
                 <Field label="Divisor de horas mensuales">
@@ -167,8 +169,9 @@ export function NominaParametrosPage() {
                     type="number"
                     min={1}
                     value={form.divisorHoras}
+                    disabled={readOnly}
                     onChange={(e) => setForm({ ...form, divisorHoras: Number(e.target.value) })}
-                    className={inputClass}
+                    className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                   />
                 </Field>
                 <Field label="Auxilio de transporte mensual (COP)">
@@ -176,8 +179,9 @@ export function NominaParametrosPage() {
                     type="number"
                     min={0}
                     value={form.auxilioTransporte}
+                    disabled={readOnly}
                     onChange={(e) => setForm({ ...form, auxilioTransporte: Number(e.target.value) })}
-                    className={inputClass}
+                    className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                   />
                 </Field>
               </div>
@@ -201,10 +205,11 @@ export function NominaParametrosPage() {
                         max={300}
                         step="0.01"
                         value={Math.round(form[key] * 10000) / 100}
+                        disabled={readOnly}
                         onChange={(e) =>
                           setForm({ ...form, [key]: Number(e.target.value) / 100 } as ParametroNominaInput)
                         }
-                        className={inputClass}
+                        className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                       />
                       <span className="text-sm text-neutral-500">%</span>
                     </div>
@@ -221,10 +226,11 @@ export function NominaParametrosPage() {
                     max={100}
                     step="0.01"
                     value={Math.round(form.porcentajeIncapacidad * 10000) / 100}
+                    disabled={readOnly}
                     onChange={(e) =>
                       setForm({ ...form, porcentajeIncapacidad: Number(e.target.value) / 100 })
                     }
-                    className={inputClass}
+                    className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                   />
                   <span className="text-sm text-neutral-500">%</span>
                 </div>
@@ -240,10 +246,11 @@ export function NominaParametrosPage() {
                       max={100}
                       step="0.01"
                       value={Math.round(form.porcentajeEPS * 10000) / 100}
+                      disabled={readOnly}
                       onChange={(e) =>
                         setForm({ ...form, porcentajeEPS: Number(e.target.value) / 100 })
                       }
-                      className={inputClass}
+                      className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                     />
                     <span className="text-sm text-neutral-500">%</span>
                   </div>
@@ -256,53 +263,58 @@ export function NominaParametrosPage() {
                       max={100}
                       step="0.01"
                       value={Math.round(form.porcentajeAFP * 10000) / 100}
+                      disabled={readOnly}
                       onChange={(e) =>
                         setForm({ ...form, porcentajeAFP: Number(e.target.value) / 100 })
                       }
-                      className={inputClass}
+                      className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                     />
                     <span className="text-sm text-neutral-500">%</span>
                   </div>
                 </Field>
               </div>
 
-              <div className="mt-4 flex items-center justify-between border-t pt-4">
-                {saved && <p className="text-sm text-green-600">Guardado correctamente.</p>}
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="ml-auto rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
-                >
-                  {submitting ? 'Guardando…' : 'Guardar'}
-                </button>
-              </div>
+              {!readOnly && (
+                <div className="mt-4 flex items-center justify-between border-t pt-4">
+                  {saved && <p className="text-sm text-green-600">Guardado correctamente.</p>}
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="ml-auto rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+                  >
+                    {submitting ? 'Guardando…' : 'Guardar'}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
 
         <div className="rounded-lg border bg-white p-4">
           <h2 className="mb-3 text-sm font-medium text-neutral-700">Días festivos</h2>
-          <div className="mb-3 flex gap-2">
-            <input
-              type="date"
-              value={nuevaFecha}
-              onChange={(e) => setNuevaFecha(e.target.value)}
-              className={inputClass}
-            />
-            <input
-              type="text"
-              placeholder="Nombre (opcional)"
-              value={nuevoNombre}
-              onChange={(e) => setNuevoNombre(e.target.value)}
-              className={inputClass}
-            />
-            <button
-              onClick={handleAddFestivo}
-              className="whitespace-nowrap rounded-md bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700"
-            >
-              Agregar
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="mb-3 flex gap-2">
+              <input
+                type="date"
+                value={nuevaFecha}
+                onChange={(e) => setNuevaFecha(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                type="text"
+                placeholder="Nombre (opcional)"
+                value={nuevoNombre}
+                onChange={(e) => setNuevoNombre(e.target.value)}
+                className={inputClass}
+              />
+              <button
+                onClick={handleAddFestivo}
+                className="whitespace-nowrap rounded-md bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700"
+              >
+                Agregar
+              </button>
+            </div>
+          )}
           {festivoError && <p className="mb-2 text-sm text-red-600">{festivoError}</p>}
 
           {festivos.length === 0 ? (
@@ -314,12 +326,14 @@ export function NominaParametrosPage() {
                   <span>
                     {f.fecha} {f.nombre && <span className="text-neutral-500">— {f.nombre}</span>}
                   </span>
-                  <button
-                    onClick={() => handleDeleteFestivo(f.id)}
-                    className="text-neutral-400 hover:text-red-600"
-                  >
-                    Quitar
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => handleDeleteFestivo(f.id)}
+                      className="text-neutral-400 hover:text-red-600"
+                    >
+                      Quitar
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
