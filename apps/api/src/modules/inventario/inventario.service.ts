@@ -1,6 +1,7 @@
 import type { InventarioFinalFisicoInput, InventarioInicialInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { calcularCostoUnitarioPromedio } from '../eventos/evento.calculations.js';
 import { calcularDesviacionInventario, calcularInventarioFinal } from './inventario.calculations.js';
 
 function round2(value: number): number {
@@ -183,7 +184,24 @@ export async function setInventarioFinalFisico(
     throw new HttpError(404, 'Artículo no encontrado');
   }
 
-  const unitCost = input.unitCost ?? Number(articulo.lastPurchasePrice);
+  // Costo por defecto = misma fórmula que el costo de un consumo de
+  // evento (ajustado 2026-09-24): si nunca hubo compras, usa el costo
+  // del inventario inicial más reciente en vez de asumir $0 — evita que
+  // un conteo físico con la MISMA cantidad que el teórico muestre una
+  // "desviación" en pesos que en realidad no existe (bug detectado con
+  // "Aceite de Oliva": 2 litros físicos a $0 vs. 2 litros teóricos a
+  // $97.980, solo porque el artículo nunca se había comprado).
+  let unitCost = input.unitCost;
+  if (unitCost === undefined) {
+    const ultimoInventario = await prisma.inventarioInicial.findFirst({
+      where: { articuloId: input.articuloId },
+      orderBy: { fecha: 'desc' },
+    });
+    unitCost = calcularCostoUnitarioPromedio(
+      Number(articulo.lastPurchasePrice),
+      ultimoInventario ? Number(ultimoInventario.unitCost) : null,
+    );
+  }
   const value = round2(input.quantity * unitCost);
   const fecha = new Date(`${input.fecha}T00:00:00.000Z`);
 

@@ -123,15 +123,28 @@ Acceso restringido a los roles Administrador y Operación.
     botón "Registrar físico"/"Editar físico" por fila, igual que el
     inicial.
   - **Carga masiva por Excel** para el conteo físico: "Cargar conteo
-    físico (Excel)" descarga una plantilla con el código y nombre de
-    cada artículo de materia prima (columna "Cantidad contada" vacía
-    para diligenciar), y al volver a cargarla hace match por código y
-    guarda una fila por artículo — las filas sin cantidad diligenciada
-    se omiten (no se fuerzan a cero), para poder contar el inventario en
-    varias sesiones sin perder lo que aún no se ha contado.
+    físico (Excel)" descarga una plantilla con el código, nombre y
+    **unidad de medida** de cada artículo de materia prima (columna
+    "Cantidad contada" vacía para diligenciar, en esa misma unidad), y al
+    volver a cargarla hace match por código y guarda una fila por
+    artículo — las filas sin cantidad diligenciada se omiten (no se
+    fuerzan a cero), para poder contar el inventario en varias sesiones
+    sin perder lo que aún no se ha contado.
   - La desviación (`calcularDesviacionInventario`, con pruebas
     unitarias) = físico − teórico: positiva si hay más de lo esperado,
     negativa si hay menos (merma/pérdida).
+  - **Actualización post-lanzamiento (2026-09-24) — bug de fondo
+    encontrado y corregido:** el costo unitario por defecto del
+    Inventario Final Físico (cuando se deja en blanco) usaba solo el
+    último precio de compra, así que un artículo sin compras registradas
+    quedaba valorado en $0 aunque tuviera un costo de inventario inicial
+    real — el conteo físico mostraba la MISMA cantidad que el teórico
+    pero una desviación en pesos que no existía de verdad (ej. "Aceite de
+    Oliva": 2 litros físicos a $0 vs. 2 litros teóricos a $97.980).
+    Corregido reutilizando `calcularCostoUnitarioPromedio` (la misma
+    fórmula ya arreglada para el costo de consumo de un evento, ver
+    Módulo 3): sin compras, usa el costo del inventario inicial tal cual
+    en vez de asumir $0.
 
 ## Dashboard General — pantalla principal (Fase 5)
 
