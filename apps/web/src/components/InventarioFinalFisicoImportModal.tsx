@@ -81,7 +81,7 @@ export function InventarioFinalFisicoImportModal({
         const articulo = articulos.find(
           (a) => a.articuloCodigo.toLowerCase() === codigo.toLowerCase(),
         );
-        const displayName = articulo?.articuloNombre ?? codigo || `Fila ${index + 2}`;
+        const displayName = articulo?.articuloNombre ?? (codigo || `Fila ${index + 2}`);
         const quantity = Number(cantidadTexto);
 
         if (!articulo) {
