@@ -919,6 +919,18 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
   `calcularCostoUnitarioPromedio` en `evento.calculations.ts`); sin
   inventario inicial registrado, se sigue usando solo el último precio
   de compra.
+- **Actualización post-lanzamiento (2026-09-24) — bug de fondo
+  encontrado y corregido:** el promedio del punto anterior se calculaba
+  también cuando el artículo **nunca había tenido compras** (último
+  precio de compra = $0), lo que diluía a la mitad un costo de
+  inventario inicial real y válido — ej. un artículo con inventario
+  inicial a $396.000/kg y ninguna compra quedaba consumiéndose a
+  $198.000/kg, sin ninguna razón real detrás de esa cifra (detectado al
+  auditar el costo de "Brotes" en un evento). Regla corregida: si no hay
+  compras registradas ($0), se usa el costo del inventario inicial tal
+  cual, sin promediarlo contra ese $0 que no es un precio real; el
+  promedio entre los dos solo aplica cuando ambos existen (compra > $0 **y**
+  inventario inicial registrado).
 
 ### Decisiones de la Fase 4
 

@@ -102,4 +102,8 @@ describe('calcularCostoUnitarioPromedio', () => {
   it('funciona cuando ambos precios son iguales (el promedio no cambia el costo)', () => {
     expect(calcularCostoUnitarioPromedio(8000, 8000)).toBe(8000);
   });
+
+  it('usa el costo del inventario inicial tal cual si el artículo nunca tuvo compras (no promedia con $0)', () => {
+    expect(calcularCostoUnitarioPromedio(0, 396000)).toBe(396000);
+  });
 });

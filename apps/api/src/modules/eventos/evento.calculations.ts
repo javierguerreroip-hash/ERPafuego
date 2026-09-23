@@ -43,13 +43,23 @@ export function calcularSubtotalConsumo(quantity: number, unitCost: number): num
 // compra del artículo y su costo unitario en el inventario inicial más
 // reciente que se haya ingresado (pedido por el negocio: un solo precio
 // de compra puede ser atípico, promediarlo con el inventario da un costo
-// más real). Si el artículo nunca tuvo inventario inicial registrado, se
-// usa solo el último precio de compra — no hay con qué promediar.
+// más real). Casos especiales (ajustado 2026-09-24 — promediar con un
+// "último precio de compra" de $0 cuando en realidad nunca hubo compra
+// diluía el costo a la mitad de forma artificial, no reflejaba nada real):
+// - Sin inventario inicial registrado: se usa solo el último precio de
+//   compra (no hay con qué promediar).
+// - Con inventario inicial pero SIN compras registradas todavía (último
+//   precio de compra = $0, que en este sistema siempre significa "nunca
+//   se compró" — ver ArticulosPage): se usa el costo del inventario
+//   inicial tal cual, sin promediar contra ese $0 que no es un precio real.
+// - Con inventario inicial Y con compras registradas (> $0): sí se
+//   promedian los dos, como antes.
 export function calcularCostoUnitarioPromedio(
   lastPurchasePrice: number,
   inventarioUnitCost: number | null,
 ): number {
   if (inventarioUnitCost === null) return round2(lastPurchasePrice);
+  if (lastPurchasePrice === 0) return round2(inventarioUnitCost);
   return round2((lastPurchasePrice + inventarioUnitCost) / 2);
 }
 
