@@ -21,6 +21,23 @@ export async function getDashboard(startDate: Date, endDate: Date) {
     orderBy: { fecha: 'asc' },
   });
 
+  // Insumos de Aseo (post-lanzamiento, 2026-09-23): categoría de monitoreo
+  // de compras, no de costeo por evento — a propósito NO entra en
+  // costosTotales/utilidadOperativa/composicionCostos (esos solo suman
+  // EventoConsumo, y esta categoría nunca genera uno — ver
+  // evento.service.ts). Se calcula aparte, directo de Compras, solo para
+  // que el negocio pueda vigilar cuánto está gastando en aseo.
+  const comprasInsumosAseo = await prisma.compra.findMany({
+    where: {
+      fecha: { gte: startDate, lte: endDate },
+      articulo: { category: 'INSUMOS_ASEO' },
+    },
+    select: { totalValue: true },
+  });
+  const comprasInsumosAseoValor = round2(
+    comprasInsumosAseo.reduce((sum, c) => sum + Number(c.totalValue), 0),
+  );
+
   let ventasTotales = 0;
   const categoriaTotales = Object.fromEntries(CATEGORIAS.map((c) => [c, 0])) as Record<
     ArticuloCategoria,
@@ -36,7 +53,12 @@ export async function getDashboard(startDate: Date, endDate: Date) {
     for (const consumo of evento.consumos) {
       const subtotal = Number(consumo.subtotal);
       costoEvento += subtotal;
-      categoriaTotales[consumo.articulo.category] += subtotal;
+      // Guard: solo suma categorías que este indicador realmente cubre
+      // (Insumos de Aseo nunca debería llegar aquí — addConsumo la
+      // rechaza — pero así no corrompe el total si algún día cambiara).
+      if (categoriaTotales[consumo.articulo.category] !== undefined) {
+        categoriaTotales[consumo.articulo.category] += subtotal;
+      }
     }
 
     const dayKey = evento.fecha.toISOString().slice(0, 10);
@@ -76,5 +98,6 @@ export async function getDashboard(startDate: Date, endDate: Date) {
       valor: round2(categoriaTotales[categoria]),
     })),
     tendencia,
+    comprasInsumosAseo: comprasInsumosAseoValor,
   };
 }

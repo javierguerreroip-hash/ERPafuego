@@ -49,7 +49,10 @@ export function EventoDetailModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventoId]);
 
-  const activeArticulos = articulos.filter((a) => a.active);
+  // Insumos de Aseo es una categoría de monitoreo de compras, no de
+  // consumo por evento (el backend la rechaza) — se excluye del selector
+  // para que no aparezca como opción confusa.
+  const activeArticulos = articulos.filter((a) => a.active && a.category !== 'INSUMOS_ASEO');
 
   async function handleAddConsumo() {
     setAddError(null);

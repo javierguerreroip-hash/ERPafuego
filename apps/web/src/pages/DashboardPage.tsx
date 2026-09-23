@@ -120,6 +120,11 @@ export function DashboardPage() {
                 valor: formatCOP(dashboard.serviciosArtisticos.valor),
                 porcentaje: `${dashboard.serviciosArtisticos.porcentaje.toFixed(1)}%`,
               },
+              {
+                indicador: 'Compras de Insumos de Aseo (monitoreo, no afecta costos)',
+                valor: formatCOP(dashboard.comprasInsumosAseo),
+                porcentaje: '',
+              },
             ]}
           />
         )}
@@ -165,6 +170,13 @@ export function DashboardPage() {
               value={dashboard.serviciosArtisticos.valor}
               porcentaje={dashboard.serviciosArtisticos.porcentaje}
             />
+          </div>
+
+          <div className="mb-4 max-w-xs">
+            <KpiCard label="Compras de Insumos de Aseo" value={dashboard.comprasInsumosAseo} />
+            <p className="mt-1 text-xs text-neutral-400">
+              Solo monitoreo — no está incluido en costos totales ni en la utilidad operativa.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

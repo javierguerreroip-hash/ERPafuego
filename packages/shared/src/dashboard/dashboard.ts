@@ -36,4 +36,8 @@ export interface DashboardDTO {
   serviciosArtisticos: DashboardIndicadorDTO;
   composicionCostos: DashboardComposicionItemDTO[];
   tendencia: DashboardTendenciaPuntoDTO[];
+  // Insumos de Aseo (post-lanzamiento, 2026-09-23): total comprado en el
+  // período, solo para monitoreo — a propósito NO está sumado dentro de
+  // costosTotales/utilidadOperativa/composicionCostos.
+  comprasInsumosAseo: number;
 }

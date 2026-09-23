@@ -94,6 +94,7 @@ enum ArticuloCategoria {
   SERVICIO_TRANSPORTE
   SERVICIOS_ARTISTICOS
   ALQUILER_MENAJE_EQUIPOS
+  INSUMOS_ASEO
 }
 
 // Catálogo de costo/compra: lo que se compra y se consume (materia prima,

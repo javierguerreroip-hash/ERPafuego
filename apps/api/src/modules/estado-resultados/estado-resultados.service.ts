@@ -40,10 +40,13 @@ export async function getEstadoResultados(startDate: Date, endDate: Date) {
   // 3. Gastos de venta = todo consumo de eventos que NO sea materia prima
   // (mano de obra, transporte, artístico, alquiler de menaje — ver
   // decisión documentada en el README sobre "alquileres en general").
+  // Insumos de Aseo nunca genera un EventoConsumo (el backend lo rechaza
+  // en addConsumo), pero se excluye también aquí por si acaso — es un
+  // gasto operativo aparte, no debe colarse en el resultado operativo.
   const consumosGastoVenta = await prisma.eventoConsumo.findMany({
     where: {
       evento: { fecha: { gte: startDate, lte: endDate } },
-      articulo: { category: { not: 'MATERIA_PRIMA' } },
+      articulo: { category: { notIn: ['MATERIA_PRIMA', 'INSUMOS_ASEO'] } },
     },
     select: { subtotal: true },
   });

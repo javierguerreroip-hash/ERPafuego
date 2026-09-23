@@ -10,8 +10,11 @@ function round2(value: number): number {
 // startDate/endDate ya vienen normalizadas a límites de día completo
 // (00:00:00 y 23:59:59.999) por el controlador.
 export async function getInventarioReporte(startDate: Date, endDate: Date) {
+  // Insumos de Aseo es una categoría de monitoreo de compras (ver README),
+  // no de inventario — no se consumen por evento ni tienen inventario
+  // inicial/final, así que quedan fuera de este reporte a propósito.
   const articulos = await prisma.articulo.findMany({
-    where: { active: true },
+    where: { active: true, category: { not: 'INSUMOS_ASEO' } },
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
   });
 

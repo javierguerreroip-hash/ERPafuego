@@ -115,6 +115,24 @@ Acceso restringido a los roles Administrador y Operación.
 - Todo se alimenta de los eventos del Módulo 3 (ventas = valor antes de
   impuestos; costos = consumos, agrupados por categoría de artículo del
   Módulo 1) — no hay datos propios, todo es solo lectura/derivado.
+- **Actualización post-lanzamiento (2026-09-24) — categoría "Insumos de
+  Aseo":** nueva categoría de `Articulo` (y de `Proveedor`) pensada
+  únicamente para poder registrar sus compras y ver cuánto se gasta en
+  aseo — es una categoría de **monitoreo**, no de costeo. A propósito
+  queda fuera de todo el circuito operativo:
+  - No se puede usar como consumo de un evento — el backend rechaza el
+    intento (`evento.service.ts`) y el selector de consumos del Módulo 3
+    ni siquiera la ofrece — para que nunca se cuele en el costo de un
+    evento.
+  - No aparece en el Módulo 4 (Inventario) ni en el Juego de Inventarios
+    (CMV) — no tienen sentido para algo que no se consume por evento ni
+    tiene "inventario final".
+  - No suma en el Estado de Resultados (CMV ni Gastos de venta) ni en
+    "Costos totales"/"Utilidad operativa" del Dashboard.
+  - Sí se agregó una tarjeta aparte en el Dashboard, **"Compras de
+    Insumos de Aseo"**, calculada directo de Compras (no de consumos)
+    para el período filtrado — explícitamente marcada como "solo
+    monitoreo" para que no se confunda con los indicadores operativos.
 
 ## Gastos Administrativos (Fase 6)
 

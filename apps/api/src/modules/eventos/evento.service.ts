@@ -198,6 +198,12 @@ export async function addConsumo(eventoId: string, input: EventoConsumoInput) {
   if (!articulo) {
     throw new HttpError(404, 'Artículo no encontrado');
   }
+  if (articulo.category === 'INSUMOS_ASEO') {
+    throw new HttpError(
+      400,
+      'Los artículos de "Insumos de Aseo" son un gasto operativo aparte — no se registran como consumo de un evento.',
+    );
+  }
 
   // Costo del consumo = promedio entre el último precio de compra y el
   // costo del inventario inicial más reciente ingresado para el artículo
