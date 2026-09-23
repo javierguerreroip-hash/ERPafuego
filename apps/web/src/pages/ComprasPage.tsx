@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
+  ARTICULO_CATEGORIAS,
+  ARTICULO_CATEGORIA_LABELS,
   CONDICIONES_PAGO,
   CONDICION_PAGO_LABELS,
   compraBatchSchema,
+  type ArticuloCategoria,
   type ArticuloDTO,
   type CompraBatchInput,
   type CompraDTO,
@@ -17,12 +20,17 @@ import { Field, inputClass } from '../components/Field';
 import { formatCOP, formatDateOnly } from '../lib/format';
 
 interface ItemRow {
+  // Solo un filtro del selector de Artículo, para encontrarlo más rápido
+  // cuando una misma factura/proveedor trae artículos de categorías
+  // distintas — no se envía al backend, la categoría real siempre es la
+  // del artículo elegido.
+  category: ArticuloCategoria | '';
   articuloId: string;
   quantity: string;
   unitPrice: string;
 }
 
-const EMPTY_ITEM: ItemRow = { articuloId: '', quantity: '', unitPrice: '' };
+const EMPTY_ITEM: ItemRow = { category: '', articuloId: '', quantity: '', unitPrice: '' };
 
 function emptyHeader() {
   return {
@@ -323,16 +331,39 @@ export function ComprasPage() {
               <div className="space-y-2">
                 {items.map((item, index) => {
                   const subtotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+                  const articulosDeCategoria = item.category
+                    ? activeArticulos.filter((a) => a.category === item.category)
+                    : activeArticulos;
                   return (
                     <div key={index} className="rounded-md border border-neutral-200 p-3">
                       <div className="grid grid-cols-12 gap-2">
                         <select
+                          value={item.category}
+                          onChange={(e) => {
+                            const category = e.target.value as ArticuloCategoria | '';
+                            const articuloActual = activeArticulos.find((a) => a.id === item.articuloId);
+                            const sigueValido = !category || articuloActual?.category === category;
+                            updateItem(index, {
+                              category,
+                              articuloId: sigueValido ? item.articuloId : '',
+                            });
+                          }}
+                          className={`${inputClass} col-span-3`}
+                        >
+                          <option value="">Categoría…</option>
+                          {ARTICULO_CATEGORIAS.map((cat) => (
+                            <option key={cat} value={cat}>
+                              {ARTICULO_CATEGORIA_LABELS[cat]}
+                            </option>
+                          ))}
+                        </select>
+                        <select
                           value={item.articuloId}
                           onChange={(e) => updateItem(index, { articuloId: e.target.value })}
-                          className={`${inputClass} col-span-5`}
+                          className={`${inputClass} col-span-4`}
                         >
                           <option value="">Artículo…</option>
-                          {activeArticulos.map((a) => (
+                          {articulosDeCategoria.map((a) => (
                             <option key={a.id} value={a.id}>
                               {a.name} ({a.code})
                             </option>
@@ -345,7 +376,7 @@ export function ComprasPage() {
                           placeholder="Cantidad"
                           value={item.quantity}
                           onChange={(e) => updateItem(index, { quantity: e.target.value })}
-                          className={`${inputClass} col-span-3`}
+                          className={`${inputClass} col-span-2`}
                         />
                         <input
                           type="number"
@@ -354,7 +385,7 @@ export function ComprasPage() {
                           placeholder="Precio unitario"
                           value={item.unitPrice}
                           onChange={(e) => updateItem(index, { unitPrice: e.target.value })}
-                          className={`${inputClass} col-span-3`}
+                          className={`${inputClass} col-span-2`}
                         />
                         <button
                           onClick={() => removeItem(index)}

@@ -1,5 +1,4 @@
 import type { NextFunction, Request, Response } from 'express';
-import { inventarioFinalFisicoSchema } from '@erp-afuego/shared';
 import { HttpError } from '../../middleware/error.middleware.js';
 import * as juegoInventariosService from './juego-inventarios.service.js';
 
@@ -18,16 +17,6 @@ export async function reporteHandler(req: Request, res: Response, next: NextFunc
     }
 
     res.json(await juegoInventariosService.getJuegoInventariosReporte(start, end));
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function setFinalFisicoHandler(req: Request, res: Response, next: NextFunction) {
-  try {
-    const input = inventarioFinalFisicoSchema.parse(req.body);
-    const registeredById = req.user!.sub;
-    res.json(await juegoInventariosService.setInventarioFinalFisico(input, registeredById));
   } catch (error) {
     next(error);
   }

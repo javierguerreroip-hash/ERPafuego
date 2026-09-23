@@ -120,11 +120,11 @@ export function DashboardPage() {
                 valor: formatCOP(dashboard.serviciosArtisticos.valor),
                 porcentaje: `${dashboard.serviciosArtisticos.porcentaje.toFixed(1)}%`,
               },
-              {
-                indicador: 'Compras de Insumos de Aseo (monitoreo, no afecta costos)',
-                valor: formatCOP(dashboard.comprasInsumosAseo),
+              ...dashboard.comprasMonitoreo.map((item) => ({
+                indicador: `Compras de ${ARTICULO_CATEGORIA_LABELS[item.categoria]} (monitoreo, no afecta costos)`,
+                valor: formatCOP(item.valor),
                 porcentaje: '',
-              },
+              })),
             ]}
           />
         )}
@@ -172,11 +172,18 @@ export function DashboardPage() {
             />
           </div>
 
-          <div className="mb-4 max-w-xs">
-            <KpiCard label="Compras de Insumos de Aseo" value={dashboard.comprasInsumosAseo} />
-            <p className="mt-1 text-xs text-neutral-400">
-              Solo monitoreo — no está incluido en costos totales ni en la utilidad operativa.
-            </p>
+          <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {dashboard.comprasMonitoreo.map((item) => (
+              <div key={item.categoria}>
+                <KpiCard
+                  label={`Compras de ${ARTICULO_CATEGORIA_LABELS[item.categoria]}`}
+                  value={item.valor}
+                />
+                <p className="mt-1 text-xs text-neutral-400">
+                  Solo monitoreo — no incluido en costos ni utilidad operativa.
+                </p>
+              </div>
+            ))}
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

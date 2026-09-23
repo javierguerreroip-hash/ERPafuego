@@ -5,13 +5,14 @@ import { z } from 'zod';
 // transporte" y (f) "Transporte" describen la misma categoría (el Dashboard y
 // el Estado de Resultados solo manejan un único indicador de transporte), así
 // que se unificaron en una sola.
-// INSUMOS_ASEO (post-lanzamiento, 2026-09-23): categoría de monitoreo, no de
-// costeo — se agregó solo para poder registrar sus compras y ver cuánto se
-// gasta en aseo, pero a propósito queda FUERA de Inventario, Juego de
-// Inventarios (CMV) y Estado de Resultados/Dashboard operativos (ver
-// decisión documentada en el README). No se puede usar como consumo de un
-// evento (el backend lo rechaza), precisamente para que nunca se cuele en
-// esos cálculos.
+// INSUMOS_ASEO (post-lanzamiento, 2026-09-23) y UTENSILIOS (2026-09-24):
+// categorías de monitoreo, no de costeo — se agregaron solo para poder
+// registrar sus compras y ver cuánto se gasta en cada una, pero a
+// propósito quedan FUERA de Inventario, Juego de Inventarios (CMV) y
+// Estado de Resultados/Dashboard operativos (ver decisión documentada en
+// el README). No se pueden usar como consumo de un evento (el backend lo
+// rechaza), precisamente para que nunca se cuelen en esos cálculos — ver
+// CATEGORIAS_MONITOREO más abajo.
 export const ARTICULO_CATEGORIAS = [
   'MATERIA_PRIMA',
   'MANO_DE_OBRA',
@@ -19,6 +20,7 @@ export const ARTICULO_CATEGORIAS = [
   'SERVICIOS_ARTISTICOS',
   'ALQUILER_MENAJE_EQUIPOS',
   'INSUMOS_ASEO',
+  'UTENSILIOS',
 ] as const;
 
 export type ArticuloCategoria = (typeof ARTICULO_CATEGORIAS)[number];
@@ -30,7 +32,14 @@ export const ARTICULO_CATEGORIA_LABELS: Record<ArticuloCategoria, string> = {
   SERVICIOS_ARTISTICOS: 'Servicios artísticos',
   ALQUILER_MENAJE_EQUIPOS: 'Alquiler de menaje y equipos',
   INSUMOS_ASEO: 'Insumos de Aseo',
+  UTENSILIOS: 'Utensilios',
 };
+
+// Categorías de solo monitoreo de compras (ver comentario arriba) — un
+// único lugar para esta lista, usado por el backend (bloquear consumos de
+// evento, excluir de Estado de Resultados/Dashboard operativo) y por el
+// frontend (ocultar del selector de consumos de un evento).
+export const CATEGORIAS_MONITOREO: ArticuloCategoria[] = ['INSUMOS_ASEO', 'UTENSILIOS'];
 
 export const articuloSchema = z.object({
   code: z.string().min(1, 'El código es requerido').max(50),

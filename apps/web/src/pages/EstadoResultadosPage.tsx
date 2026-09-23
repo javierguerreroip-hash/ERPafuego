@@ -48,7 +48,7 @@ export function EstadoResultadosPage() {
             columns={EXPORT_COLUMNS}
             rows={[
               { concepto: 'Ingreso total', valor: formatCOP(estado.ingresoTotal.valor), porcentaje: `${estado.ingresoTotal.porcentaje.toFixed(1)}%` },
-              { concepto: 'Costo de mercancía vendida (CMV real)', valor: `-${formatCOP(estado.cmv.valor)}`, porcentaje: `${estado.cmv.porcentaje.toFixed(1)}%` },
+              { concepto: 'Costo de mercancía vendida (CMV)', valor: `-${formatCOP(estado.cmv.valor)}`, porcentaje: `${estado.cmv.porcentaje.toFixed(1)}%` },
               { concepto: 'Gastos de venta', valor: `-${formatCOP(estado.gastosVenta.valor)}`, porcentaje: `${estado.gastosVenta.porcentaje.toFixed(1)}%` },
               { concepto: 'Gastos administrativos', valor: `-${formatCOP(estado.gastosAdministrativos.valor)}`, porcentaje: `${estado.gastosAdministrativos.porcentaje.toFixed(1)}%` },
               { concepto: 'Utilidad neta', valor: formatCOP(estado.utilidadNeta.valor), porcentaje: `${estado.utilidadNeta.porcentaje.toFixed(1)}%` },
@@ -65,7 +65,7 @@ export function EstadoResultadosPage() {
       {estado && (
         <div className="max-w-xl overflow-hidden rounded-lg border bg-white">
           <Row label="Ingreso total" pilar={estado.ingresoTotal} strong />
-          <Row label="(−) Costo de mercancía vendida (CMV real)" pilar={estado.cmv} negative />
+          <Row label="(−) Costo de mercancía vendida (CMV)" pilar={estado.cmv} negative />
           <Row label="(−) Gastos de venta" pilar={estado.gastosVenta} negative />
           <Row label="(−) Gastos administrativos" pilar={estado.gastosAdministrativos} negative />
           <Row label="(=) Utilidad neta" pilar={estado.utilidadNeta} strong final />

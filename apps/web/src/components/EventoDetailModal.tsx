@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ArticuloDTO, EventoDetailDTO } from '@erp-afuego/shared';
+import { CATEGORIAS_MONITOREO, type ArticuloDTO, type EventoDetailDTO } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatCOP } from '../lib/format';
@@ -49,10 +49,12 @@ export function EventoDetailModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventoId]);
 
-  // Insumos de Aseo es una categoría de monitoreo de compras, no de
-  // consumo por evento (el backend la rechaza) — se excluye del selector
-  // para que no aparezca como opción confusa.
-  const activeArticulos = articulos.filter((a) => a.active && a.category !== 'INSUMOS_ASEO');
+  // Las categorías de monitoreo (Insumos de Aseo, Utensilios) no son
+  // consumo por evento (el backend las rechaza) — se excluyen del
+  // selector para que no aparezcan como opción confusa.
+  const activeArticulos = articulos.filter(
+    (a) => a.active && !CATEGORIAS_MONITOREO.includes(a.category),
+  );
 
   async function handleAddConsumo() {
     setAddError(null);

@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import type { EventoConsumoInput, EventoInput } from '@erp-afuego/shared';
+import { CATEGORIAS_MONITOREO, type EventoConsumoInput, type EventoInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import {
@@ -198,10 +198,10 @@ export async function addConsumo(eventoId: string, input: EventoConsumoInput) {
   if (!articulo) {
     throw new HttpError(404, 'Artículo no encontrado');
   }
-  if (articulo.category === 'INSUMOS_ASEO') {
+  if (CATEGORIAS_MONITOREO.includes(articulo.category)) {
     throw new HttpError(
       400,
-      'Los artículos de "Insumos de Aseo" son un gasto operativo aparte — no se registran como consumo de un evento.',
+      'Esta categoría es solo de monitoreo de compras — no se registra como consumo de un evento.',
     );
   }
 

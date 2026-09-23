@@ -95,6 +95,7 @@ enum ArticuloCategoria {
   SERVICIOS_ARTISTICOS
   ALQUILER_MENAJE_EQUIPOS
   INSUMOS_ASEO
+  UTENSILIOS
 }
 
 // Catálogo de costo/compra: lo que se compra y se consume (materia prima,
@@ -383,10 +384,12 @@ model GastoAdministrativo {
   @@map("gastos_administrativos")
 }
 
-// Módulo — Juego de Inventarios (CMV teórico vs. real). Conteo físico de
-// cierre de período, manual por artículo, independiente del inventario
-// final "de sistema" del Módulo 4 (mismo patrón que InventarioInicial:
-// cantidad + valor $, único por artículo+fecha).
+// Conteo físico de cierre de período, manual por artículo, independiente
+// del inventario final "teórico"/de sistema (mismo patrón que
+// InventarioInicial: cantidad + valor $, único por artículo+fecha). Se
+// registra desde el Módulo 4 (Inventario); el módulo Juego de
+// Inventarios lo consume de solo lectura para calcular el CMV
+// (post-lanzamiento 2026-09-24 — antes era al revés).
 model InventarioFinalFisico {
   id             String   @id @default(uuid())
   articuloId     String

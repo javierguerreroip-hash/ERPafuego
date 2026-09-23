@@ -1,15 +1,13 @@
 import { Router } from 'express';
-import { FULL_ACCESS_ROLES, READ_ACCESS_ROLES } from '@erp-afuego/shared';
+import { READ_ACCESS_ROLES } from '@erp-afuego/shared';
 import { requireAuth, requireRole } from '../../middleware/auth.middleware.js';
-import { reporteHandler, setFinalFisicoHandler } from './juego-inventarios.controller.js';
+import { reporteHandler } from './juego-inventarios.controller.js';
 
 export const juegoInventariosRouter = Router();
 
-juegoInventariosRouter.use(requireAuth);
+// Solo lectura desde el 2026-09-24: el registro del conteo físico se
+// trasladó al módulo de Inventario (ver inventario.routes.ts); aquí solo
+// se consulta el CMV que resulta de ese dato.
+juegoInventariosRouter.use(requireAuth, requireRole(...READ_ACCESS_ROLES));
 
-juegoInventariosRouter.get('/', requireRole(...READ_ACCESS_ROLES), reporteHandler);
-juegoInventariosRouter.post(
-  '/final-fisico',
-  requireRole(...FULL_ACCESS_ROLES),
-  setFinalFisicoHandler,
-);
+juegoInventariosRouter.get('/', reporteHandler);

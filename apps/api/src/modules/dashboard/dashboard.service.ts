@@ -1,4 +1,4 @@
-import type { ArticuloCategoria } from '@erp-afuego/shared';
+import { CATEGORIAS_MONITOREO, type ArticuloCategoria } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { calcularCostoPorcentaje, calcularUtilidadOperacional } from '../eventos/evento.calculations.js';
 
@@ -21,22 +21,28 @@ export async function getDashboard(startDate: Date, endDate: Date) {
     orderBy: { fecha: 'asc' },
   });
 
-  // Insumos de Aseo (post-lanzamiento, 2026-09-23): categoría de monitoreo
-  // de compras, no de costeo por evento — a propósito NO entra en
-  // costosTotales/utilidadOperativa/composicionCostos (esos solo suman
-  // EventoConsumo, y esta categoría nunca genera uno — ver
-  // evento.service.ts). Se calcula aparte, directo de Compras, solo para
-  // que el negocio pueda vigilar cuánto está gastando en aseo.
-  const comprasInsumosAseo = await prisma.compra.findMany({
+  // Categorías de monitoreo (Insumos de Aseo, Utensilios — post-
+  // lanzamiento 2026-09-23/24): son de compras, no de costeo por evento —
+  // a propósito NO entran en costosTotales/utilidadOperativa/
+  // composicionCostos (esos solo suman EventoConsumo, y estas categorías
+  // nunca generan uno — ver evento.service.ts). Se calculan aparte,
+  // directo de Compras, solo para que el negocio pueda vigilarlas.
+  const comprasMonitoreoRaw = await prisma.compra.findMany({
     where: {
       fecha: { gte: startDate, lte: endDate },
-      articulo: { category: 'INSUMOS_ASEO' },
+      articulo: { category: { in: CATEGORIAS_MONITOREO } },
     },
-    select: { totalValue: true },
+    select: { totalValue: true, articulo: { select: { category: true } } },
   });
-  const comprasInsumosAseoValor = round2(
-    comprasInsumosAseo.reduce((sum, c) => sum + Number(c.totalValue), 0),
-  );
+  const comprasMonitoreoMap = new Map<ArticuloCategoria, number>();
+  for (const c of comprasMonitoreoRaw) {
+    const categoria = c.articulo.category;
+    comprasMonitoreoMap.set(categoria, (comprasMonitoreoMap.get(categoria) ?? 0) + Number(c.totalValue));
+  }
+  const comprasMonitoreo = CATEGORIAS_MONITOREO.map((categoria) => ({
+    categoria,
+    valor: round2(comprasMonitoreoMap.get(categoria) ?? 0),
+  }));
 
   let ventasTotales = 0;
   const categoriaTotales = Object.fromEntries(CATEGORIAS.map((c) => [c, 0])) as Record<
@@ -98,6 +104,6 @@ export async function getDashboard(startDate: Date, endDate: Date) {
       valor: round2(categoriaTotales[categoria]),
     })),
     tendencia,
-    comprasInsumosAseo: comprasInsumosAseoValor,
+    comprasMonitoreo,
   };
 }

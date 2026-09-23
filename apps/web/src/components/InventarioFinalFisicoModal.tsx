@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { inventarioFinalFisicoSchema, type JuegoInventariosDetalleDTO } from '@erp-afuego/shared';
+import { inventarioFinalFisicoSchema } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from './Modal';
@@ -11,7 +11,13 @@ export function InventarioFinalFisicoModal({
   onClose,
   onSaved,
 }: {
-  articulo: JuegoInventariosDetalleDTO;
+  articulo: {
+    articuloId: string;
+    articuloNombre: string;
+    unit: string;
+    inventarioFinalFisicoQuantity: number;
+    inventarioFinalFisicoRegistrado: boolean;
+  };
   fecha: string;
   onClose: () => void;
   onSaved: () => void;
@@ -39,7 +45,7 @@ export function InventarioFinalFisicoModal({
     }
     setSubmitting(true);
     try {
-      await apiFetch('/juego-inventarios/final-fisico', { method: 'POST', body: parsed.data, token });
+      await apiFetch('/inventario/final-fisico', { method: 'POST', body: parsed.data, token });
       onSaved();
       onClose();
     } catch (err) {

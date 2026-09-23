@@ -67,6 +67,14 @@ Acceso restringido a los roles Administrador y Operación.
 - Las compras no se editan ni se eliminan (son un hecho histórico); los
   campos de factura/condición de pago/vencimiento quedan listos para
   alimentar las Cuentas por Pagar de Cartera (Fase 12).
+- **Actualización post-lanzamiento (2026-09-24):** cada ítem del
+  formulario "Nueva compra" ahora trae primero un selector de
+  **Categoría**, que filtra el selector de Artículo a solo los de esa
+  categoría — pedido por el negocio porque una misma factura/proveedor
+  puede traer artículos de categorías distintas (ej. materia prima y
+  utensilios en la misma factura) y la lista completa de artículos era
+  difícil de navegar. Es solo un filtro de UI: no se envía al backend, la
+  categoría real siempre es la del artículo elegido.
 
 ## Módulo 3 — Ventas y costos por evento (Fase 3)
 
@@ -90,10 +98,11 @@ Acceso restringido a los roles Administrador y Operación.
 ## Módulo 4 — Inventario en tiempo real (Fase 4)
 
 - **Inventario** (`/inventario`): filtro de período (día, semana, mes o
-  rango personalizado) con las 4 variables por artículo y consolidadas:
-  Inventario inicial (manual), Compras (automático desde Módulo 2), Costos
-  y consumos (automático desde Módulo 3), e Inventario final (calculado:
-  inicial + compras − consumo).
+  rango personalizado) por artículo y consolidado: Inventario inicial
+  (manual), Compras (automático desde Módulo 2), Costos y consumos
+  (automático desde Módulo 3), Inventario final **teórico** (calculado:
+  inicial + compras − consumo), Inventario final **físico** (conteo
+  manual de cierre) y la **desviación** entre ambos.
 - "Inventario inicial" se declara por artículo con un botón "Registrar
   inicial"/"Editar inicial" en la fila — es un conteo físico manual atado
   a la fecha exacta de inicio del período que se está viendo.
@@ -102,6 +111,27 @@ Acceso restringido a los roles Administrador y Operación.
   kilos con unidades entre artículos distintos).
 - La fórmula (`inicial + compras − consumo`) tiene pruebas unitarias en
   `apps/api/src/modules/inventario/inventario.calculations.ts`.
+- **Actualización post-lanzamiento (2026-09-24) — restringido a Materia
+  Prima + conteo físico con Excel:**
+  - Este módulo ahora **solo muestra artículos de categoría Materia
+    Prima** — las demás categorías (mano de obra, transporte, artístico,
+    alquiler de menaje) son servicios/alquileres sin inventario físico
+    real, y las de monitoreo (Insumos de Aseo, Utensilios) nunca lo
+    tuvieron.
+  - Se trasladó aquí el registro del **Inventario final físico** (conteo
+    manual de cierre), que antes solo vivía en Juego de Inventarios —
+    botón "Registrar físico"/"Editar físico" por fila, igual que el
+    inicial.
+  - **Carga masiva por Excel** para el conteo físico: "Cargar conteo
+    físico (Excel)" descarga una plantilla con el código y nombre de
+    cada artículo de materia prima (columna "Cantidad contada" vacía
+    para diligenciar), y al volver a cargarla hace match por código y
+    guarda una fila por artículo — las filas sin cantidad diligenciada
+    se omiten (no se fuerzan a cero), para poder contar el inventario en
+    varias sesiones sin perder lo que aún no se ha contado.
+  - La desviación (`calcularDesviacionInventario`, con pruebas
+    unitarias) = físico − teórico: positiva si hay más de lo esperado,
+    negativa si hay menos (merma/pérdida).
 
 ## Dashboard General — pantalla principal (Fase 5)
 
@@ -115,24 +145,26 @@ Acceso restringido a los roles Administrador y Operación.
 - Todo se alimenta de los eventos del Módulo 3 (ventas = valor antes de
   impuestos; costos = consumos, agrupados por categoría de artículo del
   Módulo 1) — no hay datos propios, todo es solo lectura/derivado.
-- **Actualización post-lanzamiento (2026-09-24) — categoría "Insumos de
-  Aseo":** nueva categoría de `Articulo` (y de `Proveedor`) pensada
-  únicamente para poder registrar sus compras y ver cuánto se gasta en
-  aseo — es una categoría de **monitoreo**, no de costeo. A propósito
-  queda fuera de todo el circuito operativo:
-  - No se puede usar como consumo de un evento — el backend rechaza el
+- **Actualización post-lanzamiento (2026-09-23/24) — categorías de solo
+  monitoreo ("Insumos de Aseo", "Utensilios"):** categorías de `Articulo`
+  (y de `Proveedor`) pensadas únicamente para poder registrar sus compras
+  y ver cuánto se gasta en cada una — son de **monitoreo**, no de costeo.
+  A propósito quedan fuera de todo el circuito operativo (lista única en
+  `CATEGORIAS_MONITOREO`, `packages/shared/src/catalog/articulo.ts`):
+  - No se pueden usar como consumo de un evento — el backend rechaza el
     intento (`evento.service.ts`) y el selector de consumos del Módulo 3
-    ni siquiera la ofrece — para que nunca se cuele en el costo de un
+    ni siquiera las ofrece — para que nunca se cuelen en el costo de un
     evento.
-  - No aparece en el Módulo 4 (Inventario) ni en el Juego de Inventarios
-    (CMV) — no tienen sentido para algo que no se consume por evento ni
-    tiene "inventario final".
-  - No suma en el Estado de Resultados (CMV ni Gastos de venta) ni en
+  - No aparecen en el Módulo 4 (Inventario, restringido a Materia Prima
+    desde 2026-09-24) ni en el Juego de Inventarios (CMV).
+  - No suman en el Estado de Resultados (CMV ni Gastos de venta) ni en
     "Costos totales"/"Utilidad operativa" del Dashboard.
-  - Sí se agregó una tarjeta aparte en el Dashboard, **"Compras de
-    Insumos de Aseo"**, calculada directo de Compras (no de consumos)
-    para el período filtrado — explícitamente marcada como "solo
-    monitoreo" para que no se confunda con los indicadores operativos.
+  - Sí se agrega una tarjeta aparte en el Dashboard por cada categoría de
+    monitoreo (`comprasMonitoreo` en `DashboardDTO`, una tarjeta por
+    categoría automáticamente — no hace falta tocar código si se agrega
+    una nueva), calculada directo de Compras (no de consumos) para el
+    período filtrado, explícitamente marcada como "solo monitoreo" para
+    que no se confunda con los indicadores operativos.
 
 ## Gastos Administrativos (Fase 6)
 
@@ -148,22 +180,31 @@ Acceso restringido a los roles Administrador y Operación.
   (`calcularTotalGastosAdministrativos`, con pruebas unitarias) para que
   el futuro Estado de Resultados siempre lo consuma actualizado.
 
-## Juego de Inventarios — CMV teórico vs. real (Fase 7)
+## Juego de Inventarios — CMV (Fase 7)
 
-- **Juego de Inventarios** (`/juego-inventarios`): compara, para el
-  período elegido, el CMV teórico (100% de sistema: inventario inicial +
-  compras − inventario final calculado del Módulo 4) contra el CMV real
-  (inventario inicial + compras − inventario final **físico**, contado en
-  bodega y registrado manualmente en este módulo, por artículo). Muestra
-  valor $, % sobre la venta para cada uno, y la desviación (valor y %)
-  entre ambos — para identificar mermas o descuadres.
-- Detalle por artículo de materia prima (con botón "Registrar"/"Editar"
-  para el conteo físico de cierre) además del consolidado, para poder ver
-  en qué artículo específico está la desviación.
-- Fórmulas (`calcularCMV`, `calcularDesviacionCMV`) con pruebas unitarias
-  en `apps/api/src/modules/juego-inventarios/juego-inventarios.calculations.ts`
-  — "CMV teórico/real" y "desviación" están explícitamente en la lista de
-  fórmulas que `CLAUDE.md` pide probar.
+- **Juego de Inventarios** (`/juego-inventarios`): muestra, para el
+  período elegido, el CMV = Inventario inicial + Compras − Inventario
+  final **físico** (Real) — valor $ y % sobre la venta, solo materia
+  prima. Detalle por artículo del mismo cálculo, además del consolidado.
+- Fórmula (`calcularCMV`) con pruebas unitarias en
+  `apps/api/src/modules/juego-inventarios/juego-inventarios.calculations.ts`
+  — está explícitamente en la lista de fórmulas que `CLAUDE.md` pide
+  probar.
+- **Actualización post-lanzamiento (2026-09-24) — simplificado a un solo
+  CMV:** antes este módulo calculaba un "CMV teórico" (con el inventario
+  final de sistema) y un "CMV real" (con el físico), más la desviación
+  entre los dos, y era donde se registraba el conteo físico. Ahora:
+  - Esa comparación teórico-vs-físico se trasladó al Módulo 4
+    (Inventario), que ya es dueño del "inventario final teórico" y del
+    conteo físico — ver esa sección para la desviación.
+  - Aquí queda un **único CMV**, siempre calculado con el inventario
+    final **físico/real** (nunca el teórico) — es la definición contable
+    que de verdad importa para costear lo vendido.
+  - El registro del conteo físico se trasladó por completo a Inventario;
+    esta pantalla quedó de **solo lectura** (`GET /juego-inventarios`, ya
+    no existe `POST /juego-inventarios/final-fisico`).
+  - El Estado de Resultados (Fase 8) sigue reutilizando este CMV tal
+    cual, sin cambios en su propia fórmula.
 
 ## Estado de Resultados (Fase 8)
 

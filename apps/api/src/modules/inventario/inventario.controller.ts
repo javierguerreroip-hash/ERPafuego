@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { inventarioInicialSchema } from '@erp-afuego/shared';
+import { inventarioFinalFisicoSchema, inventarioInicialSchema } from '@erp-afuego/shared';
 import { HttpError } from '../../middleware/error.middleware.js';
 import * as inventarioService from './inventario.service.js';
 
@@ -32,6 +32,16 @@ export async function setInicialHandler(req: Request, res: Response, next: NextF
     const input = inventarioInicialSchema.parse(req.body);
     const registeredById = req.user!.sub;
     res.json(await inventarioService.setInventarioInicial(input, registeredById));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function setFinalFisicoHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const input = inventarioFinalFisicoSchema.parse(req.body);
+    const registeredById = req.user!.sub;
+    res.json(await inventarioService.setInventarioFinalFisico(input, registeredById));
   } catch (error) {
     next(error);
   }

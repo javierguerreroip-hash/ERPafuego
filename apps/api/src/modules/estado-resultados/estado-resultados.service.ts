@@ -1,4 +1,4 @@
-import { GASTO_ADMINISTRATIVO_RUBROS } from '@erp-afuego/shared';
+import { CATEGORIAS_MONITOREO, GASTO_ADMINISTRATIVO_RUBROS } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { calcularCostoPorcentaje } from '../eventos/evento.calculations.js';
 import { getJuegoInventariosReporte } from '../juego-inventarios/juego-inventarios.service.js';
@@ -32,21 +32,24 @@ export async function getEstadoResultados(startDate: Date, endDate: Date) {
   });
   const ingresoTotal = round2(eventos.reduce((sum, e) => sum + Number(e.valorAntesImpuestos), 0));
 
-  // 2. CMV real (Módulo "Juego de Inventarios") — se reutiliza tal cual,
-  // ya incluye el alcance "solo materia prima".
+  // 2. CMV (Módulo "Juego de Inventarios") — se reutiliza tal cual, ya
+  // incluye el alcance "solo materia prima" y está calculado con el
+  // inventario final FÍSICO/real (ver decisión post-lanzamiento
+  // 2026-09-24 documentada en el README).
   const juegoInventarios = await getJuegoInventariosReporte(startDate, endDate);
-  const cmv = juegoInventarios.consolidado.cmvReal.valor;
+  const cmv = juegoInventarios.consolidado.cmv.valor;
 
   // 3. Gastos de venta = todo consumo de eventos que NO sea materia prima
   // (mano de obra, transporte, artístico, alquiler de menaje — ver
   // decisión documentada en el README sobre "alquileres en general").
-  // Insumos de Aseo nunca genera un EventoConsumo (el backend lo rechaza
-  // en addConsumo), pero se excluye también aquí por si acaso — es un
-  // gasto operativo aparte, no debe colarse en el resultado operativo.
+  // Las categorías de monitoreo (Insumos de Aseo, Utensilios) nunca
+  // generan un EventoConsumo (el backend lo rechaza en addConsumo), pero
+  // se excluyen también aquí por si acaso — son un gasto operativo
+  // aparte, no deben colarse en el resultado operativo.
   const consumosGastoVenta = await prisma.eventoConsumo.findMany({
     where: {
       evento: { fecha: { gte: startDate, lte: endDate } },
-      articulo: { category: { notIn: ['MATERIA_PRIMA', 'INSUMOS_ASEO'] } },
+      articulo: { category: { notIn: ['MATERIA_PRIMA', ...CATEGORIAS_MONITOREO] } },
     },
     select: { subtotal: true },
   });

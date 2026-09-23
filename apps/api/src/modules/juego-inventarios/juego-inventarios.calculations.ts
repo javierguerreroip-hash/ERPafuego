@@ -1,29 +1,21 @@
 import { calcularInventarioFinal } from '../inventario/inventario.calculations.js';
 
-function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-// CMV = Inventario inicial + Compras − Inventario final (docs/spec_erp_afuego.md).
-// Es matemáticamente la misma fórmula que el "inventario final" del
-// Módulo 4 — aquí el término que resta es el CMV teórico (inventario
-// final "de sistema") o el CMV real (inventario final físico contado).
+// CMV = Inventario inicial + Compras − Inventario final FÍSICO/real
+// (docs/spec_erp_afuego.md). Es matemáticamente la misma fórmula que el
+// "inventario final" del Módulo 4, pero aquí el término que resta es
+// siempre el conteo físico de cierre — nunca el teórico (de sistema).
+//
+// Actualización post-lanzamiento (2026-09-24): antes existían un "CMV
+// teórico" (con el inventario final de sistema) y un "CMV real" (con el
+// físico), más la desviación entre los dos. Esa comparación se trasladó
+// al módulo de Inventario (que ya calcula "inventario final teórico" y
+// tiene el conteo físico) — aquí queda un solo CMV, calculado siempre con
+// el físico/real, que es la definición contable que de verdad importa
+// para costear lo vendido.
 export function calcularCMV(
   inventarioInicial: number,
   compras: number,
-  inventarioFinal: number,
+  inventarioFinalFisico: number,
 ): number {
-  return calcularInventarioFinal(inventarioInicial, compras, inventarioFinal);
-}
-
-// Desviación entre el CMV real y el CMV teórico, en $ y en % relativo al
-// teórico (qué tanto se desvió el real de lo esperado por sistema) — para
-// identificar mermas, pérdidas o descuadres de inventario.
-export function calcularDesviacionCMV(
-  cmvReal: number,
-  cmvTeorico: number,
-): { valor: number; porcentaje: number } {
-  const valor = round2(cmvReal - cmvTeorico);
-  const porcentaje = cmvTeorico !== 0 ? round2((valor / Math.abs(cmvTeorico)) * 100) : 0;
-  return { valor, porcentaje };
+  return calcularInventarioFinal(inventarioInicial, compras, inventarioFinalFisico);
 }

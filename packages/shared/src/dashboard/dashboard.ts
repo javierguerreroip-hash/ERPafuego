@@ -24,6 +24,15 @@ export interface DashboardTendenciaPuntoDTO {
   utilidad: number;
 }
 
+// Compras de una categoría de solo monitoreo (Insumos de Aseo,
+// Utensilios — ver CATEGORIAS_MONITOREO) en el período, solo para
+// vigilancia — a propósito NO están sumadas dentro de
+// costosTotales/utilidadOperativa/composicionCostos.
+export interface DashboardComprasMonitoreoItemDTO {
+  categoria: ArticuloCategoria;
+  valor: number;
+}
+
 export interface DashboardDTO {
   start: string;
   end: string;
@@ -36,8 +45,5 @@ export interface DashboardDTO {
   serviciosArtisticos: DashboardIndicadorDTO;
   composicionCostos: DashboardComposicionItemDTO[];
   tendencia: DashboardTendenciaPuntoDTO[];
-  // Insumos de Aseo (post-lanzamiento, 2026-09-23): total comprado en el
-  // período, solo para monitoreo — a propósito NO está sumado dentro de
-  // costosTotales/utilidadOperativa/composicionCostos.
-  comprasInsumosAseo: number;
+  comprasMonitoreo: DashboardComprasMonitoreoItemDTO[];
 }
