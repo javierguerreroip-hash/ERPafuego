@@ -73,7 +73,27 @@ function accionDe(operation: string): 'CREATE' | 'UPDATE' | 'DELETE' {
 // arma cada `serialize()` con sus propios `include`) — se intenta con
 // los campos descriptivos más comunes entre los modelos de este
 // esquema, y si ninguno aplica, se cae a un id corto.
-function nombreLegible(model: string, result: Record<string, unknown> | null | undefined): string {
+//
+// Un puñado de modelos (InventarioInicial, InventarioFinalFisico,
+// EventoConsumo, Turno, Incapacidad) no tienen NINGÚN campo propio
+// legible — solo guardan el id de a qué pertenecen (artículo, empleado).
+// Sin esto, "registroNombre" quedaba como "InventarioInicial a1b2c3d4" y
+// el buscador de Auditoría nunca podía encontrarlos por el nombre real
+// (ej. buscar "Brotes" no encontraba su Inventario Inicial) — descubierto
+// el 2026-09-24 al intentar rastrear un costo unitario. Se resuelve con
+// una consulta puntual extra a la tabla relacionada.
+const FK_NAME_LOOKUP: Record<string, { fk: string; via: 'articulo' | 'user' }> = {
+  InventarioInicial: { fk: 'articuloId', via: 'articulo' },
+  InventarioFinalFisico: { fk: 'articuloId', via: 'articulo' },
+  EventoConsumo: { fk: 'articuloId', via: 'articulo' },
+  Turno: { fk: 'userId', via: 'user' },
+  Incapacidad: { fk: 'userId', via: 'user' },
+};
+
+async function nombreLegible(
+  model: string,
+  result: Record<string, unknown> | null | undefined,
+): Promise<string> {
   const candidatos = [
     'name',
     'nombreArchivo',
@@ -89,6 +109,22 @@ function nombreLegible(model: string, result: Record<string, unknown> | null | u
     const valor = result?.[campo];
     if (typeof valor === 'string' && valor.trim()) return valor;
   }
+
+  const lookup = FK_NAME_LOOKUP[model];
+  const fkValor = lookup ? result?.[lookup.fk] : undefined;
+  if (lookup && typeof fkValor === 'string') {
+    try {
+      const relacionado =
+        lookup.via === 'articulo'
+          ? await basePrisma.articulo.findUnique({ where: { id: fkValor }, select: { name: true } })
+          : await basePrisma.user.findUnique({ where: { id: fkValor }, select: { name: true } });
+      if (relacionado?.name) return relacionado.name;
+    } catch {
+      // Si esta resolución falla, se cae al id corto de abajo — no vale
+      // la pena arriesgar el log de auditoría por esto.
+    }
+  }
+
   const id = typeof result?.id === 'string' ? result.id.slice(0, 8) : '';
   return `${model} ${id}`.trim();
 }
@@ -110,7 +146,7 @@ export const prisma = basePrisma.$extends({
           if (userId) {
             const record = result as Record<string, unknown> | null;
             const registroId = typeof record?.id === 'string' ? record.id : 'desconocido';
-            const registroNombre = nombreLegible(model, record);
+            const registroNombre = await nombreLegible(model, record);
             const detalle =
               operation === 'delete'
                 ? undefined

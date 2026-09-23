@@ -291,6 +291,23 @@ Acceso restringido a los roles Administrador y Operación.
   para que quede un solo lugar donde ajustar quién tiene acceso de
   lectura vs. edición.
 
+## Auditoría — nombres legibles en módulos sin campo propio (post-lanzamiento, 2026-09-24)
+
+- Bug encontrado al intentar rastrear de dónde salió el costo unitario de
+  un consumo: `InventarioInicial`, `InventarioFinalFisico`,
+  `EventoConsumo`, `Turno` e `Incapacidad` no tienen ningún campo propio
+  legible (solo guardan el id del artículo o del empleado), así que el
+  interceptor automático de auditoría (Etapa 1) les asignaba un nombre
+  genérico tipo `"InventarioInicial a1b2c3d4"` — buscar por el nombre
+  real (ej. "Brotes") en el panel de Auditoría nunca los encontraba,
+  aunque el movimiento sí estuviera registrado.
+- **Fix** (`apps/api/src/lib/prisma.ts`): para esos 5 modelos, el
+  interceptor ahora resuelve el nombre real con una consulta puntual
+  extra a `Articulo` o `User` según corresponda, antes de guardar el
+  log. Aplica desde este deploy en adelante — los registros de auditoría
+  ya guardados con el nombre genérico no se corrigen retroactivamente
+  (quedan como estaban, solo dejan de repetirse hacia adelante).
+
 ## Menú adaptado a celular (post-lanzamiento, 2026-09-23, Etapa 4 del plan de mejoras)
 
 - El menú lateral (`AppLayout.tsx`) ahora es un panel deslizante en
