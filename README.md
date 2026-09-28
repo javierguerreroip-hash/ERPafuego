@@ -85,6 +85,24 @@ Acceso restringido a los roles Administrador y Operación.
   artículo del botón "Ver histórico"). Se agregó también una tarjeta
   **"Total de compras"** con la suma de lo que se ve en pantalla (respeta
   tanto el período como el buscador de texto).
+- **Bug encontrado y corregido (2026-09-28) — facturas con muchos ítems
+  fallaban con "Error interno del servidor":** una factura real de 12
+  ítems (algunos artículos repetidos en líneas distintas, como puede
+  pasar en una factura de supermercado) tardaba ~6 segundos en guardarse
+  porque `createCompraBatch` consultaba y actualizaba la base de datos
+  varias veces por cada ítem, en serie — eso superaba el límite de
+  tiempo por defecto de Prisma para transacciones interactivas (5s), y
+  la transacción fallaba con un error genérico sin mensaje claro.
+  Diagnosticado con los logs de Observability de Netlify (duración
+  6032ms, sin log de aplicación) — la base de datos (Supabase) estaba
+  sana, el cuello de botella era la cantidad de idas y vueltas dentro de
+  la transacción. **Fix:** se valida que todos los artículos existan con
+  una sola consulta (`findMany`) antes de abrir la transacción, en vez
+  de un `findUnique` por ítem, y se subió el límite de tiempo de la
+  transacción a 20 segundos. Si alguna vez una compra fuera tan grande
+  que igual lo superara, ahora responde con un mensaje claro ("tenía
+  demasiados ítems...", código Prisma `P2028` en
+  `error.middleware.ts`) en vez del genérico.
 
 ## Módulo 3 — Ventas y costos por evento (Fase 3)
 

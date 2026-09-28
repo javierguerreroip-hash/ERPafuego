@@ -81,60 +81,78 @@ export async function createCompraBatch(input: CompraBatchInput, registeredById:
       ? new Date(input.fechaVencimiento)
       : null;
 
-  const created = await prisma.$transaction(async (tx) => {
-    const compras = [];
-    for (const item of input.items) {
-      const articulo = await tx.articulo.findUnique({ where: { id: item.articuloId } });
-      if (!articulo) {
-        throw new HttpError(404, `Artículo no encontrado: ${item.articuloId}`);
+  // Se valida que todos los artículos existan ANTES de abrir la
+  // transacción, con una sola consulta (findMany) en vez de un
+  // findUnique por ítem — una factura con varios ítems (o el mismo
+  // artículo repetido, como puede pasar en una factura real) hacía que
+  // la transacción encadenara demasiadas idas y vueltas a la base de
+  // datos en serie y superara el límite de tiempo por defecto de Prisma
+  // para transacciones interactivas (5s), fallando con un error genérico
+  // — detectado 2026-09-28 con una factura de 12 ítems.
+  const articuloIds = [...new Set(input.items.map((item) => item.articuloId))];
+  const articulos = await prisma.articulo.findMany({ where: { id: { in: articuloIds } } });
+  const articulosMap = new Map(articulos.map((a) => [a.id, a]));
+  for (const item of input.items) {
+    if (!articulosMap.has(item.articuloId)) {
+      throw new HttpError(404, `Artículo no encontrado: ${item.articuloId}`);
+    }
+  }
+
+  const created = await prisma.$transaction(
+    async (tx) => {
+      const compras = [];
+      for (const item of input.items) {
+        const articulo = articulosMap.get(item.articuloId)!;
+        const totalValue = Math.round(item.quantity * item.unitPrice * 100) / 100;
+
+        const compra = await tx.compra.create({
+          data: {
+            articuloId: item.articuloId,
+            proveedorId: input.proveedorId,
+            fecha,
+            quantity: item.quantity,
+            unit: articulo.unit,
+            unitPrice: item.unitPrice,
+            totalValue,
+            facturaNumero: input.facturaNumero,
+            condicionPago: input.condicionPago,
+            fechaVencimiento,
+            registeredById,
+          },
+          include: includeRelations,
+        });
+
+        await tx.articulo.update({
+          where: { id: item.articuloId },
+          data: { lastPurchasePrice: item.unitPrice },
+        });
+
+        compras.push(compra);
       }
 
-      const totalValue = Math.round(item.quantity * item.unitPrice * 100) / 100;
-
-      const compra = await tx.compra.create({
-        data: {
-          articuloId: item.articuloId,
-          proveedorId: input.proveedorId,
-          fecha,
-          quantity: item.quantity,
-          unit: articulo.unit,
-          unitPrice: item.unitPrice,
-          totalValue,
-          facturaNumero: input.facturaNumero,
-          condicionPago: input.condicionPago,
-          fechaVencimiento,
-          registeredById,
-        },
-        include: includeRelations,
-      });
-
-      await tx.articulo.update({
-        where: { id: item.articuloId },
-        data: { lastPurchasePrice: item.unitPrice },
-      });
-
-      compras.push(compra);
-    }
-
-    // Cartera (Fase 12): una compra a crédito genera automáticamente su
-    // Cuenta por Pagar (agrupada por proveedor + número de factura, no
-    // por línea) — upsert porque varias compras pueden compartir la
-    // misma factura.
-    if (input.condicionPago === 'CREDITO') {
-      await tx.cuentaPorPagar.upsert({
-        where: {
-          proveedorId_facturaNumero: {
-            proveedorId: input.proveedorId,
-            facturaNumero: input.facturaNumero,
+      // Cartera (Fase 12): una compra a crédito genera automáticamente su
+      // Cuenta por Pagar (agrupada por proveedor + número de factura, no
+      // por línea) — upsert porque varias compras pueden compartir la
+      // misma factura.
+      if (input.condicionPago === 'CREDITO') {
+        await tx.cuentaPorPagar.upsert({
+          where: {
+            proveedorId_facturaNumero: {
+              proveedorId: input.proveedorId,
+              facturaNumero: input.facturaNumero,
+            },
           },
-        },
-        update: {},
-        create: { proveedorId: input.proveedorId, facturaNumero: input.facturaNumero },
-      });
-    }
+          update: {},
+          create: { proveedorId: input.proveedorId, facturaNumero: input.facturaNumero },
+        });
+      }
 
-    return compras;
-  });
+      return compras;
+    },
+    // 20s en vez de los 5s por defecto — con margen amplio para facturas
+    // con muchos ítems (ver comentario arriba).
+    { timeout: 20000 },
+  );
 
   return created.map(serialize);
 }
