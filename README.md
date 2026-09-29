@@ -122,6 +122,16 @@ Acceso restringido a los roles Administrador y Operación.
 - Las fórmulas financieras (`apps/api/src/modules/eventos/evento.calculations.ts`)
   tienen pruebas unitarias — corre `npm run test -w apps/api` (o
   `npm run test` desde la raíz).
+- **Actualización post-lanzamiento (2026-09-29):** se agregó el botón
+  **"Editar"** por fila (junto a "Eliminar") — el backend (`PUT
+  /eventos/:id`) ya existía desde la Fase 3 pero no estaba expuesto en
+  el frontend, así que no había forma de corregir un evento ya creado
+  (ej. cambiar la tasa de impuesto de una venta, el cliente, la opción de
+  menú, el número de personas o el vendedor). Reutiliza el mismo
+  formulario de "Nuevo evento"; al guardar recalcula
+  `valorDespuesImpuestos` con la tasa elegida. En eventos creados antes
+  de exigir vendedor (anteriores al 2026-09-22, con `vendedorId: null`),
+  el selector obliga a elegir uno antes de poder guardar la edición.
 
 ## Módulo 4 — Inventario en tiempo real (Fase 4)
 

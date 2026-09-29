@@ -43,6 +43,7 @@ export function EventosPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<EventoDTO | null>(null);
   const [form, setForm] = useState<EventoInput>(emptyForm());
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -120,7 +121,26 @@ export function EventosPage() {
   });
 
   function openCreate() {
+    setEditing(null);
     setForm(emptyForm());
+    setFormError(null);
+    setShowForm(true);
+  }
+
+  function openEdit(evento: EventoDTO) {
+    setEditing(evento);
+    setForm({
+      fecha: evento.fecha.slice(0, 10),
+      clienteId: evento.clienteId,
+      opcionMenuId: evento.opcionMenuId,
+      numeroPersonas: evento.numeroPersonas,
+      valorAntesImpuestos: evento.valorAntesImpuestos,
+      taxRateId: evento.taxRateId,
+      // Solo puede quedar vacío en eventos creados antes de exigir
+      // vendedor (ver EventoDTO) — el selector obliga a elegir uno antes
+      // de poder guardar la edición.
+      vendedorId: evento.vendedorId ?? '',
+    });
     setFormError(null);
     setShowForm(true);
   }
@@ -134,7 +154,15 @@ export function EventosPage() {
     }
     setSubmitting(true);
     try {
-      await apiFetch<EventoDTO>('/eventos', { method: 'POST', body: parsed.data, token });
+      if (editing) {
+        await apiFetch<EventoDTO>(`/eventos/${editing.id}`, {
+          method: 'PUT',
+          body: parsed.data,
+          token,
+        });
+      } else {
+        await apiFetch<EventoDTO>('/eventos', { method: 'POST', body: parsed.data, token });
+      }
       setShowForm(false);
       await loadAll();
     } catch (err) {
@@ -280,17 +308,28 @@ export function EventosPage() {
                       ({evento.utilidadOperacionalPorcentaje.toFixed(1)}%)
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="space-x-3 px-4 py-2 text-right">
                     {!readOnly && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingEvento(evento);
-                        }}
-                        className="text-red-600 hover:underline"
-                      >
-                        Eliminar
-                      </button>
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(evento);
+                          }}
+                          className="text-orange-600 hover:underline"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingEvento(evento);
+                          }}
+                          className="text-red-600 hover:underline"
+                        >
+                          Eliminar
+                        </button>
+                      </>
                     )}
                   </td>
                 </tr>
@@ -301,7 +340,7 @@ export function EventosPage() {
       </div>
 
       {showForm && (
-        <Modal title="Nuevo evento" onClose={() => setShowForm(false)}>
+        <Modal title={editing ? 'Editar evento' : 'Nuevo evento'} onClose={() => setShowForm(false)}>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Fecha del evento">
@@ -408,7 +447,7 @@ export function EventosPage() {
                 disabled={submitting}
                 className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
               >
-                {submitting ? 'Guardando…' : 'Guardar evento'}
+                {submitting ? 'Guardando…' : editing ? 'Guardar cambios' : 'Guardar evento'}
               </button>
             </div>
           </div>
