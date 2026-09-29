@@ -220,16 +220,24 @@ Acceso restringido a los roles Administrador y Operación.
 ## Gastos Administrativos (Fase 6)
 
 - **Gastos Administrativos** (`/gastos-administrativos`, Administrador/
-  Operación/Ventas): registro mensual de los 11 rubros fijos (arriendo,
+  Operación/Ventas): registro mensual de los 12 rubros fijos (arriendo,
   nómina administrativa, servicios públicos, honorarios de contador y
   socios, control de plagas, seguros, internet, adicionales, cuota de
-  obligación financiera, **Publicidad** y **Lavandería** — estos dos
-  últimos agregados 2026-09-10 a pedido del negocio, ver "Decisiones de
-  la Fase 6"). Selector de mes (un registro por año+mes) con histórico de
-  meses ya cargados a un clic.
+  obligación financiera, **Publicidad**, **Lavandería** y **Seguridad
+  Social** — los tres últimos agregados post-lanzamiento a pedido del
+  negocio, ver "Decisiones de la Fase 6"). Selector de mes (un registro
+  por año+mes) con histórico de meses ya cargados a un clic.
 - El total del mes no se guarda: se suma en el servicio
   (`calcularTotalGastosAdministrativos`, con pruebas unitarias) para que
   el futuro Estado de Resultados siempre lo consuma actualizado.
+- **Actualización post-lanzamiento (2026-09-29):** se agregó el rubro
+  **Seguridad Social** — mismo patrón que Publicidad/Lavandería (columna
+  fija más en `GastoAdministrativo`, no un catálogo abierto). Como
+  `GASTO_ADMINISTRATIVO_RUBROS` es la única lista que hay que tocar (el
+  formulario, la exportación y el total ya son genéricos sobre esa
+  lista), agregar un rubro nuevo no vuelve a tocar el resto del código —
+  solo el schema de Prisma, su migración y el `emptyForm()` del
+  frontend (que sí inicializa cada campo a mano).
 
 ## Juego de Inventarios — CMV (Fase 7)
 
@@ -1119,6 +1127,8 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
   `GASTO_ADMINISTRATIVO_RUBROS` (el total y el Estado de Resultados los
   recogen automáticamente, sin tocar su fórmula) y se agregó la
   migración de base de datos correspondiente a cada uno.
+- **Actualización post-lanzamiento (2026-09-29):** mismo patrón, un
+  rubro fijo más: **Seguridad Social**.
 
 ### Decisiones de la Fase 7
 

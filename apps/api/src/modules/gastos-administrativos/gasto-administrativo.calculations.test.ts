@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { calcularTotalGastosAdministrativos } from './gasto-administrativo.calculations.js';
 
 describe('calcularTotalGastosAdministrativos', () => {
-  it('suma los 11 rubros fijos', () => {
+  it('suma los 12 rubros fijos', () => {
     const total = calcularTotalGastosAdministrativos({
       arriendo: 2000000,
       nomina: 3500000,
@@ -15,8 +15,9 @@ describe('calcularTotalGastosAdministrativos', () => {
       cuotaObligacionFinanciera: 600000,
       publicidad: 300000,
       lavanderia: 80000,
+      seguridadSocial: 400000,
     });
-    expect(total).toBe(8400000);
+    expect(total).toBe(8800000);
   });
 
   it('devuelve 0 si todos los rubros están en 0', () => {
@@ -32,6 +33,7 @@ describe('calcularTotalGastosAdministrativos', () => {
       cuotaObligacionFinanciera: 0,
       publicidad: 0,
       lavanderia: 0,
+      seguridadSocial: 0,
     });
     expect(total).toBe(0);
   });
@@ -49,7 +51,26 @@ describe('calcularTotalGastosAdministrativos', () => {
       cuotaObligacionFinanciera: 0,
       publicidad: 450000,
       lavanderia: 90000,
+      seguridadSocial: 0,
     });
     expect(total).toBe(540000);
+  });
+
+  it('incluye seguridad social aunque los demás rubros estén en 0', () => {
+    const total = calcularTotalGastosAdministrativos({
+      arriendo: 0,
+      nomina: 0,
+      serviciosPublicos: 0,
+      honorariosContadorSocios: 0,
+      controlPlagas: 0,
+      seguros: 0,
+      internet: 0,
+      adicionales: 0,
+      cuotaObligacionFinanciera: 0,
+      publicidad: 0,
+      lavanderia: 0,
+      seguridadSocial: 620000,
+    });
+    expect(total).toBe(620000);
   });
 });

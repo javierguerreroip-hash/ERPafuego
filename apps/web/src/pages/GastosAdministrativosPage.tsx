@@ -38,6 +38,7 @@ function emptyForm(year: number, month: number): GastoAdministrativoInput {
     cuotaObligacionFinanciera: 0,
     publicidad: 0,
     lavanderia: 0,
+    seguridadSocial: 0,
   };
 }
 
