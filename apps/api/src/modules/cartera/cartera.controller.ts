@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { abonoSchema } from '@erp-afuego/shared';
+import * as abonoService from './abono.service.js';
 import * as cxcService from './cxc.service.js';
 import * as cxpService from './cxp.service.js';
 
@@ -49,6 +50,16 @@ export async function addAbonoCxPHandler(req: Request, res: Response, next: Next
     const input = abonoSchema.parse(req.body);
     await cxpService.addAbonoCxP(req.params.cuentaId, input, req.user!.sub);
     res.status(201).json(await cxpService.listCxP({}));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateAbonoHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const input = abonoSchema.parse(req.body);
+    await abonoService.updateAbono(req.params.abonoId, input);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

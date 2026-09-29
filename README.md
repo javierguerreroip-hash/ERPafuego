@@ -572,6 +572,17 @@ Acceso restringido a los roles Administrador y Operación.
   recalcula sumando los abonos.
 - Fórmulas (`calcularSaldoPendiente`, `calcularEstadoCartera`) con
   pruebas unitarias en `apps/api/src/modules/cartera/cartera.calculations.ts`.
+- **Actualización post-lanzamiento (2026-09-29) — editar un abono:**
+  antes solo se podía registrar un abono nuevo; si quedaba mal digitado
+  (valor o fecha) no había forma de corregirlo. Se agregó un botón
+  "Editar" junto a cada abono en el detalle expandido de CxC/CxP —
+  **exclusivo de Administrador** (a diferencia de registrar uno nuevo,
+  que sigue abierto a Administrador/Operación/Ventas), pedido explícito
+  del negocio por ser una corrección financiera sensible. Un solo
+  endpoint (`PUT /cartera/abonos/:abonoId`,
+  `apps/api/src/modules/cartera/abono.service.ts`) sirve tanto para
+  abonos de CxC como de CxP — el modelo `Abono` es el mismo para los
+  dos. No se agregó borrado de abonos (no fue lo pedido).
 
 ## Pulido general (Fase 13)
 

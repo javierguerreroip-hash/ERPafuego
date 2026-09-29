@@ -65,9 +65,12 @@ export function CarteraPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // editAbono presente = editando un abono ya registrado (solo
+  // Administrador, post-lanzamiento 2026-09-29); ausente = registrando
+  // uno nuevo.
   const [abonoFor, setAbonoFor] = useState<
-    | { tipo: 'CXC'; eventoId: string; saldo: number }
-    | { tipo: 'CXP'; cuentaId: string; saldo: number }
+    | { tipo: 'CXC'; eventoId: string; saldo: number; editAbono?: { id: string; valor: number; fecha: string } }
+    | { tipo: 'CXP'; cuentaId: string; saldo: number; editAbono?: { id: string; valor: number; fecha: string } }
     | null
   >(null);
 
@@ -139,7 +142,9 @@ export function CarteraPage() {
 
   async function handleAbono(input: AbonoInput) {
     if (!abonoFor) return;
-    if (abonoFor.tipo === 'CXC') {
+    if (abonoFor.editAbono) {
+      await apiFetch(`/cartera/abonos/${abonoFor.editAbono.id}`, { method: 'PUT', body: input, token });
+    } else if (abonoFor.tipo === 'CXC') {
       await apiFetch(`/cartera/cxc/${abonoFor.eventoId}/abonos`, { method: 'POST', body: input, token });
     } else {
       await apiFetch(`/cartera/cxp/${abonoFor.cuentaId}/abonos`, { method: 'POST', body: input, token });
@@ -324,11 +329,28 @@ export function CarteraPage() {
                           {r.abonos.length === 0 ? (
                             <p className="text-xs text-neutral-400">Sin abonos registrados.</p>
                           ) : (
-                            <ul className="text-xs text-neutral-600">
+                            <ul className="space-y-0.5 text-xs text-neutral-600">
                               {r.abonos.map((a) => (
-                                <li key={a.id}>
-                                  {formatDateOnly(a.fecha)} — {formatCOP(a.valor)} (registrado por{' '}
-                                  {a.registeredByName})
+                                <li key={a.id} className="flex items-center justify-between gap-2">
+                                  <span>
+                                    {formatDateOnly(a.fecha)} — {formatCOP(a.valor)} (registrado por{' '}
+                                    {a.registeredByName})
+                                  </span>
+                                  {user?.role === 'ADMINISTRADOR' && (
+                                    <button
+                                      onClick={() =>
+                                        setAbonoFor({
+                                          tipo: 'CXC',
+                                          eventoId: r.eventoId,
+                                          saldo: r.saldoPendiente,
+                                          editAbono: { id: a.id, valor: a.valor, fecha: a.fecha },
+                                        })
+                                      }
+                                      className="shrink-0 text-orange-600 hover:underline"
+                                    >
+                                      Editar
+                                    </button>
+                                  )}
                                 </li>
                               ))}
                             </ul>
@@ -405,11 +427,28 @@ export function CarteraPage() {
                           {r.abonos.length === 0 ? (
                             <p className="text-xs text-neutral-400">Sin abonos registrados.</p>
                           ) : (
-                            <ul className="text-xs text-neutral-600">
+                            <ul className="space-y-0.5 text-xs text-neutral-600">
                               {r.abonos.map((a) => (
-                                <li key={a.id}>
-                                  {formatDateOnly(a.fecha)} — {formatCOP(a.valor)} (registrado por{' '}
-                                  {a.registeredByName})
+                                <li key={a.id} className="flex items-center justify-between gap-2">
+                                  <span>
+                                    {formatDateOnly(a.fecha)} — {formatCOP(a.valor)} (registrado por{' '}
+                                    {a.registeredByName})
+                                  </span>
+                                  {user?.role === 'ADMINISTRADOR' && (
+                                    <button
+                                      onClick={() =>
+                                        setAbonoFor({
+                                          tipo: 'CXP',
+                                          cuentaId: r.id,
+                                          saldo: r.saldoPendiente,
+                                          editAbono: { id: a.id, valor: a.valor, fecha: a.fecha },
+                                        })
+                                      }
+                                      className="shrink-0 text-orange-600 hover:underline"
+                                    >
+                                      Editar
+                                    </button>
+                                  )}
                                 </li>
                               ))}
                             </ul>
@@ -427,8 +466,15 @@ export function CarteraPage() {
 
       {abonoFor && (
         <AbonoModal
-          title={abonoFor.tipo === 'CXC' ? 'Registrar abono — Cuenta por cobrar' : 'Registrar abono — Cuenta por pagar'}
+          title={
+            abonoFor.editAbono
+              ? 'Editar abono'
+              : abonoFor.tipo === 'CXC'
+                ? 'Registrar abono — Cuenta por cobrar'
+                : 'Registrar abono — Cuenta por pagar'
+          }
           saldoPendiente={abonoFor.saldo}
+          initial={abonoFor.editAbono}
           onClose={() => setAbonoFor(null)}
           onSubmit={handleAbono}
         />

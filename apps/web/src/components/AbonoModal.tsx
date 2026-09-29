@@ -7,16 +7,21 @@ import { formatCOP } from '../lib/format';
 export function AbonoModal({
   title,
   saldoPendiente,
+  initial,
   onClose,
   onSubmit,
 }: {
   title: string;
   saldoPendiente: number;
+  // Presente = editando un abono ya registrado; ausente = registrando
+  // uno nuevo (post-lanzamiento, 2026-09-29).
+  initial?: { valor: number; fecha: string };
   onClose: () => void;
   onSubmit: (input: AbonoInput) => Promise<void>;
 }) {
-  const [valor, setValor] = useState('');
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const isEditing = Boolean(initial);
+  const [valor, setValor] = useState(initial ? String(initial.valor) : '');
+  const [fecha, setFecha] = useState(initial ? initial.fecha.slice(0, 10) : new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,7 +37,7 @@ export function AbonoModal({
       await onSubmit(parsed.data);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al registrar el abono');
+      setError(err instanceof Error ? err.message : `Error al ${isEditing ? 'editar' : 'registrar'} el abono`);
     } finally {
       setSubmitting(false);
     }
@@ -71,7 +76,7 @@ export function AbonoModal({
             disabled={submitting}
             className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
           >
-            {submitting ? 'Guardando…' : 'Registrar abono'}
+            {submitting ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Registrar abono'}
           </button>
         </div>
       </div>
