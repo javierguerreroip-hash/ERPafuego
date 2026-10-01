@@ -420,6 +420,9 @@ model ParametroNomina {
   smlv                           Decimal  @db.Decimal(14, 2)
   divisorHoras                   Decimal  @db.Decimal(6, 2)
   auxilioTransporte              Decimal  @db.Decimal(14, 2)
+  // Tope semanal de horas ordinarias (post-lanzamiento, 2026-10-01) —
+  // Art. 161 CST / Ley 2101 de 2021. Vigente hoy: 42h (desde 2026-07-15).
+  jornadaSemanalMaxima           Decimal  @default(42) @db.Decimal(5, 2)
   recargoNocturno                Decimal  @db.Decimal(5, 4)
   recargoExtraDiurna             Decimal  @db.Decimal(5, 4)
   recargoExtraNocturna           Decimal  @db.Decimal(5, 4)

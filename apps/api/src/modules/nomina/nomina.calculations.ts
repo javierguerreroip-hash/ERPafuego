@@ -37,6 +37,16 @@ function esDomingo(colombiaDate: Date): boolean {
   return colombiaDate.getUTCDay() === 0;
 }
 
+// Clave de la semana calendario (lunes a domingo, hora Colombia) a la
+// que pertenece un turno — la fecha ISO de su lunes.
+function semanaISO(horaEntradaUtc: Date): string {
+  const col = aColombia(horaEntradaUtc);
+  const diaSemana = col.getUTCDay(); // 0=domingo … 6=sábado
+  const diasDesdeElLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+  const lunes = new Date(col.getTime() - diasDesdeElLunes * 24 * 3600 * 1000);
+  return fechaISO(lunes);
+}
+
 // Genera los puntos de quiebre (en tiempo real) dentro de (entrada, salida):
 // cada cruce de las 6:00/19:00 y cada medianoche en hora Colombia — son los
 // únicos instantes donde puede cambiar la clasificación diurna/nocturna o
@@ -177,6 +187,75 @@ export function sumarDesgloses(desgloses: DesgloseHorasDTO[]): DesgloseHorasDTO 
   return total;
 }
 
+export interface TurnoConDesglose {
+  horaEntrada: Date;
+  desglose: DesgloseHorasDTO;
+}
+
+// Tope semanal de horas ordinarias (Art. 161 CST, reformado por la Ley
+// 2101 de 2021 — post-lanzamiento, 2026-10-01). Además del tope de 8h
+// por turno que ya aplica `clasificarTurno`, la ley colombiana limita el
+// total de horas ORDINARIAS (diurna + nocturna; nunca la dominical/
+// festiva, que se rige aparte, ni la extra que un turno ya generó por su
+// propio tope diario) dentro de una semana calendario (lunes a domingo,
+// hora Colombia) a un máximo que bajó de forma escalonada: 47h
+// (jul-2023), 46h (jul-2024), 44h (jul-2025), 42h desde el 15 de julio
+// de 2026 — valor configurable en ParametroNomina.jornadaSemanalMaxima,
+// nunca fijo aquí, porque la ley lo va a volver a cambiar.
+//
+// Lo que exceda el tope semanal se reclasifica a extra (diurna/nocturna,
+// según de dónde venían las horas), tomando el excedente de los turnos
+// MÁS RECIENTES de la semana en orden cronológico — un trabajador nunca
+// "pierde" horas ordinarias que ya trabajó al principio de la semana por
+// algo que pase después.
+//
+// Requiere los turnos de la semana COMPLETA (lunes a domingo), no solo
+// los de un período de pago — una quincena casi nunca empieza en lunes,
+// así que quien llama debe incluir turnos de fuera del período que
+// pertenezcan a la misma semana calendario (ver liquidacion.service.ts)
+// y luego filtrar el resultado de vuelta al período a pagar.
+export function aplicarTopeSemanal(
+  turnos: TurnoConDesglose[],
+  topeSemanalHoras: number,
+): TurnoConDesglose[] {
+  const porSemana = new Map<string, TurnoConDesglose[]>();
+  for (const t of turnos) {
+    const clave = semanaISO(t.horaEntrada);
+    const lista = porSemana.get(clave) ?? [];
+    lista.push(t);
+    porSemana.set(clave, lista);
+  }
+
+  const resultado: TurnoConDesglose[] = [];
+  for (const lista of porSemana.values()) {
+    const ordenada = [...lista].sort((a, b) => a.horaEntrada.getTime() - b.horaEntrada.getTime());
+    let acumuladoOrdinaria = 0;
+
+    for (const t of ordenada) {
+      const d = { ...t.desglose };
+      const ordinariaTurno = round2(d.diurnaOrdinaria + d.nocturnaOrdinaria);
+      const disponible = Math.max(0, round2(topeSemanalHoras - acumuladoOrdinaria));
+      const aUsar = Math.min(ordinariaTurno, disponible);
+      const excedente = round2(ordinariaTurno - aUsar);
+      acumuladoOrdinaria = round2(acumuladoOrdinaria + aUsar);
+
+      if (excedente > 0 && ordinariaTurno > 0) {
+        const fraccionDiurna = d.diurnaOrdinaria / ordinariaTurno;
+        const excedenteDiurna = round2(excedente * fraccionDiurna);
+        const excedenteNocturna = round2(excedente - excedenteDiurna);
+        d.diurnaOrdinaria = round2(d.diurnaOrdinaria - excedenteDiurna);
+        d.nocturnaOrdinaria = round2(d.nocturnaOrdinaria - excedenteNocturna);
+        d.extraDiurna = round2(d.extraDiurna + excedenteDiurna);
+        d.extraNocturna = round2(d.extraNocturna + excedenteNocturna);
+      }
+
+      resultado.push({ horaEntrada: t.horaEntrada, desglose: d });
+    }
+  }
+
+  return resultado;
+}
+
 export interface TasasRecargo {
   recargoNocturno: number;
   recargoExtraDiurna: number;
@@ -266,6 +345,29 @@ export function calcularDeducciones(
     deduccionAFP,
     totalDeducciones: round2(deduccionEPS + deduccionAFP),
   };
+}
+
+// Límites (lunes 00:00 a domingo 23:59:59.999, en UTC) de las semanas
+// calendario completas que contienen `start` y `end` — post-lanzamiento,
+// 2026-10-01, para poder traer los turnos de esas semanas completas y
+// aplicar `aplicarTopeSemanal` correctamente aunque el período de pago
+// (quincena) no empiece ni termine en lunes.
+//
+// `start`/`end` llegan como "medianoche UTC de la fecha calendario"
+// (mismo criterio que el resto del módulo — ver controller), no como
+// instantes reales, así que el día de la semana se lee directo de sus
+// componentes UTC, sin pasar por `aColombia` (eso es solo para
+// instantes reales como `horaEntrada`).
+export function limiteSemanasCompletas(start: Date, end: Date): { desde: Date; hasta: Date } {
+  const diaStart = start.getUTCDay(); // 0=domingo…6=sábado
+  const diasDesdeElLunes = diaStart === 0 ? 6 : diaStart - 1;
+  const desde = new Date(start.getTime() - diasDesdeElLunes * 24 * 3600 * 1000);
+
+  const diaEnd = end.getUTCDay();
+  const diasHastaElDomingo = diaEnd === 0 ? 0 : 7 - diaEnd;
+  const hasta = new Date(end.getTime() + diasHastaElDomingo * 24 * 3600 * 1000);
+
+  return { desde, hasta };
 }
 
 // Auxilio de transporte prorrateado por días trabajados (no por horas) —

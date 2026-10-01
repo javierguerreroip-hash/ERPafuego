@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aplicarTopeSemanal,
   calcularAuxilioTransporte,
   calcularDeducciones,
   calcularTotalDevengadoHoras,
   calcularValorIncapacidad,
   calcularValorPorConcepto,
   clasificarTurno,
+  limiteSemanasCompletas,
   sumarDesgloses,
   type TasasRecargo,
+  type TurnoConDesglose,
 } from './nomina.calculations.js';
 
 // Tasas confirmadas por el usuario (ver README): recargo nocturno 35%,
@@ -189,5 +192,152 @@ describe('calcularAuxilioTransporte', () => {
 
   it('devuelve 0 si no se trabajó ningún día', () => {
     expect(calcularAuxilioTransporte(249095, 0)).toBe(0);
+  });
+});
+
+// Tope semanal de horas ordinarias (Art. 161 CST / Ley 2101 de 2021),
+// agregado 2026-10-01 tras detectar que la liquidación solo revisaba el
+// tope de 8h por turno, nunca el acumulado semanal — ver README.
+describe('aplicarTopeSemanal', () => {
+  function turno(fechaHoraLocal: string, desglose: Partial<ReturnType<typeof vacio>>): TurnoConDesglose {
+    return { horaEntrada: colombia(fechaHoraLocal), desglose: { ...vacio(), ...desglose } };
+  }
+  function vacio() {
+    return {
+      diurnaOrdinaria: 0,
+      nocturnaOrdinaria: 0,
+      extraDiurna: 0,
+      extraNocturna: 0,
+      dominicalFestivaDiurna: 0,
+      dominicalFestivaNocturna: 0,
+      extraDiurnaDominicalFestiva: 0,
+      extraNocturnaDominicalFestiva: 0,
+    };
+  }
+
+  it('una semana por debajo del tope no cambia nada', () => {
+    // 5 turnos de 6.5h ordinarias (lunes a viernes) = 32.5h, bajo 42h.
+    const turnos = ['2026-01-05', '2026-01-06', '2026-01-07', '2026-01-08', '2026-01-09'].map((f) =>
+      turno(`${f}T08:00`, { diurnaOrdinaria: 6.5 }),
+    );
+    const resultado = aplicarTopeSemanal(turnos, 42);
+    for (const t of resultado) {
+      expect(t.desglose.diurnaOrdinaria).toBe(6.5);
+      expect(t.desglose.extraDiurna).toBe(0);
+    }
+  });
+
+  it('una semana que pasa el tope mueve el excedente al ÚLTIMO turno cronológico, no al primero', () => {
+    // 6 turnos de 7.5h ordinarias (lunes a sábado) = 45h, 3h por encima
+    // de un tope de 42h — el sábado (el último turno de la semana) debe
+    // quedar con 4.5h ordinarias + 3h extra; los otros 5, sin tocar.
+    const fechas = ['2026-01-05', '2026-01-06', '2026-01-07', '2026-01-08', '2026-01-09', '2026-01-10'];
+    const turnos = fechas.map((f) => turno(`${f}T08:00`, { diurnaOrdinaria: 7.5 }));
+    const resultado = aplicarTopeSemanal(turnos, 42);
+
+    for (let i = 0; i < 5; i++) {
+      expect(resultado[i].desglose.diurnaOrdinaria).toBe(7.5);
+      expect(resultado[i].desglose.extraDiurna).toBe(0);
+    }
+    const sabado = resultado[5];
+    expect(sabado.desglose.diurnaOrdinaria).toBe(4.5);
+    expect(sabado.desglose.extraDiurna).toBe(3);
+
+    const totalOrdinaria = resultado.reduce((s, t) => s + t.desglose.diurnaOrdinaria, 0);
+    const totalExtra = resultado.reduce((s, t) => s + t.desglose.extraDiurna, 0);
+    expect(totalOrdinaria).toBe(42);
+    expect(totalExtra).toBe(3);
+  });
+
+  it('reparte el excedente proporcionalmente entre diurna y nocturna cuando el turno que cruza el tope tiene las dos', () => {
+    // Turno A (lunes) ya "gasta" 40h de las 42h de la semana. Turno B
+    // (martes) trae 2h diurnas + 2h nocturnas ordinarias — con solo 2h
+    // de cupo semanal disponible, la mitad de cada una se vuelve extra.
+    const turnoA = turno('2026-01-05T08:00', { diurnaOrdinaria: 40 });
+    const turnoB = turno('2026-01-06T08:00', { diurnaOrdinaria: 2, nocturnaOrdinaria: 2 });
+    const [a, b] = aplicarTopeSemanal([turnoA, turnoB], 42);
+
+    expect(a.desglose.diurnaOrdinaria).toBe(40);
+    expect(a.desglose.extraDiurna).toBe(0);
+    expect(b.desglose.diurnaOrdinaria).toBe(1);
+    expect(b.desglose.nocturnaOrdinaria).toBe(1);
+    expect(b.desglose.extraDiurna).toBe(1);
+    expect(b.desglose.extraNocturna).toBe(1);
+  });
+
+  it('nunca toca las horas dominicales/festivas, aunque la semana ya haya superado el tope', () => {
+    const turnos = [
+      ...['2026-01-05', '2026-01-06', '2026-01-07', '2026-01-08', '2026-01-09', '2026-01-10'].map((f) =>
+        turno(`${f}T08:00`, { diurnaOrdinaria: 7.5 }),
+      ),
+      turno('2026-01-11T08:00', { dominicalFestivaDiurna: 7.5 }), // domingo
+    ];
+    const resultado = aplicarTopeSemanal(turnos, 42);
+    const domingo = resultado[6];
+    expect(domingo.desglose.dominicalFestivaDiurna).toBe(7.5);
+    expect(domingo.desglose.extraDiurnaDominicalFestiva).toBe(0);
+  });
+
+  it('turnos de semanas distintas no se mezclan — cada semana calendario tiene su propio tope', () => {
+    const lunesSemana1 = turno('2026-01-05T08:00', { diurnaOrdinaria: 40 });
+    const lunesSemana2 = turno('2026-01-12T08:00', { diurnaOrdinaria: 40 }); // otra semana ISO
+    const resultado = aplicarTopeSemanal([lunesSemana1, lunesSemana2], 42);
+    expect(resultado[0].desglose.extraDiurna).toBe(0);
+    expect(resultado[1].desglose.extraDiurna).toBe(0);
+  });
+
+  it('reconstruye la semana real del 21-26 de sept. 2026 que motivó este cambio: ~2h extra adicionales por el tope semanal', () => {
+    // Mismos turnos exactos de la disputa de liquidación (ver captura
+    // del usuario, 2026-10-01) — lunes a sábado, sin domingo.
+    const datos: [string, string, string][] = [
+      ['2026-01-05', '09:31:54', '17:00:10'], // se usan fechas de una semana cualquiera;
+      ['2026-01-06', '09:12:44', '17:13:38'], // lo que importa es el patrón de horas,
+      ['2026-01-07', '09:30:00', '17:00:00'], // no el año exacto de la disputa real.
+      ['2026-01-08', '09:33:02', '17:00:39'],
+      ['2026-01-09', '09:17:50', '18:01:22'],
+      ['2026-01-10', '09:09:18', '17:01:40'],
+    ];
+    const sinFestivos2 = () => false;
+    const turnosConDesglose: TurnoConDesglose[] = datos.map(([fecha, entrada, salida]) => ({
+      horaEntrada: colombia(`${fecha}T${entrada.slice(0, 5)}`),
+      desglose: clasificarTurno(
+        colombia(`${fecha}T${entrada.slice(0, 5)}`),
+        colombia(`${fecha}T${salida.slice(0, 5)}`),
+        sinFestivos2,
+      ),
+    }));
+
+    const antesDelTope = sumarDesgloses(turnosConDesglose.map((t) => t.desglose));
+    // Antes del tope semanal, solo el martes (8.02h) y el viernes
+    // (8.73h) generan algo de extra por el tope diario de 8h.
+    expect(antesDelTope.extraDiurna).toBeCloseTo(0.75, 2);
+
+    const conTope = aplicarTopeSemanal(turnosConDesglose, 42);
+    const despuesDelTope = sumarDesgloses(conTope.map((t) => t.desglose));
+    // Con el tope semanal de 42h, el sábado (último turno de la semana)
+    // aporta 1.30h adicionales de extra — el total queda en 2.05h, no
+    // los 0.75h que mostraba antes de este cambio.
+    expect(despuesDelTope.extraDiurna).toBeCloseTo(2.05, 2);
+    expect(despuesDelTope.diurnaOrdinaria).toBeCloseTo(42, 2);
+  });
+});
+
+describe('limiteSemanasCompletas', () => {
+  it('amplía el rango a la semana calendario completa (lunes a domingo) cuando el período no empieza ni termina en lunes', () => {
+    // Quincena real de la disputa: 16 (miércoles) al 30 (miércoles) de
+    // septiembre de 2026.
+    const start = new Date('2026-09-16T00:00:00.000Z');
+    const end = new Date('2026-09-30T23:59:59.999Z');
+    const { desde, hasta } = limiteSemanasCompletas(start, end);
+    expect(desde.toISOString().slice(0, 10)).toBe('2026-09-14'); // lunes
+    expect(hasta.toISOString().slice(0, 10)).toBe('2026-10-04'); // domingo
+  });
+
+  it('no cambia nada si el período ya empieza en lunes y termina en domingo', () => {
+    const start = new Date('2026-01-05T00:00:00.000Z'); // lunes
+    const end = new Date('2026-01-11T23:59:59.999Z'); // domingo
+    const { desde, hasta } = limiteSemanasCompletas(start, end);
+    expect(desde.getTime()).toBe(start.getTime());
+    expect(hasta.getTime()).toBe(end.getTime());
   });
 });

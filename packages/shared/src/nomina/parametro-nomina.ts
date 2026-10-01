@@ -9,6 +9,15 @@ export const parametroNominaSchema = z.object({
   smlv: z.number().positive('El SMLV debe ser mayor a 0'),
   divisorHoras: z.number().positive('El divisor de horas debe ser mayor a 0'),
   auxilioTransporte: z.number().nonnegative('El auxilio de transporte no puede ser negativo'),
+  // Tope semanal de horas ordinarias (Art. 161 CST, reformado por la Ley
+  // 2101 de 2021) — además del tope de 8h por turno, la ley colombiana
+  // limita la jornada ordinaria a un máximo semanal, que bajó de forma
+  // escalonada: 47h (jul-2023), 46h (jul-2024), 44h (jul-2025) y 42h
+  // desde el 15 de julio de 2026 (valor vigente hoy). Configurable aquí
+  // — nunca fijo en el código — para el día que la ley lo vuelva a
+  // cambiar. Post-lanzamiento, 2026-10-01: agregado tras detectar que la
+  // liquidación solo revisaba el tope diario, no el semanal.
+  jornadaSemanalMaxima: z.number().positive('La jornada semanal máxima debe ser mayor a 0'),
   recargoNocturno: z.number().min(0).max(3),
   recargoExtraDiurna: z.number().min(0).max(3),
   recargoExtraNocturna: z.number().min(0).max(3),

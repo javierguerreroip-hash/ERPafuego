@@ -1,12 +1,14 @@
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import {
+  aplicarTopeSemanal,
   calcularAuxilioTransporte,
   calcularDeducciones,
   calcularTotalDevengadoHoras,
   calcularValorIncapacidad,
   calcularValorPorConcepto,
   clasificarTurno,
+  limiteSemanasCompletas,
   sumarDesgloses,
 } from './nomina.calculations.js';
 import { getParametrosRaw } from './parametro-nomina.service.js';
@@ -32,21 +34,44 @@ export async function getLiquidacion(userId: string, start: Date, end: Date) {
     Math.round((Number(parametros.smlv) / Number(parametros.divisorHoras) + Number.EPSILON) * 100) /
     100;
 
-  const turnos = await prisma.turno.findMany({
-    where: { userId, horaEntrada: { gte: start, lte: end }, horaSalida: { not: null } },
-    orderBy: { horaEntrada: 'asc' },
-  });
+  // Se traen los turnos de las semanas calendario COMPLETAS (lunes a
+  // domingo) que tocan el período, no solo los del período de pago —
+  // necesario para aplicar correctamente el tope semanal de horas
+  // ordinarias (post-lanzamiento, 2026-10-01: ver aplicarTopeSemanal)
+  // aunque la quincena casi nunca empiece ni termine en lunes. Al final
+  // se filtra de vuelta solo lo que cae en [start, end] antes de sumar
+  // lo que realmente se paga en ESTA liquidación — un turno de la
+  // quincena anterior que ya se pagó no se vuelve a pagar aquí, pero sí
+  // "gasta" su parte del tope semanal si comparte semana calendario con
+  // turnos de este período.
+  const { desde: semanaDesde, hasta: semanaHasta } = limiteSemanasCompletas(start, end);
 
-  // Margen de un día a cada lado: un turno nocturno que empieza el último
-  // día del período puede extenderse al día calendario siguiente, y ese
-  // día también debe poder chequearse contra el calendario de festivos.
-  const festivosStart = new Date(start.getTime() - 24 * 3600 * 1000);
-  const festivosEnd = new Date(end.getTime() + 24 * 3600 * 1000);
+  // Margen de un día a cada lado de esa ventana: un turno nocturno en el
+  // borde puede extenderse al día calendario siguiente, y ese día
+  // también debe poder chequearse contra el calendario de festivos.
+  const festivosStart = new Date(semanaDesde.getTime() - 24 * 3600 * 1000);
+  const festivosEnd = new Date(semanaHasta.getTime() + 24 * 3600 * 1000);
   const festivos = await getFestivosSet(festivosStart, festivosEnd);
   const esFestivo = (fecha: string) => festivos.has(fecha);
 
-  const desgloses = turnos.map((t) => clasificarTurno(t.horaEntrada, t.horaSalida!, esFestivo));
-  const desglose = sumarDesgloses(desgloses);
+  const turnosSemanaCompleta = await prisma.turno.findMany({
+    where: {
+      userId,
+      horaEntrada: { gte: semanaDesde, lte: semanaHasta },
+      horaSalida: { not: null },
+    },
+    orderBy: { horaEntrada: 'asc' },
+  });
+
+  const desglosesPorTurno = turnosSemanaCompleta.map((t) => ({
+    horaEntrada: t.horaEntrada,
+    desglose: clasificarTurno(t.horaEntrada, t.horaSalida!, esFestivo),
+  }));
+  const conTopeSemanal = aplicarTopeSemanal(desglosesPorTurno, Number(parametros.jornadaSemanalMaxima));
+  const turnosDelPeriodo = conTopeSemanal.filter(
+    (t) => t.horaEntrada >= start && t.horaEntrada <= end,
+  );
+  const desglose = sumarDesgloses(turnosDelPeriodo.map((t) => t.desglose));
 
   const tasas = {
     recargoNocturno: Number(parametros.recargoNocturno),
@@ -62,7 +87,7 @@ export async function getLiquidacion(userId: string, start: Date, end: Date) {
   const totalDevengadoHoras = calcularTotalDevengadoHoras(valorPorConcepto);
 
   const diasTrabajados = new Set(
-    turnos.map((t) => t.horaEntrada.toISOString().slice(0, 10)),
+    turnosDelPeriodo.map((t) => t.horaEntrada.toISOString().slice(0, 10)),
   ).size;
   const auxilioTransporte = calcularAuxilioTransporte(
     Number(parametros.auxilioTransporte),

@@ -27,6 +27,7 @@ function toForm(p: ParametroNominaDTO): ParametroNominaInput {
     smlv: p.smlv,
     divisorHoras: p.divisorHoras,
     auxilioTransporte: p.auxilioTransporte,
+    jornadaSemanalMaxima: p.jornadaSemanalMaxima,
     recargoNocturno: p.recargoNocturno,
     recargoExtraDiurna: p.recargoExtraDiurna,
     recargoExtraNocturna: p.recargoExtraNocturna,
@@ -184,7 +185,24 @@ export function NominaParametrosPage() {
                     className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                   />
                 </Field>
+                <Field label="Jornada semanal máxima (horas)">
+                  <input
+                    type="number"
+                    min={1}
+                    step="any"
+                    value={form.jornadaSemanalMaxima}
+                    disabled={readOnly}
+                    onChange={(e) =>
+                      setForm({ ...form, jornadaSemanalMaxima: Number(e.target.value) })
+                    }
+                    className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
+                  />
+                </Field>
               </div>
+              <p className="mt-1 text-xs text-neutral-400">
+                Tope de horas ordinarias por semana (Art. 161 CST / Ley 2101 de 2021) — además
+                del tope de 8h por turno. Vigente desde el 15 de julio de 2026: 42h.
+              </p>
 
               {parametros && (
                 <p className="mt-2 text-xs text-neutral-500">

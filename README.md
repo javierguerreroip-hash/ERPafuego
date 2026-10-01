@@ -306,6 +306,50 @@ Acceso restringido a los roles Administrador y Operación.
   son funciones puras con pruebas unitarias extensas — "liquidación de
   nómina" está explícitamente en la lista de fórmulas que `CLAUDE.md`
   pide probar, y es la fórmula más compleja de todo el sistema.
+- **Actualización post-lanzamiento (2026-10-01) — tope semanal de 42
+  horas, además del tope diario:** corrección de fondo encontrada al
+  revisar una disputa de liquidación con un empleado. La fórmula
+  original (`clasificarTurno`) solo limitaba la jornada ordinaria a 8
+  horas **por turno** — nunca revisaba si el acumulado de la **semana**
+  superaba el tope legal. Eso dejó de ser seguro desde el 15 de julio de
+  2026: la Ley 2101 de 2021 bajó la jornada semanal máxima de forma
+  escalonada (47h jul-2023, 46h jul-2024, 44h jul-2025) hasta **42h**,
+  valor vigente hoy. El Código Sustantivo del Trabajo (Art. 161) limita
+  las dos cosas **a la vez** por defecto (8h/día Y 42h/semana) salvo que
+  exista un pacto de horario flexible por escrito (que el negocio
+  confirmó que no existe para el personal de cocina) — así que ambos
+  topes aplican.
+  - **`aplicarTopeSemanal`** (`nomina.calculations.ts`, con pruebas
+    unitarias extensas, incluida una reconstrucción exacta de la semana
+    real que motivó el hallazgo): agrupa los turnos por semana calendario
+    (lunes a domingo, hora Colombia) y, si el acumulado de horas
+    ORDINARIAS (diurna + nocturna — nunca la dominical/festiva, que se
+    rige aparte, ni la extra que un turno ya generó por su propio tope
+    diario) supera el tope semanal, reclasifica el excedente a extra
+    (diurna/nocturna, repartido proporcionalmente si el turno tenía las
+    dos), tomándolo de los turnos **más recientes** de la semana en orden
+    cronológico — nunca de los primeros, para no quitarle a un empleado
+    horas ordinarias que ya trabajó por algo que pasó después.
+  - **`jornadaSemanalMaxima`** se agregó a `ParametroNomina` (configurable,
+    nunca fijo en el código — default 42h) precisamente porque la ley ya
+    la cambió 4 veces en 3 años y la va a volver a cambiar.
+  - **`limiteSemanasCompletas`**: como una quincena casi nunca empieza ni
+    termina en lunes, `liquidacion.service.ts` trae los turnos de las
+    semanas calendario **completas** que tocan el período (no solo los
+    del período de pago), aplica el tope sobre esas semanas completas, y
+    recién ahí filtra de vuelta a lo que realmente se paga en esta
+    liquidación — así un turno de la quincena anterior no se vuelve a
+    pagar, pero si comparte semana calendario con turnos de este
+    período, sí "gasta" su parte del tope semanal correctamente.
+  - **Límite conocido y documentado:** el tope semanal se calcula por
+    separado para cada liquidación que se consulte — no hay un registro
+    persistente de "cuánto del tope ya se gastó" entre consultas. Para
+    una quincena ya cerrada esto no es un problema (los turnos de la
+    semana ya existen todos), pero si se liquida un período a medio
+    terminar y luego se vuelve a liquidar más adelante, el resultado
+    puede variar levemente según qué turnos existan en ese momento — es
+    el mismo tipo de recalculo en vivo que ya aplicaba antes a todo el
+    módulo (nada se guarda hasta que de verdad se paga).
 
 ## CRM de Ventas (Fase 10)
 
@@ -1211,6 +1255,12 @@ npm -w apps/api run prisma:studio   # Explorador visual de la base de datos
   referencia estándar que usa la mayoría del software de nómina
   colombiano para turnos individuales. Avísame si tu operación maneja
   turnos con un umbral distinto.
+  - **Corrección (2026-10-01):** esta advertencia se quedó corta — el
+    tope diario de 8h/turno es necesario pero no suficiente, porque la
+    ley colombiana también limita el acumulado SEMANAL (42h desde
+    jul-2026). Se agregó `aplicarTopeSemanal` para cubrir ese segundo
+    tope — ver la actualización post-lanzamiento más arriba, en la
+    sección de Nómina de Cocina.
 - **Calendario de festivos administrable, no hardcodeado:** Colombia no
   tiene un único estándar embebible de forma confiable (la Ley Emiliani
   mueve varios festivos al lunes siguiente, y la lista cambia cada año),
