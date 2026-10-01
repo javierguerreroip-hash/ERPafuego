@@ -12,7 +12,16 @@ import { useAuth } from '../context/AuthContext';
 import { Field, inputClass } from '../components/Field';
 import { formatCOP } from '../lib/format';
 
-const RECARGO_FIELDS: { key: keyof ParametroNominaInput; label: string }[] = [
+type RecargoKey =
+  | 'recargoNocturno'
+  | 'recargoExtraDiurna'
+  | 'recargoExtraNocturna'
+  | 'recargoDominicalFestiva'
+  | 'recargoNocturnoDomFestivo'
+  | 'recargoExtraDiurnaDomFestiva'
+  | 'recargoExtraNocturnaDomFestiva';
+
+const RECARGO_FIELDS: { key: RecargoKey; label: string }[] = [
   { key: 'recargoNocturno', label: 'Recargo nocturno' },
   { key: 'recargoExtraDiurna', label: 'Hora extra diurna' },
   { key: 'recargoExtraNocturna', label: 'Hora extra nocturna' },
