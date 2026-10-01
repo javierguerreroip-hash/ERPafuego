@@ -87,6 +87,33 @@ function desgloseVacio(): DesgloseHorasDTO {
   };
 }
 
+// Recorta la hora de entrada real a la hora de entrada AUTORIZADA
+// ("HH:MM", hora Colombia — post-lanzamiento, 2026-10-01, pedido
+// explícito del negocio) cuando el empleado marcó ANTES de esa hora: ese
+// tiempo no se paga ni cuenta para los topes diario/semanal, como si
+// hubiera marcado justo a la hora autorizada. Si marcó DESPUÉS (llegó
+// tarde), se devuelve su hora real sin tocar — ya trabaja menos horas
+// ese día, no hace falta nada más. La hora de salida nunca se recorta
+// (se sigue usando tal cual en clasificarTurno). "00:00" desactiva la
+// regla (la hora autorizada nunca es mayor que la real).
+export function recortarEntradaAutorizada(
+  horaEntrada: Date,
+  horaEntradaAutorizada: string,
+): Date {
+  const [horasStr, minutosStr] = horaEntradaAutorizada.split(':');
+  const horas = Number(horasStr);
+  const minutos = Number(minutosStr);
+  if (!Number.isFinite(horas) || !Number.isFinite(minutos)) return horaEntrada;
+
+  const col = aColombia(horaEntrada);
+  const autorizadaColEtiquetadaUtc = new Date(
+    Date.UTC(col.getUTCFullYear(), col.getUTCMonth(), col.getUTCDate(), horas, minutos),
+  );
+  const autorizadaUtc = new Date(autorizadaColEtiquetadaUtc.getTime() + COLOMBIA_OFFSET_MS);
+
+  return horaEntrada < autorizadaUtc ? autorizadaUtc : horaEntrada;
+}
+
 // Clasifica las horas de un turno en los 8 conceptos del Código
 // Sustantivo del Trabajo colombiano. Simplificación documentada: se toma
 // la jornada ordinaria como las primeras 8 horas de CADA turno (no un

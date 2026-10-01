@@ -28,6 +28,7 @@ function toForm(p: ParametroNominaDTO): ParametroNominaInput {
     divisorHoras: p.divisorHoras,
     auxilioTransporte: p.auxilioTransporte,
     jornadaSemanalMaxima: p.jornadaSemanalMaxima,
+    horaEntradaAutorizada: p.horaEntradaAutorizada,
     recargoNocturno: p.recargoNocturno,
     recargoExtraDiurna: p.recargoExtraDiurna,
     recargoExtraNocturna: p.recargoExtraNocturna,
@@ -198,10 +199,24 @@ export function NominaParametrosPage() {
                     className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                   />
                 </Field>
+                <Field label="Hora de entrada autorizada">
+                  <input
+                    type="time"
+                    value={form.horaEntradaAutorizada}
+                    disabled={readOnly}
+                    onChange={(e) => setForm({ ...form, horaEntradaAutorizada: e.target.value })}
+                    className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
+                  />
+                </Field>
               </div>
               <p className="mt-1 text-xs text-neutral-400">
                 Tope de horas ordinarias por semana (Art. 161 CST / Ley 2101 de 2021) — además
                 del tope de 8h por turno. Vigente desde el 15 de julio de 2026: 42h.
+              </p>
+              <p className="mt-1 text-xs text-neutral-400">
+                Si un empleado marca su entrada ANTES de esta hora, esos minutos no se pagan ni
+                cuentan como tiempo extra — el sistema toma la hora autorizada como si fuera la
+                hora real de entrada. La hora de salida siempre se toma tal como se marca.
               </p>
 
               {parametros && (

@@ -350,6 +350,35 @@ Acceso restringido a los roles Administrador y Operación.
     puede variar levemente según qué turnos existan en ese momento — es
     el mismo tipo de recalculo en vivo que ya aplicaba antes a todo el
     módulo (nada se guarda hasta que de verdad se paga).
+- **Actualización post-lanzamiento (2026-10-01) — hora de entrada
+  autorizada:** pedido del negocio, mismo origen que el punto anterior
+  (horario de cocina: entrada 9:30am, salida 5:00pm). Si un empleado
+  marca su entrada ANTES de la hora autorizada, esos minutos de más no
+  se pagan ni cuentan como tiempo extra (ni para el tope diario ni el
+  semanal) — el sistema calcula como si hubiera marcado justo a esa
+  hora. Si marca DESPUÉS (llegó tarde), se usa su hora real sin ajustar
+  — ya trabaja menos horas ese día, no hace falta nada más. La hora de
+  **salida** nunca se recorta: siempre se paga/cuenta la hora real en
+  que el empleado marca su salida.
+  - **`recortarEntradaAutorizada`** (`nomina.calculations.ts`, con
+    pruebas unitarias): recibe la hora de entrada real y la hora
+    autorizada ("HH:MM", hora Colombia) y devuelve la mayor de las dos.
+    `liquidacion.service.ts` aplica este recorte a cada turno ANTES de
+    llamar `clasificarTurno` — así el recorte alimenta tanto la
+    clasificación diurna/nocturna/ordinaria/extra de ese turno como el
+    acumulado semanal (`aplicarTopeSemanal`), que usa la hora de entrada
+    ya recortada para agrupar por semana.
+  - **`horaEntradaAutorizada`** se agregó a `ParametroNomina`
+    (configurable, nunca fijo en el código — default `"09:30"`) porque
+    es un parámetro de negocio, no legal, y puede cambiar si cambia el
+    horario de la cocina. `"00:00"` desactiva la regla por completo.
+  - **Es una regla GLOBAL**, no por empleado — confirmado con el
+    negocio: todo el personal de Cocina/Nómina comparte el mismo
+    horario autorizado de entrada.
+  - **Aplica retroactivamente**: como todo el módulo de liquidación, no
+    hay nada "congelado" hasta que de verdad se paga — al consultar
+    cualquier liquidación (incluida una ya revisada antes de este
+    cambio) se recalcula con la regla vigente al momento de la consulta.
 
 ## CRM de Ventas (Fase 10)
 

@@ -18,6 +18,16 @@ export const parametroNominaSchema = z.object({
   // cambiar. Post-lanzamiento, 2026-10-01: agregado tras detectar que la
   // liquidación solo revisaba el tope diario, no el semanal.
   jornadaSemanalMaxima: z.number().positive('La jornada semanal máxima debe ser mayor a 0'),
+  // Hora de entrada autorizada ("HH:MM", hora Colombia) — pedido del
+  // negocio, 2026-10-01: si un empleado marca ANTES de esta hora, esos
+  // minutos no cuentan como trabajados (ni para el tope diario ni el
+  // semanal) — se calcula como si hubiera marcado justo a esta hora. Si
+  // marca después (llegó tarde), se usa su hora real sin ajustar. La
+  // hora de salida NUNCA se recorta. "00:00" equivale a desactivar la
+  // regla (nunca recorta nada).
+  horaEntradaAutorizada: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Formato HH:MM (24 horas)'),
   recargoNocturno: z.number().min(0).max(3),
   recargoExtraDiurna: z.number().min(0).max(3),
   recargoExtraNocturna: z.number().min(0).max(3),

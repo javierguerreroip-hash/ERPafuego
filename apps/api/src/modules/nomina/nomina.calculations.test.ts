@@ -8,6 +8,7 @@ import {
   calcularValorPorConcepto,
   clasificarTurno,
   limiteSemanasCompletas,
+  recortarEntradaAutorizada,
   sumarDesgloses,
   type TasasRecargo,
   type TurnoConDesglose,
@@ -339,5 +340,53 @@ describe('limiteSemanasCompletas', () => {
     const { desde, hasta } = limiteSemanasCompletas(start, end);
     expect(desde.getTime()).toBe(start.getTime());
     expect(hasta.getTime()).toBe(end.getTime());
+  });
+});
+
+describe('recortarEntradaAutorizada', () => {
+  // 2026-01-05 es lunes (ver helper `colombia` arriba).
+  it('recorta la entrada a la hora autorizada cuando el empleado marca antes', () => {
+    const entrada = colombia('2026-01-05 09:12');
+    const recortada = recortarEntradaAutorizada(entrada, '09:30');
+    expect(recortada.getTime()).toBe(colombia('2026-01-05 09:30').getTime());
+  });
+
+  it('no cambia la entrada cuando el empleado marca justo a la hora autorizada', () => {
+    const entrada = colombia('2026-01-05 09:30');
+    const recortada = recortarEntradaAutorizada(entrada, '09:30');
+    expect(recortada.getTime()).toBe(entrada.getTime());
+  });
+
+  it('no cambia la entrada cuando el empleado marca después de la hora autorizada (llegó tarde)', () => {
+    const entrada = colombia('2026-01-05 09:47');
+    const recortada = recortarEntradaAutorizada(entrada, '09:30');
+    expect(recortada.getTime()).toBe(entrada.getTime());
+  });
+
+  it('"00:00" desactiva la regla (nunca recorta)', () => {
+    const entrada = colombia('2026-01-05 05:00');
+    const recortada = recortarEntradaAutorizada(entrada, '00:00');
+    expect(recortada.getTime()).toBe(entrada.getTime());
+  });
+
+  it('combinado con clasificarTurno: los minutos tempranos no suman como extra', () => {
+    // Marca a las 9:12, autorizada 9:30, sale a las 17:30 (8h18 reales,
+    // pero solo 8h00 "autorizadas" menos 0.5h de almuerzo = 7.5h ordinaria,
+    // sin ningún excedente a extra).
+    const entradaReal = colombia('2026-01-05 09:12');
+    const salida = colombia('2026-01-05 17:30');
+    const entradaRecortada = recortarEntradaAutorizada(entradaReal, '09:30');
+    const desglose = clasificarTurno(entradaRecortada, salida, sinFestivos);
+    expect(desglose.diurnaOrdinaria).toBe(7.5);
+    expect(desglose.extraDiurna).toBe(0);
+  });
+
+  it('si el recorte deja la entrada igual o después de la salida, el turno clasifica en cero (no revienta)', () => {
+    const entradaReal = colombia('2026-01-05 05:00');
+    const salida = colombia('2026-01-05 09:00');
+    const entradaRecortada = recortarEntradaAutorizada(entradaReal, '09:30');
+    const desglose = clasificarTurno(entradaRecortada, salida, sinFestivos);
+    expect(desglose.diurnaOrdinaria).toBe(0);
+    expect(desglose.extraDiurna).toBe(0);
   });
 });

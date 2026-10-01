@@ -9,6 +9,7 @@ import {
   calcularValorPorConcepto,
   clasificarTurno,
   limiteSemanasCompletas,
+  recortarEntradaAutorizada,
   sumarDesgloses,
 } from './nomina.calculations.js';
 import { getParametrosRaw } from './parametro-nomina.service.js';
@@ -63,10 +64,20 @@ export async function getLiquidacion(userId: string, start: Date, end: Date) {
     orderBy: { horaEntrada: 'asc' },
   });
 
-  const desglosesPorTurno = turnosSemanaCompleta.map((t) => ({
-    horaEntrada: t.horaEntrada,
-    desglose: clasificarTurno(t.horaEntrada, t.horaSalida!, esFestivo),
-  }));
+  // Hora de entrada AUTORIZADA (post-lanzamiento, 2026-10-01): si el
+  // empleado marcó antes, se recorta a esa hora antes de clasificar el
+  // turno — esos minutos nunca cuentan como trabajados, ni para el tope
+  // diario ni el semanal. La hora de salida nunca se toca.
+  const desglosesPorTurno = turnosSemanaCompleta.map((t) => {
+    const horaEntradaRecortada = recortarEntradaAutorizada(
+      t.horaEntrada,
+      parametros.horaEntradaAutorizada,
+    );
+    return {
+      horaEntrada: horaEntradaRecortada,
+      desglose: clasificarTurno(horaEntradaRecortada, t.horaSalida!, esFestivo),
+    };
+  });
   const conTopeSemanal = aplicarTopeSemanal(desglosesPorTurno, Number(parametros.jornadaSemanalMaxima));
   const turnosDelPeriodo = conTopeSemanal.filter(
     (t) => t.horaEntrada >= start && t.horaEntrada <= end,
