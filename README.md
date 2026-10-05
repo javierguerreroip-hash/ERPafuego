@@ -45,6 +45,37 @@ general).
   opciones de la Carta 2026 (Anexo A) vienen precargadas por semilla,
   agrupadas en Momentos/Fuertes, Parrilla, Paellas, Bocados/Snacks,
   Refrigerios, Infantil y Adicionales.
+  - **Costo por menú y recetas (post-lanzamiento, 2026-10-05):** cada
+    opción de menú tiene una receta (`RecetaIngrediente`): artículos de
+    **Materia Prima** y la cantidad de cada uno por UNA unidad de venta
+    (una persona o una unidad, según el tipo de precio), en la unidad del
+    artículo. La columna **Costo** de la tabla se calcula en vivo —
+    nunca se guarda — como Σ cantidad × costo unitario, con el mismo
+    patrón que un consumo de evento (subtotal redondeado por línea; costo
+    unitario = promedio entre el último precio de compra y el inventario
+    inicial más reciente, con sus casos especiales), y muestra el valor y
+    el % sobre el precio de venta. "Sin receta" si aún no tiene
+    ingredientes.
+  - **Plantilla de Excel** ("Descargar plantilla de recetas"): hoja
+    `Receta` con una fila por ingrediente de cada menú activo. Se
+    precargan (1) la receta ya guardada con sus cantidades y (2) como
+    sugerencia, los artículos de Materia Prima cuyo nombre aparece en la
+    descripción del menú (comparación sin tildes ni plural; es solo un
+    punto de partida), más 3 filas en blanco por menú para agregar otros
+    ingredientes escribiendo el código. Unidad, costo unitario y costo
+    del ingrediente vienen por fórmulas de Excel (BUSCARV sobre la hoja
+    `Articulos`); la hoja `Menus` suma el costo por porción y el % sobre
+    el precio. Solo se diligencia "Cantidad por porción".
+  - **Carga masiva** ("Subir recetas"): el archivo se valida en el
+    navegador (menú por nombre, artículo por código, cantidades > 0, sin
+    repetidos) y solo se habilita "Importar" si no hay errores. La receta
+    de cada menú que traiga al menos una cantidad **reemplaza** a la
+    anterior; los menús sin cantidades no se tocan (no hay forma de
+    "vaciar" una receta desde el Excel). Queda una entrada de Auditoría
+    por menú con la receta cargada. Un artículo que ya es ingrediente de
+    una receta no se puede eliminar (solo desactivar).
+  - Por ahora la receta **no** carga consumos automáticamente a los
+    eventos: es la referencia del costo teórico del menú.
 - **Clientes** (`/clientes`) y **Proveedores** (`/proveedores`).
 
 Las cuatro pantallas permiten crear, editar y activar/desactivar (nunca

@@ -117,6 +117,7 @@ model Articulo {
   consumos          EventoConsumo[]
   inventarioInicial InventarioInicial[]
   inventarioFinalFisico InventarioFinalFisico[]
+  recetas    RecetaIngrediente[]
 
   @@map("articulos")
 }
@@ -149,6 +150,7 @@ model OpcionMenu {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   eventos     Evento[]
+  receta      RecetaIngrediente[]
 
   @@map("opciones_menu")
 }
@@ -723,4 +725,25 @@ model Notificacion {
 
   @@index([createdAt])
   @@map("notificaciones")
+}
+
+// Receta de una opción de menú (post-lanzamiento, 2026-10-05): qué
+// artículos de Materia Prima lleva y cuánto por UNA unidad de venta (una
+// persona o una unidad, según el priceType del menú), expresado en la
+// unidad del artículo. Con esto el costo del menú se calcula en vivo
+// (Σ cantidad × costo unitario del artículo) — nunca se guarda el costo.
+// Se carga de forma masiva desde la plantilla de Excel de Opciones de Menú.
+model RecetaIngrediente {
+  id           String     @id @default(uuid())
+  opcionMenuId String
+  opcionMenu   OpcionMenu @relation(fields: [opcionMenuId], references: [id], onDelete: Cascade)
+  articuloId   String
+  articulo     Articulo   @relation(fields: [articuloId], references: [id])
+  cantidad     Decimal    @db.Decimal(14, 4)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([opcionMenuId, articuloId])
+  @@index([articuloId])
+  @@map("receta_ingredientes")
 }

@@ -77,17 +77,24 @@ export async function setArticuloActive(id: string, active: boolean, userId: str
 export async function deleteArticulo(id: string, userId: string) {
   const articulo = await findArticuloOrThrow(id);
 
-  const [compras, consumos, inventarioInicial, inventarioFinalFisico] = await Promise.all([
+  const [compras, consumos, inventarioInicial, inventarioFinalFisico, recetas] = await Promise.all([
     prisma.compra.count({ where: { articuloId: id } }),
     prisma.eventoConsumo.count({ where: { articuloId: id } }),
     prisma.inventarioInicial.count({ where: { articuloId: id } }),
     prisma.inventarioFinalFisico.count({ where: { articuloId: id } }),
+    prisma.recetaIngrediente.count({ where: { articuloId: id } }),
   ]);
 
   if (compras > 0 || consumos > 0 || inventarioInicial > 0 || inventarioFinalFisico > 0) {
     throw new HttpError(
       409,
       'No se puede eliminar: este artículo ya tiene compras, consumos o inventarios registrados. Desactívalo en su lugar.',
+    );
+  }
+  if (recetas > 0) {
+    throw new HttpError(
+      409,
+      'No se puede eliminar: este artículo es ingrediente de la receta de una opción de menú. Desactívalo en su lugar.',
     );
   }
 

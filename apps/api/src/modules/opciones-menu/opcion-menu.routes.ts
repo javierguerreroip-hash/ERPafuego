@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { requireAuth, requireRole } from '../../middleware/auth.middleware.js';
 import {
   createHandler,
+  importarRecetasHandler,
   listHandler,
+  plantillaRecetaHandler,
   setActiveHandler,
   updateHandler,
 } from './opcion-menu.controller.js';
@@ -14,6 +16,16 @@ opcionMenuRouter.use(requireAuth);
 // Administrador, Operación y Ventas tienen acceso completo a todos los
 // módulos (decisión del negocio).
 opcionMenuRouter.get('/', requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'), listHandler);
+opcionMenuRouter.get(
+  '/recetas/plantilla',
+  requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'),
+  plantillaRecetaHandler,
+);
+opcionMenuRouter.post(
+  '/recetas/importar',
+  requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'),
+  importarRecetasHandler,
+);
 opcionMenuRouter.post('/', requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'), createHandler);
 opcionMenuRouter.put('/:id', requireRole('ADMINISTRADOR', 'OPERACION', 'VENTAS'), updateHandler);
 opcionMenuRouter.patch(

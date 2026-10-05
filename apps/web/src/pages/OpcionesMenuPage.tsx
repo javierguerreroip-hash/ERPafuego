@@ -9,9 +9,14 @@ import {
   type OpcionMenuDTO,
   type OpcionMenuInput,
   type PriceType,
+  type RecetaPlantillaDTO,
 } from '@erp-afuego/shared';
 import { useResource } from '../hooks/useResource';
+import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../lib/api';
+import { descargarPlantillaRecetas } from '../lib/receta-excel';
 import { Modal } from '../components/Modal';
+import { RecetasImportModal } from '../components/RecetasImportModal';
 import { Field, FilterChip, inputClass } from '../components/Field';
 import { formatCOP } from '../lib/format';
 
@@ -24,10 +29,14 @@ const EMPTY_FORM: OpcionMenuInput = {
 };
 
 export function OpcionesMenuPage() {
-  const { items, loading, error, create, update, setActive } = useResource<
+  const { token } = useAuth();
+  const { items, loading, error, refresh, create, update, setActive } = useResource<
     OpcionMenuDTO,
     OpcionMenuInput
   >('/opciones-menu');
+  const [showImport, setShowImport] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<OpcionMenuCategoria | 'TODAS'>('TODAS');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<OpcionMenuDTO | null>(null);
@@ -65,6 +74,19 @@ export function OpcionesMenuPage() {
     setShowForm(true);
   }
 
+  async function handleDownloadTemplate() {
+    setDownloadError(null);
+    setDownloading(true);
+    try {
+      const data = await apiFetch<RecetaPlantillaDTO>('/opciones-menu/recetas/plantilla', { token });
+      descargarPlantillaRecetas(data);
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : 'Error al generar la plantilla');
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   async function handleSubmit() {
     setFormError(null);
     const parsed = opcionMenuSchema.safeParse(form);
@@ -94,12 +116,27 @@ export function OpcionesMenuPage() {
           <h1 className="text-xl font-semibold text-neutral-900">Opciones de Menú</h1>
           <p className="text-sm text-neutral-500">Catálogo de venta — Carta 2026.</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          Nueva opción
-        </button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            onClick={handleDownloadTemplate}
+            disabled={downloading}
+            className="rounded-md border px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
+          >
+            {downloading ? 'Generando…' : 'Descargar plantilla de recetas'}
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-md border px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+          >
+            Subir recetas
+          </button>
+          <button
+            onClick={openCreate}
+            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          >
+            Nueva opción
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -126,15 +163,18 @@ export function OpcionesMenuPage() {
         </div>
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {(error || downloadError) && (
+        <p className="mb-4 text-sm text-red-600">{error ?? downloadError}</p>
+      )}
 
-      <div className="overflow-hidden rounded-lg border bg-white">
+      <div className="overflow-x-auto rounded-lg border bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-neutral-50 text-neutral-500">
             <tr>
               <th className="px-4 py-2">Nombre</th>
               <th className="px-4 py-2">Categoría</th>
               <th className="px-4 py-2">Precio</th>
+              <th className="px-4 py-2">Costo</th>
               <th className="px-4 py-2">Tipo</th>
               <th className="px-4 py-2">Estado</th>
               <th className="px-4 py-2" />
@@ -143,13 +183,13 @@ export function OpcionesMenuPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-neutral-400">
                   Cargando…
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-neutral-400">
                   No hay opciones en esta categoría.
                 </td>
               </tr>
@@ -164,6 +204,18 @@ export function OpcionesMenuPage() {
                   </td>
                   <td className="px-4 py-2">{OPCION_MENU_CATEGORIA_LABELS[item.category]}</td>
                   <td className="px-4 py-2">{formatCOP(item.price)}</td>
+                  <td className="px-4 py-2">
+                    {item.ingredientesCount === 0 ? (
+                      <span className="text-xs text-neutral-400">Sin receta</span>
+                    ) : (
+                      <>
+                        <p>{formatCOP(item.costo)}</p>
+                        <p className="text-xs text-neutral-400">
+                          {item.costoPorcentaje.toFixed(1)}% · {item.ingredientesCount} ingr.
+                        </p>
+                      </>
+                    )}
+                  </td>
                   <td className="px-4 py-2">{PRICE_TYPE_LABELS[item.priceType]}</td>
                   <td className="px-4 py-2">
                     <span
@@ -193,6 +245,10 @@ export function OpcionesMenuPage() {
           </tbody>
         </table>
       </div>
+
+      {showImport && (
+        <RecetasImportModal onClose={() => setShowImport(false)} onDone={() => refresh()} />
+      )}
 
       {showForm && (
         <Modal title={editing ? 'Editar opción de menú' : 'Nueva opción de menú'} onClose={() => setShowForm(false)}>

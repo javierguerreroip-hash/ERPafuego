@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { opcionMenuSchema } from '@erp-afuego/shared';
+import { opcionMenuSchema, recetaImportSchema } from '@erp-afuego/shared';
 import * as opcionMenuService from './opcion-menu.service.js';
 
 export async function listHandler(_req: Request, res: Response, next: NextFunction) {
@@ -23,6 +23,23 @@ export async function updateHandler(req: Request, res: Response, next: NextFunct
   try {
     const input = opcionMenuSchema.parse(req.body);
     res.json(await opcionMenuService.updateOpcionMenu(req.params.id, input, req.user!.sub));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function plantillaRecetaHandler(_req: Request, res: Response, next: NextFunction) {
+  try {
+    res.json(await opcionMenuService.getPlantillaReceta());
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function importarRecetasHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const input = recetaImportSchema.parse(req.body);
+    res.json(await opcionMenuService.importarRecetas(input, req.user!.sub));
   } catch (error) {
     next(error);
   }
