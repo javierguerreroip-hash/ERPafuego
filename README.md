@@ -214,6 +214,18 @@ Acceso restringido a los roles Administrador y Operación.
     fórmula ya arreglada para el costo de consumo de un evento, ver
     Módulo 3): sin compras, usa el costo del inventario inicial tal cual
     en vez de asumir $0.
+  - **Cierre de un mes = apertura del siguiente (post-lanzamiento,
+    2026-10-05):** cuando se guarda un inventario final físico cuya fecha
+    es el ÚLTIMO día de un mes (en el modal de uno por uno y también en
+    la carga masiva, porque ambos usan el mismo endpoint), ese mismo
+    conteo — cantidad, costo unitario y valor — queda registrado como
+    inventario inicial del día 1 del mes siguiente. Cada vez que el
+    físico se edita, el inicial del mes siguiente se **sobrescribe**
+    (aunque se hubiera digitado a mano), y ambos se guardan en una sola
+    transacción. Un conteo a mitad de mes no genera nada. El modal
+    avisa cuando aplica. Los cierres ya guardados antes de este cambio
+    no se trasladan solos: se trasladan la próxima vez que se guarde ese
+    conteo.
 
 ## Dashboard General — pantalla principal (Fase 5)
 

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { calcularDesviacionInventario, calcularInventarioFinal } from './inventario.calculations.js';
+import {
+  calcularDesviacionInventario,
+  calcularInventarioFinal,
+  fechaInicialDelMesSiguiente,
+} from './inventario.calculations.js';
 
 describe('calcularInventarioFinal', () => {
   it('inicial + compras - consumo', () => {
@@ -38,5 +42,32 @@ describe('calcularDesviacionInventario', () => {
 
   it('redondea a 2 decimales', () => {
     expect(calcularDesviacionInventario(10.005, 0)).toBe(10.01);
+  });
+});
+
+describe('fechaInicialDelMesSiguiente', () => {
+  it('devuelve el 1 del mes siguiente cuando la fecha es fin de mes', () => {
+    const r = fechaInicialDelMesSiguiente(new Date('2026-09-30T00:00:00.000Z'));
+    expect(r?.toISOString()).toBe('2026-10-01T00:00:00.000Z');
+  });
+
+  it('cruza el año en diciembre', () => {
+    const r = fechaInicialDelMesSiguiente(new Date('2026-12-31T00:00:00.000Z'));
+    expect(r?.toISOString()).toBe('2027-01-01T00:00:00.000Z');
+  });
+
+  it('respeta febrero (año bisiesto y no bisiesto)', () => {
+    expect(fechaInicialDelMesSiguiente(new Date('2028-02-29T00:00:00.000Z'))?.toISOString()).toBe(
+      '2028-03-01T00:00:00.000Z',
+    );
+    expect(fechaInicialDelMesSiguiente(new Date('2027-02-28T00:00:00.000Z'))?.toISOString()).toBe(
+      '2027-03-01T00:00:00.000Z',
+    );
+    expect(fechaInicialDelMesSiguiente(new Date('2028-02-28T00:00:00.000Z'))).toBeNull();
+  });
+
+  it('devuelve null si la fecha no es el último día del mes', () => {
+    expect(fechaInicialDelMesSiguiente(new Date('2026-09-29T00:00:00.000Z'))).toBeNull();
+    expect(fechaInicialDelMesSiguiente(new Date('2026-09-01T00:00:00.000Z'))).toBeNull();
   });
 });

@@ -30,6 +30,11 @@ export function InventarioFinalFisicoModal({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Fin de mes → el conteo es también el inicial del mes siguiente.
+  const diaSiguiente = new Date(`${fecha}T00:00:00`);
+  diaSiguiente.setDate(diaSiguiente.getDate() + 1);
+  const fechaInicioMesSiguiente = diaSiguiente.getDate() === 1 ? diaSiguiente : null;
+
   async function handleSubmit() {
     setError(null);
     const payload = {
@@ -61,6 +66,13 @@ export function InventarioFinalFisicoModal({
         <p className="text-sm text-neutral-500">
           Conteo físico de cierre ({new Date(`${fecha}T00:00:00`).toLocaleDateString('es-CO')}), independiente del inventario final calculado por el sistema.
         </p>
+        {fechaInicioMesSiguiente && (
+          <p className="rounded-md bg-orange-50 p-2 text-xs text-orange-800">
+            Este conteo también queda como inventario inicial del{' '}
+            {fechaInicioMesSiguiente.toLocaleDateString('es-CO')} (mes siguiente), y se actualiza
+            cada vez que lo edites.
+          </p>
+        )}
         <Field label={`Cantidad (${articulo.unit})`}>
           <input
             type="number"

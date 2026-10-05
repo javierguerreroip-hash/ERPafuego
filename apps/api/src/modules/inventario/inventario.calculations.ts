@@ -24,3 +24,16 @@ export function calcularDesviacionInventario(
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
+
+// Encadenamiento de períodos (post-lanzamiento, 2026-10-05): el inventario
+// final físico de cierre de un mes es el inventario inicial del mes
+// siguiente. Si `fecha` (medianoche UTC, igual que se guarda) es el ÚLTIMO
+// día de un mes, devuelve el día siguiente (el 1 del mes que sigue), que es
+// la fecha en la que se guarda el inicial; si no es fin de mes, devuelve
+// null (un conteo a mitad de mes no abre un período nuevo).
+export function fechaInicialDelMesSiguiente(fecha: Date): Date | null {
+  const siguiente = new Date(
+    Date.UTC(fecha.getUTCFullYear(), fecha.getUTCMonth(), fecha.getUTCDate() + 1),
+  );
+  return siguiente.getUTCDate() === 1 ? siguiente : null;
+}

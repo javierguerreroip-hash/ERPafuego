@@ -2,7 +2,11 @@ import type { InventarioFinalFisicoInput, InventarioInicialInput } from '@erp-af
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import { calcularCostoUnitarioPromedio } from '../eventos/evento.calculations.js';
-import { calcularDesviacionInventario, calcularInventarioFinal } from './inventario.calculations.js';
+import {
+  calcularDesviacionInventario,
+  calcularInventarioFinal,
+  fechaInicialDelMesSiguiente,
+} from './inventario.calculations.js';
 
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -205,18 +209,47 @@ export async function setInventarioFinalFisico(
   const value = round2(input.quantity * unitCost);
   const fecha = new Date(`${input.fecha}T00:00:00.000Z`);
 
-  const registro = await prisma.inventarioFinalFisico.upsert({
-    where: { articuloId_fecha: { articuloId: input.articuloId, fecha } },
-    update: { quantity: input.quantity, unit: articulo.unit, unitCost, value, registeredById },
-    create: {
-      articuloId: input.articuloId,
-      fecha,
-      quantity: input.quantity,
-      unit: articulo.unit,
-      unitCost,
-      value,
-      registeredById,
-    },
+  // Encadenamiento de períodos (post-lanzamiento, 2026-10-05): si el conteo
+  // es de FIN DE MES, ese mismo conteo (cantidad, costo unitario y valor)
+  // pasa a ser el inventario inicial del mes siguiente, y se sobrescribe
+  // cada vez que el físico se edita. Ambos upserts van en una transacción
+  // para que nunca quede el cierre de un mes sin reflejarse en el
+  // siguiente. El upsert del inicial lo audita el interceptor general.
+  const fechaInicialSiguiente = fechaInicialDelMesSiguiente(fecha);
+
+  const registro = await prisma.$transaction(async (tx) => {
+    const finalFisico = await tx.inventarioFinalFisico.upsert({
+      where: { articuloId_fecha: { articuloId: input.articuloId, fecha } },
+      update: { quantity: input.quantity, unit: articulo.unit, unitCost, value, registeredById },
+      create: {
+        articuloId: input.articuloId,
+        fecha,
+        quantity: input.quantity,
+        unit: articulo.unit,
+        unitCost,
+        value,
+        registeredById,
+      },
+    });
+
+    if (fechaInicialSiguiente) {
+      await tx.inventarioInicial.upsert({
+        where: {
+          articuloId_fecha: { articuloId: input.articuloId, fecha: fechaInicialSiguiente },
+        },
+        update: { quantity: input.quantity, unit: articulo.unit, unitCost, value, registeredById },
+        create: {
+          articuloId: input.articuloId,
+          fecha: fechaInicialSiguiente,
+          quantity: input.quantity,
+          unit: articulo.unit,
+          unitCost,
+          value,
+          registeredById,
+        },
+      });
+    }
+    return finalFisico;
   });
 
   return {
@@ -227,5 +260,6 @@ export async function setInventarioFinalFisico(
     unit: registro.unit,
     unitCost: Number(registro.unitCost),
     value: Number(registro.value),
+    inicialSiguienteMes: fechaInicialSiguiente ? fechaInicialSiguiente.toISOString() : null,
   };
 }
