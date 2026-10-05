@@ -12,6 +12,12 @@ import {
   updateConsumoHandler,
   updateHandler,
 } from './evento.controller.js';
+import {
+  deleteArchivoHandler,
+  downloadArchivoHandler,
+  listArchivosHandler,
+  uploadArchivoHandler,
+} from './evento-archivo.controller.js';
 
 export const eventoRouter = Router();
 
@@ -34,5 +40,17 @@ eventoRouter.delete(
   '/:id/consumos/:consumoId',
   requireRole(...FULL_ACCESS_ROLES),
   removeConsumoHandler,
+);
+eventoRouter.get('/:id/archivos', requireRole(...READ_ACCESS_ROLES), listArchivosHandler);
+eventoRouter.post('/:id/archivos', requireRole(...FULL_ACCESS_ROLES), uploadArchivoHandler);
+eventoRouter.get(
+  '/:id/archivos/:archivoId',
+  requireRole(...READ_ACCESS_ROLES),
+  downloadArchivoHandler,
+);
+eventoRouter.delete(
+  '/:id/archivos/:archivoId',
+  requireRole(...FULL_ACCESS_ROLES),
+  deleteArchivoHandler,
 );
 eventoRouter.delete('/:id', requireRole(...FULL_ACCESS_ROLES), deleteHandler);

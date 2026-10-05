@@ -189,6 +189,14 @@ export async function updateEvento(id: string, input: EventoInput) {
     },
     include: includeSummary,
   });
+
+  // Trazabilidad: si cambia el vendedor de la venta, la Agenda lo sigue.
+  // updateMany porque la venta puede no tener registro de Agenda.
+  await prisma.agendaEvento.updateMany({
+    where: { eventoId: id },
+    data: { vendedorId: vendedor.id },
+  });
+
   return serializeSummary(evento);
 }
 

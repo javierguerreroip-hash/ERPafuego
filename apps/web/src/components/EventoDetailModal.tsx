@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
-import { CATEGORIAS_MONITOREO, type ArticuloDTO, type EventoDetailDTO } from '@erp-afuego/shared';
+import {
+  CATEGORIAS_MONITOREO,
+  EVENTO_ARCHIVO_MAX_SIZE_BYTES,
+  type ArticuloDTO,
+  type EventoDetailDTO,
+} from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatCOP } from '../lib/format';
+import { ArchivosSection } from './ArchivosSection';
 import { Modal } from './Modal';
 import { inputClass } from './Field';
 
@@ -270,6 +276,13 @@ export function EventoDetailModal({
               </>
             )}
           </div>
+
+          <ArchivosSection
+            basePath={`/eventos/${eventoId}`}
+            maxSizeBytes={EVENTO_ARCHIVO_MAX_SIZE_BYTES}
+            readOnly={readOnly}
+            title="Detalle de lo vendido (archivos adjuntos)"
+          />
         </div>
       ) : null}
     </Modal>

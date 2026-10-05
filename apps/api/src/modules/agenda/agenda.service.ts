@@ -46,6 +46,7 @@ function serialize(agenda: AgendaEventoWithRelations) {
     observaciones: agenda.observaciones,
     vendedorId: agenda.vendedorId,
     vendedorNombre: agenda.vendedor?.name ?? null,
+    vendedorDeVenta: agenda.evento.vendedorId !== null,
     createdAt: agenda.createdAt.toISOString(),
     updatedAt: agenda.updatedAt.toISOString(),
   };
@@ -77,7 +78,7 @@ export async function listAgenda(filters: {
 export async function listEventosDisponibles() {
   const eventos = await prisma.evento.findMany({
     where: { agenda: null },
-    include: { cliente: true, opcionMenu: true },
+    include: { cliente: true, opcionMenu: true, vendedor: true },
     orderBy: { fecha: 'desc' },
   });
   return eventos.map((e) => ({
@@ -87,6 +88,8 @@ export async function listEventosDisponibles() {
     opcionMenuNombre: e.opcionMenu.name,
     numeroPersonas: e.numeroPersonas,
     valorAntesImpuestos: Number(e.valorAntesImpuestos),
+    vendedorId: e.vendedorId,
+    vendedorNombre: e.vendedor?.name ?? null,
   }));
 }
 
@@ -109,7 +112,10 @@ export async function createAgendaEvento(input: AgendaEventoInput, userId: strin
       horaServicio: input.horaServicio,
       anticipo: input.anticipo,
       observaciones: input.observaciones,
-      vendedorId: input.vendedorId ?? null,
+      // Trazabilidad: el vendedor es el de la venta (que viene del CRM).
+      // Solo si la venta no tiene vendedor (eventos antiguos) se acepta el
+      // que llegue en el formulario.
+      vendedorId: evento.vendedorId ?? input.vendedorId ?? null,
     },
     include: includeRelations,
   });
@@ -125,7 +131,10 @@ export async function createAgendaEvento(input: AgendaEventoInput, userId: strin
 }
 
 export async function updateAgendaEvento(id: string, input: AgendaEventoUpdateInput, userId: string) {
-  const existing = await prisma.agendaEvento.findUnique({ where: { id } });
+  const existing = await prisma.agendaEvento.findUnique({
+    where: { id },
+    include: { evento: { select: { vendedorId: true } } },
+  });
   if (!existing) {
     throw new HttpError(404, 'Registro de agenda no encontrado');
   }
@@ -138,7 +147,8 @@ export async function updateAgendaEvento(id: string, input: AgendaEventoUpdateIn
       horaServicio: input.horaServicio,
       anticipo: input.anticipo,
       observaciones: input.observaciones,
-      vendedorId: input.vendedorId ?? null,
+      // Ver createAgendaEvento: el vendedor de la venta manda.
+      vendedorId: existing.evento.vendedorId ?? input.vendedorId ?? null,
     },
     include: includeRelations,
   });

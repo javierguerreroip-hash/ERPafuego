@@ -54,6 +54,9 @@ export interface AgendaEventoDTO {
   observaciones: string;
   vendedorId: string | null;
   vendedorNombre: string | null;
+  // true cuando el vendedor viene de la venta (CRM) y por tanto es de solo
+  // lectura en la Agenda.
+  vendedorDeVenta: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,4 +70,7 @@ export interface EventoDisponibleDTO {
   opcionMenuNombre: string;
   numeroPersonas: number;
   valorAntesImpuestos: number;
+  // Vendedor de la venta (viene del CRM) — se precarga en el formulario.
+  vendedorId: string | null;
+  vendedorNombre: string | null;
 }

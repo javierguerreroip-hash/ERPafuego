@@ -436,6 +436,31 @@ Acceso restringido a los roles Administrador y Operación.
   `Notificacion` quedó genérico (`tipo` como string libre) para poder
   disparar otros avisos más adelante sin otra migración, aunque hoy solo
   la Agenda los genera.
+- **Actualización post-lanzamiento (2026-10-05) — adjuntos de la venta y
+  trazabilidad del vendedor:**
+  - **Archivos en cada venta (Módulo 3):** el modal de detalle del
+    evento tiene una sección "Detalle de lo vendido" para subir
+    imágenes, PDF u otros archivos (máx. 3 MB c/u, varios por venta),
+    con botones Ver (imágenes y PDF se abren en una pestaña nueva),
+    Descargar y Eliminar. La misma sección aparece al editar el registro
+    en la Agenda, para que Logística vea lo que el vendedor vendió sin
+    entrar a Ventas. Mismo mecanismo que los adjuntos de Cliente
+    (`EventoArchivo`: base64 en el JSON, guardado en la base de datos,
+    se borra en cascada con la venta); el componente de interfaz es
+    ahora compartido (`ArchivosSection`). Subir/eliminar: Administrador,
+    Operación y Ventas; ver/descargar: también Consulta (solo en Ventas,
+    porque Agenda sigue sin ser visible para ese rol).
+  - **Vendedor con trazabilidad completa:** Cotización → Negocio (CRM) →
+    Venta (Evento) → Agenda comparten el mismo vendedor. Al ganar un
+    negocio ya se copiaba a la venta y a la agenda; lo que faltaba era
+    (1) el alta manual en la Agenda, que ahora precarga el vendedor de la
+    venta al elegirla, y (2) que la venta mandara: si la venta tiene
+    vendedor, el campo queda de solo lectura en la Agenda (el backend lo
+    impone aunque llegue otro valor), y si se cambia el vendedor desde
+    Ventas la Agenda lo sigue. Solo las ventas antiguas sin vendedor
+    permiten elegirlo a mano en la Agenda. La migración rellena los
+    registros de Agenda que estaban sin vendedor con el de su venta
+    (nunca pisa uno ya asignado).
 
 ## Rol de Consulta externa — solo lectura (post-lanzamiento, 2026-09-23, Etapa 3 del plan de mejoras)
 

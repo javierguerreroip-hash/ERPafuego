@@ -90,3 +90,31 @@ export interface RankingOpcionesReporteDTO {
   totalPersonasAtendidas: number;
   ranking: RankingOpcionDTO[];
 }
+
+// Adjuntos de la venta (post-lanzamiento, 2026-10-05): el detalle de lo
+// que el vendedor vendió, para que Logística lo consulte desde la Agenda.
+// Mismo mecanismo y mismo límite que los adjuntos de Cliente (base64
+// dentro del JSON, guardado en la base de datos).
+export const EVENTO_ARCHIVO_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+
+export const eventoArchivoUploadSchema = z.object({
+  nombreArchivo: z.string().min(1, 'El nombre del archivo es requerido').max(255),
+  mimeType: z.string().min(1, 'El tipo de archivo es requerido').max(150),
+  contenidoBase64: z.string().min(1, 'El archivo está vacío'),
+});
+
+export type EventoArchivoUploadInput = z.infer<typeof eventoArchivoUploadSchema>;
+
+export interface EventoArchivoDTO {
+  id: string;
+  eventoId: string;
+  nombreArchivo: string;
+  mimeType: string;
+  size: number;
+  uploadedByName: string;
+  createdAt: string;
+}
+
+export interface EventoArchivoContenidoDTO extends EventoArchivoDTO {
+  contenidoBase64: string;
+}

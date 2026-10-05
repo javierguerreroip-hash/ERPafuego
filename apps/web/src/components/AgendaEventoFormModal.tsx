@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  EVENTO_ARCHIVO_MAX_SIZE_BYTES,
   agendaEventoSchema,
   agendaEventoUpdateSchema,
   type AgendaEventoDTO,
@@ -8,6 +9,7 @@ import {
 } from '@erp-afuego/shared';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { ArchivosSection } from './ArchivosSection';
 import { Modal } from './Modal';
 import { Field, inputClass } from './Field';
 import { formatCOP, formatDateOnly } from '../lib/format';
@@ -45,6 +47,9 @@ export function AgendaEventoFormModal({
   const [submitting, setSubmitting] = useState(false);
 
   const eventoSeleccionado = eventosDisponibles.find((e) => e.id === eventoId);
+  const vendedorBloqueado = editing
+    ? editing.vendedorDeVenta
+    : Boolean(eventoSeleccionado?.vendedorId);
 
   async function handleSubmit() {
     setError(null);
@@ -85,7 +90,13 @@ export function AgendaEventoFormModal({
           <Field label="Evento (Módulo 3)">
             <select
               value={eventoId}
-              onChange={(e) => setEventoId(e.target.value)}
+              onChange={(e) => {
+                const id = e.target.value;
+                setEventoId(id);
+                // Precarga el vendedor de la venta (viene del CRM).
+                const evento = eventosDisponibles.find((ev) => ev.id === id);
+                setForm((prev) => ({ ...prev, vendedorId: evento?.vendedorId ?? null }));
+              }}
               className={inputClass}
             >
               <option value="">Selecciona…</option>
@@ -160,8 +171,9 @@ export function AgendaEventoFormModal({
         <Field label="Vendedor">
           <select
             value={form.vendedorId ?? ''}
+            disabled={vendedorBloqueado}
             onChange={(e) => setForm({ ...form, vendedorId: e.target.value || null })}
-            className={inputClass}
+            className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
           >
             <option value="">Sin asignar</option>
             {vendedores.map((v) => (
@@ -170,6 +182,11 @@ export function AgendaEventoFormModal({
               </option>
             ))}
           </select>
+          {vendedorBloqueado && (
+            <p className="mt-1 text-xs text-neutral-500">
+              Viene de la venta (seleccionado en el CRM). Para cambiarlo, edita la venta.
+            </p>
+          )}
         </Field>
         <Field label="Observaciones adicionales">
           <textarea
@@ -179,6 +196,14 @@ export function AgendaEventoFormModal({
             rows={3}
           />
         </Field>
+
+        {editing && (
+          <ArchivosSection
+            basePath={`/eventos/${editing.eventoId}`}
+            maxSizeBytes={EVENTO_ARCHIVO_MAX_SIZE_BYTES}
+            title="Detalle de lo vendido (archivos adjuntos)"
+          />
+        )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

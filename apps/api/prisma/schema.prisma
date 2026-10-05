@@ -77,6 +77,7 @@ model User {
   incapacidades           Incapacidad[]        @relation("IncapacidadEmpleado")
   incapacidadesRegistradas Incapacidad[]       @relation("IncapacidadRegisteredBy")
   archivosClienteSubidos  ClienteArchivo[]     @relation("ClienteArchivoUploadedBy")
+  archivosEventoSubidos   EventoArchivo[]      @relation("EventoArchivoUploadedBy")
   auditLogs               AuditLog[]           @relation("AuditLogUser")
   notificacionesCreadas   Notificacion[]       @relation("NotificacionCreatedBy")
 
@@ -301,8 +302,31 @@ model Evento {
   negocio                 Negocio?
   agenda                   AgendaEvento?
   abonos                   Abono[]
+  archivos                 EventoArchivo[]
 
   @@map("eventos")
+}
+
+// Adjuntos de la venta (post-lanzamiento, 2026-10-05) — el detalle de lo
+// que el vendedor vendió (cotización firmada, pedido, imágenes del
+// montaje...) para que Logística lo consulte desde la Agenda. Mismo
+// mecanismo que ClienteArchivo: el archivo se guarda en la base de datos
+// (columna "contenido", bytea) y viaja en base64 dentro del JSON. Se
+// borra en cascada con el Evento.
+model EventoArchivo {
+  id            String   @id @default(uuid())
+  eventoId      String
+  evento        Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nombreArchivo String
+  mimeType      String
+  size          Int
+  contenido     Bytes
+  uploadedById  String
+  uploadedBy    User     @relation("EventoArchivoUploadedBy", fields: [uploadedById], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@index([eventoId])
+  @@map("evento_archivos")
 }
 
 // Detalle de consumos de materia prima/servicios de un evento, cargado
