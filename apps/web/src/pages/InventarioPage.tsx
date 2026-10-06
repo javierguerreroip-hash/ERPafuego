@@ -22,7 +22,7 @@ export function InventarioPage() {
   const [error, setError] = useState<string | null>(null);
   const [inicialFor, setInicialFor] = useState<InventarioDetalleDTO | null>(null);
   const [fisicoFor, setFisicoFor] = useState<InventarioDetalleDTO | null>(null);
-  const [showImportFisico, setShowImportFisico] = useState(false);
+  const [importConteo, setImportConteo] = useState<1 | 2 | null>(null);
   const [search, setSearch] = useState('');
 
   async function load() {
@@ -58,7 +58,7 @@ export function InventarioPage() {
   async function handleImportRow(articuloId: string, quantity: number) {
     await apiFetch('/inventario/final-fisico', {
       method: 'POST',
-      body: { articuloId, fecha: end, quantity },
+      body: { articuloId, fecha: end, quantity, conteo: importConteo ?? 2 },
       token,
     });
   }
@@ -76,10 +76,16 @@ export function InventarioPage() {
         {!readOnly && (
           <div className="flex gap-2">
             <button
-              onClick={() => setShowImportFisico(true)}
+              onClick={() => setImportConteo(1)}
               className="rounded-md border border-orange-600 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
             >
-              Cargar conteo físico (Excel)
+              Cargar conteo #1 (Excel)
+            </button>
+            <button
+              onClick={() => setImportConteo(2)}
+              className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+            >
+              Cargar conteo #2 (Excel)
             </button>
           </div>
         )}
@@ -88,6 +94,18 @@ export function InventarioPage() {
       <PeriodPickerControls filter={filter} />
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+      {reporte?.plazoCierre && (
+        <p
+          className={`mb-4 rounded-md p-3 text-sm ${
+            reporte.plazoCierre.vencido ? 'bg-red-50 text-red-700' : 'bg-orange-50 text-orange-800'
+          }`}
+        >
+          {reporte.plazoCierre.vencido
+            ? `El plazo para cargar o corregir el cierre de este mes venció el ${new Date(`${reporte.plazoCierre.hasta}T00:00:00`).toLocaleDateString('es-CO')}. Solo un Administrador puede modificarlo.`
+            : `Cierre del mes: puedes cargar o corregir los conteos hasta el ${new Date(`${reporte.plazoCierre.hasta}T00:00:00`).toLocaleDateString('es-CO')} (7 días después de terminar el mes). El conteo #2 queda como inventario inicial del mes siguiente.`}
+        </p>
+      )}
 
       <div className="mb-4">
         <input
@@ -193,6 +211,15 @@ export function InventarioPage() {
                         <p className="text-xs text-neutral-400">
                           {formatCOP(item.inventarioFinalFisicoValue)}
                         </p>
+                        <span
+                          className={`mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] ${
+                            item.conteoFisicoVigente === 2
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {item.conteoFisicoVigente === 2 ? 'Conteo #2 (definitivo)' : 'Conteo #1 (provisional)'}
+                        </span>
                       </>
                     ) : (
                       <span className="text-xs text-amber-600">Sin registrar</span>
@@ -257,19 +284,22 @@ export function InventarioPage() {
         />
       )}
 
-      {showImportFisico && reporte && (
+      {importConteo && reporte && (
         <InventarioFinalFisicoImportModal
           articulos={reporte.detalle.map((d) => ({
             articuloId: d.articuloId,
             articuloCodigo: d.articuloCodigo,
             articuloNombre: d.articuloNombre,
             unit: d.unit,
+            teoricoQuantity: d.inventarioFinalTeoricoQuantity,
+            conteo1Quantity: d.conteo1Quantity,
           }))}
           fecha={end}
+          conteo={importConteo}
           onSaveRow={handleImportRow}
-          onClose={() => setShowImportFisico(false)}
+          onClose={() => setImportConteo(null)}
           onDone={() => {
-            setShowImportFisico(false);
+            setImportConteo(null);
             load();
           }}
         />

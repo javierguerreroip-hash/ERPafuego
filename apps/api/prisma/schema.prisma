@@ -422,6 +422,11 @@ model InventarioFinalFisico {
   articuloId     String
   articulo       Articulo @relation(fields: [articuloId], references: [id])
   fecha          DateTime
+  // 1 = primer conteo (se compara contra el teórico para detectar
+  // diferencias); 2 = conteo definitivo, ya reconteado y ajustado. Solo el
+  // conteo 2 pasa a ser el inventario inicial del mes siguiente. Los
+  // registros anteriores a esta columna quedan como 2 (definitivos).
+  conteo         Int      @default(2)
   quantity       Decimal  @db.Decimal(14, 3)
   unit           String
   unitCost       Decimal  @db.Decimal(14, 2)
@@ -431,7 +436,7 @@ model InventarioFinalFisico {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  @@unique([articuloId, fecha])
+  @@unique([articuloId, fecha, conteo])
   @@map("inventario_final_fisico")
 }
 

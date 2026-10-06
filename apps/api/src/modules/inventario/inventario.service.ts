@@ -1,15 +1,32 @@
-import type { InventarioFinalFisicoInput, InventarioInicialInput } from '@erp-afuego/shared';
+import {
+  DIAS_PLAZO_CIERRE_INVENTARIO,
+  type InventarioFinalFisicoInput,
+  type InventarioInicialInput,
+  type UserRole,
+} from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import { calcularCostoUnitarioPromedio } from '../eventos/evento.calculations.js';
 import {
   calcularDesviacionInventario,
   calcularInventarioFinal,
+  elegirConteoVigente,
   fechaInicialDelMesSiguiente,
+  plazoCierreMes,
 } from './inventario.calculations.js';
 
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+// "Hoy" en hora de Colombia (UTC-5, sin horario de verano), expresado para
+// leerse con getters UTC — para el plazo de cierre de mes.
+function hoyColombia(): Date {
+  return new Date(Date.now() - 5 * 3600 * 1000);
+}
+
+function fechaCorta(fecha: Date): string {
+  return fecha.toISOString().slice(0, 10);
 }
 
 // startDate/endDate ya vienen normalizadas a límites de día completo
@@ -73,7 +90,12 @@ export async function getInventarioReporte(startDate: Date, endDate: Date) {
   const finalesFisicos = await prisma.inventarioFinalFisico.findMany({
     where: { fecha: endDateAtMidnight, articuloId: { in: articuloIds } },
   });
-  const finalesFisicosMap = new Map(finalesFisicos.map((f) => [f.articuloId, f]));
+  const finalesFisicosPorArticulo = new Map<string, typeof finalesFisicos>();
+  for (const f of finalesFisicos) {
+    const lista = finalesFisicosPorArticulo.get(f.articuloId) ?? [];
+    lista.push(f);
+    finalesFisicosPorArticulo.set(f.articuloId, lista);
+  }
 
   const detalle = articulos.map((articulo) => {
     const inicial = inicialesMap.get(articulo.id);
@@ -89,7 +111,11 @@ export async function getInventarioReporte(startDate: Date, endDate: Date) {
     );
     const inventarioFinalTeoricoValue = calcularInventarioFinal(inicialValue, compra.value, consumo.value);
 
-    const finalFisico = finalesFisicosMap.get(articulo.id);
+    const conteos = finalesFisicosPorArticulo.get(articulo.id) ?? [];
+    const conteo1 = conteos.find((c) => c.conteo === 1);
+    const conteo2 = conteos.find((c) => c.conteo === 2);
+    // Vigente: el conteo 2 (definitivo) si existe; si no, el 1 (provisional).
+    const finalFisico = elegirConteoVigente(conteos);
     const inventarioFinalFisicoQuantity = finalFisico ? Number(finalFisico.quantity) : 0;
     const inventarioFinalFisicoValue = finalFisico ? Number(finalFisico.value) : 0;
 
@@ -111,6 +137,11 @@ export async function getInventarioReporte(startDate: Date, endDate: Date) {
       inventarioFinalFisicoQuantity,
       inventarioFinalFisicoValue,
       inventarioFinalFisicoRegistrado: Boolean(finalFisico),
+      conteoFisicoVigente: finalFisico ? (finalFisico.conteo === 2 ? (2 as const) : (1 as const)) : null,
+      conteo1Quantity: conteo1 ? Number(conteo1.quantity) : null,
+      conteo1Value: conteo1 ? Number(conteo1.value) : null,
+      conteo2Quantity: conteo2 ? Number(conteo2.quantity) : null,
+      conteo2Value: conteo2 ? Number(conteo2.value) : null,
       desviacionQuantity: calcularDesviacionInventario(
         inventarioFinalFisicoQuantity,
         inventarioFinalTeoricoQuantity,
@@ -132,9 +163,12 @@ export async function getInventarioReporte(startDate: Date, endDate: Date) {
     desviacionValue: round2(detalle.reduce((sum, d) => sum + d.desviacionValue, 0)),
   };
 
+  const plazo = plazoCierreMes(endDateAtMidnight, hoyColombia(), DIAS_PLAZO_CIERRE_INVENTARIO);
+
   return {
     start: startDate.toISOString(),
     end: endDate.toISOString(),
+    plazoCierre: plazo ? { hasta: fechaCorta(plazo.hasta), vencido: plazo.vencido } : null,
     detalle,
     consolidado,
   };
@@ -182,10 +216,23 @@ export async function setInventarioInicial(input: InventarioInicialInput, regist
 export async function setInventarioFinalFisico(
   input: InventarioFinalFisicoInput,
   registeredById: string,
+  role: UserRole,
 ) {
   const articulo = await prisma.articulo.findUnique({ where: { id: input.articuloId } });
   if (!articulo) {
     throw new HttpError(404, 'Artículo no encontrado');
+  }
+
+  // Plazo de cierre (post-lanzamiento, 2026-10-05): el cierre de un mes
+  // (conteo 1 y 2) se puede cargar o corregir hasta 7 días después de su
+  // último día; pasado ese plazo, solo Administrador.
+  const fecha = new Date(`${input.fecha}T00:00:00.000Z`);
+  const plazo = plazoCierreMes(fecha, hoyColombia(), DIAS_PLAZO_CIERRE_INVENTARIO);
+  if (plazo?.vencido && role !== 'ADMINISTRADOR') {
+    throw new HttpError(
+      403,
+      `El plazo para cargar o corregir este cierre venció el ${fechaCorta(plazo.hasta)} (${DIAS_PLAZO_CIERRE_INVENTARIO} días después de terminar el mes). Solicita a un Administrador que lo haga.`,
+    );
   }
 
   // Costo por defecto = misma fórmula que el costo de un consumo de
@@ -207,7 +254,6 @@ export async function setInventarioFinalFisico(
     );
   }
   const value = round2(input.quantity * unitCost);
-  const fecha = new Date(`${input.fecha}T00:00:00.000Z`);
 
   // Encadenamiento de períodos (post-lanzamiento, 2026-10-05): si el conteo
   // es de FIN DE MES, ese mismo conteo (cantidad, costo unitario y valor)
@@ -215,15 +261,21 @@ export async function setInventarioFinalFisico(
   // cada vez que el físico se edita. Ambos upserts van en una transacción
   // para que nunca quede el cierre de un mes sin reflejarse en el
   // siguiente. El upsert del inicial lo audita el interceptor general.
-  const fechaInicialSiguiente = fechaInicialDelMesSiguiente(fecha);
+  // Solo el CONTEO 2 (definitivo, ya reconteado y ajustado) se traslada; el
+  // conteo 1 es únicamente para detectar diferencias contra el teórico.
+  const fechaInicialSiguiente =
+    input.conteo === 2 ? fechaInicialDelMesSiguiente(fecha) : null;
 
   const registro = await prisma.$transaction(async (tx) => {
     const finalFisico = await tx.inventarioFinalFisico.upsert({
-      where: { articuloId_fecha: { articuloId: input.articuloId, fecha } },
+      where: {
+        articuloId_fecha_conteo: { articuloId: input.articuloId, fecha, conteo: input.conteo },
+      },
       update: { quantity: input.quantity, unit: articulo.unit, unitCost, value, registeredById },
       create: {
         articuloId: input.articuloId,
         fecha,
+        conteo: input.conteo,
         quantity: input.quantity,
         unit: articulo.unit,
         unitCost,
@@ -260,6 +312,7 @@ export async function setInventarioFinalFisico(
     unit: registro.unit,
     unitCost: Number(registro.unitCost),
     value: Number(registro.value),
+    conteo: registro.conteo,
     inicialSiguienteMes: fechaInicialSiguiente ? fechaInicialSiguiente.toISOString() : null,
   };
 }

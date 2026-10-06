@@ -226,6 +226,30 @@ Acceso restringido a los roles Administrador y Operación.
     avisa cuando aplica. Los cierres ya guardados antes de este cambio
     no se trasladan solos: se trasladan la próxima vez que se guarde ese
     conteo.
+  - **Conteo #1 y conteo #2 (post-lanzamiento, 2026-10-05, ajusta lo
+    anterior):** el cierre de cada mes tiene dos conteos por artículo
+    (`InventarioFinalFisico.conteo`). El **#1** es el primer conteo: se
+    carga por Excel (plantilla ciega, sin el teórico) y sirve para ver
+    diferencias contra el teórico. Tras el reconteo —dando el beneficio
+    de la duda al error humano— se carga el **#2** (definitivo) por
+    Excel; su plantilla trae el teórico, el conteo #1 y su diferencia, y
+    la columna a diligenciar viene precargada con el #1 para corregir solo
+    lo que cambió. **Solo el #2 pasa como inventario inicial del mes
+    siguiente** (si el cierre es de fin de mes). El "inventario final
+    físico" que ven la pantalla, el consolidado y el CMV es el **vigente**:
+    el #2 si existe y, si no, el #1 como dato provisional (la tabla lo
+    marca "Conteo #1 (provisional)" / "Conteo #2 (definitivo)"). Los
+    registros que ya existían quedan como conteo #2.
+  - **Plazo de cierre de 7 días:** el cierre de un mes se puede cargar o
+    corregir (conteos #1 y #2) hasta 7 días después de su último día,
+    inclusive (`DIAS_PLAZO_CIERRE_INVENTARIO`); aun así queda como
+    inventario inicial del mes en curso (día 1 del mes siguiente al
+    cierre). Pasado el plazo, solo el rol **Administrador** puede cargarlo
+    o corregirlo (los demás reciben un mensaje claro). La pantalla muestra
+    el plazo en un aviso cuando el período termina un fin de mes. Ojo: un
+    conteo hecho varios días después se registra con fecha de fin de mes,
+    así que las compras/consumos de esos días de gracia ya pertenecen al
+    mes nuevo.
 
 ## Dashboard General — pantalla principal (Fase 5)
 

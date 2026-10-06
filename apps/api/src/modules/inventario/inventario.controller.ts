@@ -41,7 +41,7 @@ export async function setFinalFisicoHandler(req: Request, res: Response, next: N
   try {
     const input = inventarioFinalFisicoSchema.parse(req.body);
     const registeredById = req.user!.sub;
-    res.json(await inventarioService.setInventarioFinalFisico(input, registeredById));
+    res.json(await inventarioService.setInventarioFinalFisico(input, registeredById, req.user!.role));
   } catch (error) {
     next(error);
   }

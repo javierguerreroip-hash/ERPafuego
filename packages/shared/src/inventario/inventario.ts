@@ -25,11 +25,21 @@ export type InventarioInicialInput = z.infer<typeof inventarioInicialSchema>;
 export const inventarioFinalFisicoSchema = z.object({
   articuloId: z.string().min(1, 'Selecciona un artículo'),
   fecha: z.string().min(1, 'La fecha es requerida'),
+  // 1 = primer conteo (para detectar diferencias contra el teórico);
+  // 2 = conteo definitivo ya reconteado y ajustado. Solo el 2 pasa a ser el
+  // inventario inicial del mes siguiente (post-lanzamiento, 2026-10-05).
+  conteo: z.union([z.literal(1), z.literal(2)]).default(2),
   quantity: z.number().nonnegative('La cantidad no puede ser negativa'),
   unitCost: z.number().nonnegative('El costo unitario no puede ser negativo').optional(),
 });
 
 export type InventarioFinalFisicoInput = z.infer<typeof inventarioFinalFisicoSchema>;
+
+export type ConteoFisico = 1 | 2;
+
+// Días después de terminar un mes durante los cuales se permite cargar o
+// corregir su cierre (conteo 1 y 2). Pasado ese plazo, solo Administrador.
+export const DIAS_PLAZO_CIERRE_INVENTARIO = 7;
 
 export interface InventarioDetalleDTO {
   articuloId: string;
@@ -51,6 +61,13 @@ export interface InventarioDetalleDTO {
   inventarioFinalFisicoQuantity: number;
   inventarioFinalFisicoValue: number;
   inventarioFinalFisicoRegistrado: boolean;
+  // Los valores de arriba son los del conteo VIGENTE: el 2 si ya existe, y si
+  // no, el 1 (provisional). null = todavía no hay ningún conteo.
+  conteoFisicoVigente: ConteoFisico | null;
+  conteo1Quantity: number | null;
+  conteo1Value: number | null;
+  conteo2Quantity: number | null;
+  conteo2Value: number | null;
   // Desviación = físico − teórico (positiva = hay más de lo que el
   // sistema esperaba; negativa = merma/pérdida frente a lo esperado).
   desviacionQuantity: number;
@@ -60,6 +77,9 @@ export interface InventarioDetalleDTO {
 export interface InventarioReporteDTO {
   start: string;
   end: string;
+  // Solo cuando el fin del período es el último día de un mes: hasta cuándo
+  // (YYYY-MM-DD) se puede cargar o corregir el cierre sin ser Administrador.
+  plazoCierre: { hasta: string; vencido: boolean } | null;
   detalle: InventarioDetalleDTO[];
   consolidado: {
     inventarioInicialValue: number;

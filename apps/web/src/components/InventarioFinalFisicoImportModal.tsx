@@ -15,6 +15,9 @@ interface ArticuloParaConteo {
   articuloCodigo: string;
   articuloNombre: string;
   unit: string;
+  // Referencias para la plantilla del conteo #2.
+  teoricoQuantity?: number;
+  conteo1Quantity?: number | null;
 }
 
 interface RowResult {
@@ -29,12 +32,14 @@ interface RowResult {
 export function InventarioFinalFisicoImportModal({
   articulos,
   fecha,
+  conteo,
   onSaveRow,
   onClose,
   onDone,
 }: {
   articulos: ArticuloParaConteo[];
   fecha: string;
+  conteo: 1 | 2;
   onSaveRow: (articuloId: string, quantity: number) => Promise<unknown>;
   onClose: () => void;
   onDone: () => void;
@@ -43,21 +48,55 @@ export function InventarioFinalFisicoImportModal({
   const [importing, setImporting] = useState(false);
   const [importedAny, setImportedAny] = useState(false);
 
+  // Conteo #1: plantilla ciega (sin el teórico) para no sesgar el conteo.
+  // Conteo #2: trae el teórico, el conteo #1 y su diferencia, y la columna
+  // a diligenciar viene precargada con el conteo #1 — solo se corrigen los
+  // artículos que cambiaron tras el reconteo.
+  const columnaCantidad = conteo === 1 ? 'Cantidad contada' : 'Conteo #2 (ajustado)';
+
   function downloadTemplate() {
+    if (conteo === 1) {
+      exportToExcel(
+        'plantilla_conteo_1_materia_prima',
+        'Conteo 1',
+        [
+          { key: 'codigo', label: 'Código' },
+          { key: 'nombre', label: 'Artículo' },
+          { key: 'unidad', label: 'Unidad' },
+          { key: 'cantidad', label: columnaCantidad },
+        ],
+        articulos.map((a) => ({
+          codigo: a.articuloCodigo,
+          nombre: a.articuloNombre,
+          unidad: a.unit,
+          cantidad: '',
+        })),
+      );
+      return;
+    }
     exportToExcel(
-      'plantilla_conteo_fisico_materia_prima',
-      'Conteo físico',
+      'plantilla_conteo_2_materia_prima',
+      'Conteo 2',
       [
         { key: 'codigo', label: 'Código' },
         { key: 'nombre', label: 'Artículo' },
         { key: 'unidad', label: 'Unidad' },
-        { key: 'cantidad', label: 'Cantidad contada' },
+        { key: 'teorico', label: 'Inv. final teórico' },
+        { key: 'conteo1', label: 'Conteo #1' },
+        { key: 'diferencia', label: 'Diferencia conteo #1 vs teórico' },
+        { key: 'cantidad', label: columnaCantidad },
       ],
       articulos.map((a) => ({
         codigo: a.articuloCodigo,
         nombre: a.articuloNombre,
         unidad: a.unit,
-        cantidad: '',
+        teorico: a.teoricoQuantity ?? '',
+        conteo1: a.conteo1Quantity ?? '',
+        diferencia:
+          a.conteo1Quantity !== null && a.conteo1Quantity !== undefined && a.teoricoQuantity !== undefined
+            ? Math.round((a.conteo1Quantity - a.teoricoQuantity) * 100) / 100
+            : '',
+        cantidad: a.conteo1Quantity ?? '',
       })),
     );
   }
@@ -79,7 +118,7 @@ export function InventarioFinalFisicoImportModal({
       const parsed: RowResult[] = [];
       rawRows.forEach((rawRow, index) => {
         const codigo = String(rawRow['Código'] ?? '').trim();
-        const cantidadTexto = String(rawRow['Cantidad contada'] ?? '').trim();
+        const cantidadTexto = String(rawRow[columnaCantidad] ?? '').trim();
         // Fila sin cantidad diligenciada todavía — se omite en vez de
         // contarla como error, porque no siempre se cuenta todo el
         // catálogo en una sola sesión.
@@ -104,7 +143,7 @@ export function InventarioFinalFisicoImportModal({
           parsed.push({
             index,
             displayName,
-            error: 'La cantidad contada no es un número válido',
+            error: 'La cantidad no es un número válido',
             status: 'error',
           });
           return;
@@ -142,16 +181,29 @@ export function InventarioFinalFisicoImportModal({
 
   return (
     <Modal
-      title="Cargar conteo físico desde Excel"
+      title={conteo === 1 ? 'Cargar conteo #1 desde Excel' : 'Cargar conteo #2 (definitivo) desde Excel'}
       onClose={() => (importedAny ? onDone() : onClose())}
     >
       <div className="space-y-3">
         <p className="text-sm text-neutral-600">
-          Descarga la plantilla con todos los artículos de materia prima (con su unidad de
-          medida) y diligencia la columna "Cantidad contada" con el conteo físico de cierre (
-          {new Date(`${fecha}T00:00:00`).toLocaleDateString('es-CO')}) en esa misma unidad; luego
-          vuelve a cargarla aquí. El costo unitario se calcula automático con el último precio de
-          compra.
+          {conteo === 1 ? (
+            <>
+              Primer conteo de cierre ({new Date(`${fecha}T00:00:00`).toLocaleDateString('es-CO')}).
+              Descarga la plantilla con todos los artículos de materia prima (con su unidad de
+              medida) y diligencia la columna "{columnaCantidad}" en esa misma unidad. Con este conteo
+              identificas diferencias contra el teórico; NO pasa como inventario inicial del mes
+              siguiente.
+            </>
+          ) : (
+            <>
+              Conteo #2 (definitivo) de cierre ({new Date(`${fecha}T00:00:00`).toLocaleDateString('es-CO')}).
+              La plantilla trae el teórico, el conteo #1 y su diferencia; la columna "
+              {columnaCantidad}" viene precargada con el conteo #1 — corrige solo lo que cambió
+              tras el reconteo. Este conteo es el que cuenta para el CMV y el que pasa como
+              inventario inicial del mes siguiente (si el cierre es de fin de mes).
+            </>
+          )}
+          {' '}El costo unitario se calcula automático.
         </p>
         <button
           type="button"
