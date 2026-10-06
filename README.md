@@ -236,10 +236,12 @@ Acceso restringido a los roles Administrador y Operación.
     la columna a diligenciar viene precargada con el #1 para corregir solo
     lo que cambió. **Solo el #2 pasa como inventario inicial del mes
     siguiente** (si el cierre es de fin de mes). El "inventario final
-    físico" que ven la pantalla, el consolidado y el CMV es el **vigente**:
-    el #2 si existe y, si no, el #1 como dato provisional (la tabla lo
-    marca "Conteo #1 (provisional)" / "Conteo #2 (definitivo)"). Los
-    registros que ya existían quedan como conteo #2.
+    físico" que ven la pantalla, el consolidado, la desviación y el CMV es
+    **siempre el #2** (decisión del negocio): mientras no exista, el
+    artículo aparece "Sin registrar" y el CMV no usa el #1. El #1 se ve en
+    su propia columna, con su diferencia contra el teórico, solo para
+    identificar diferencias. Los registros que ya existían quedan como
+    conteo #2.
   - **Plazo de cierre de 7 días:** el cierre de un mes se puede cargar o
     corregir (conteos #1 y #2) hasta 7 días después de su último día,
     inclusive (`DIAS_PLAZO_CIERRE_INVENTARIO`); aun así queda como

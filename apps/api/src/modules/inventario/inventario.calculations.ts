@@ -38,14 +38,6 @@ export function fechaInicialDelMesSiguiente(fecha: Date): Date | null {
   return siguiente.getUTCDate() === 1 ? siguiente : null;
 }
 
-// Conteo físico VIGENTE de un artículo (post-lanzamiento, 2026-10-05): el
-// conteo 2 (definitivo, ya reconteado y ajustado) si existe; si todavía no
-// se ha cargado, el conteo 1 como dato provisional. Es el que alimenta el
-// "inventario final físico" del reporte y el CMV.
-export function elegirConteoVigente<T extends { conteo: number }>(conteos: T[]): T | undefined {
-  return conteos.find((c) => c.conteo === 2) ?? conteos.find((c) => c.conteo === 1);
-}
-
 // Plazo para cargar/corregir el cierre de un mes: hasta `diasPlazo` días
 // después de su último día (inclusive). Solo aplica cuando `fechaFin` es el
 // último día de un mes; para cualquier otra fecha devuelve null. `hoy` debe

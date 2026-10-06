@@ -61,11 +61,12 @@ export interface InventarioDetalleDTO {
   inventarioFinalFisicoQuantity: number;
   inventarioFinalFisicoValue: number;
   inventarioFinalFisicoRegistrado: boolean;
-  // Los valores de arriba son los del conteo VIGENTE: el 2 si ya existe, y si
-  // no, el 1 (provisional). null = todavía no hay ningún conteo.
-  conteoFisicoVigente: ConteoFisico | null;
+  // Los valores de arriba son SIEMPRE los del conteo #2 (definitivo); el #1 es
+  // solo para identificar diferencias: su diferencia contra el teórico va aparte.
   conteo1Quantity: number | null;
   conteo1Value: number | null;
+  conteo1DesviacionQuantity: number | null;
+  conteo1DesviacionValue: number | null;
   conteo2Quantity: number | null;
   conteo2Value: number | null;
   // Desviación = físico − teórico (positiva = hay más de lo que el

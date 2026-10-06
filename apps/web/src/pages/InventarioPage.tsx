@@ -147,7 +147,8 @@ export function InventarioPage() {
               <th className="px-4 py-2">Compras</th>
               <th className="px-4 py-2">Consumo</th>
               <th className="px-4 py-2">Inv. final teórico (Sistema)</th>
-              <th className="px-4 py-2">Inv. final físico (Real)</th>
+              <th className="px-4 py-2">Conteo #1 (diferencia vs teórico)</th>
+              <th className="px-4 py-2">Inv. final físico (Real) — Conteo #2</th>
               <th className="px-4 py-2">Desviación</th>
               <th className="px-4 py-2" />
             </tr>
@@ -155,19 +156,19 @@ export function InventarioPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
                   Cargando…
                 </td>
               </tr>
             ) : !reporte || reporte.detalle.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
                   No hay artículos de materia prima activos.
                 </td>
               </tr>
             ) : filteredDetalle.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
+                <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
                   Ningún artículo coincide con la búsqueda.
                 </td>
               </tr>
@@ -205,21 +206,31 @@ export function InventarioPage() {
                     </p>
                   </td>
                   <td className="px-4 py-2">
+                    {item.conteo1Quantity !== null ? (
+                      <>
+                        {item.conteo1Quantity} {item.unit}
+                        <p
+                          className={`text-xs ${
+                            (item.conteo1DesviacionQuantity ?? 0) === 0
+                              ? 'text-neutral-400'
+                              : 'font-medium text-red-500'
+                          }`}
+                        >
+                          Dif.: {item.conteo1DesviacionQuantity} {item.unit} —{' '}
+                          {formatCOP(item.conteo1DesviacionValue ?? 0)}
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-xs text-neutral-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
                     {item.inventarioFinalFisicoRegistrado ? (
                       <>
                         {item.inventarioFinalFisicoQuantity} {item.unit}
                         <p className="text-xs text-neutral-400">
                           {formatCOP(item.inventarioFinalFisicoValue)}
                         </p>
-                        <span
-                          className={`mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] ${
-                            item.conteoFisicoVigente === 2
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-amber-100 text-amber-700'
-                          }`}
-                        >
-                          {item.conteoFisicoVigente === 2 ? 'Conteo #2 (definitivo)' : 'Conteo #1 (provisional)'}
-                        </span>
                       </>
                     ) : (
                       <span className="text-xs text-amber-600">Sin registrar</span>

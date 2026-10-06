@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   calcularDesviacionInventario,
   calcularInventarioFinal,
-  elegirConteoVigente,
   fechaInicialDelMesSiguiente,
   plazoCierreMes,
 } from './inventario.calculations.js';
@@ -71,24 +70,6 @@ describe('fechaInicialDelMesSiguiente', () => {
   it('devuelve null si la fecha no es el último día del mes', () => {
     expect(fechaInicialDelMesSiguiente(new Date('2026-09-29T00:00:00.000Z'))).toBeNull();
     expect(fechaInicialDelMesSiguiente(new Date('2026-09-01T00:00:00.000Z'))).toBeNull();
-  });
-});
-
-describe('elegirConteoVigente', () => {
-  it('usa el conteo 2 cuando existe, aunque también haya conteo 1', () => {
-    const r = elegirConteoVigente([
-      { conteo: 1, quantity: 10 },
-      { conteo: 2, quantity: 12 },
-    ]);
-    expect(r?.quantity).toBe(12);
-  });
-
-  it('usa el conteo 1 (provisional) cuando todavía no hay conteo 2', () => {
-    expect(elegirConteoVigente([{ conteo: 1, quantity: 10 }])?.quantity).toBe(10);
-  });
-
-  it('devuelve undefined si no hay conteos', () => {
-    expect(elegirConteoVigente([])).toBeUndefined();
   });
 });
 

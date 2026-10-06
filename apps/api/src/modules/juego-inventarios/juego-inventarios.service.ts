@@ -1,6 +1,5 @@
 import { prisma } from '../../lib/prisma.js';
 import { calcularCostoPorcentaje } from '../eventos/evento.calculations.js';
-import { elegirConteoVigente } from '../inventario/inventario.calculations.js';
 import { calcularCMV } from './juego-inventarios.calculations.js';
 
 function round2(value: number): number {
@@ -56,20 +55,18 @@ export async function getJuegoInventariosReporte(startDate: Date, endDate: Date)
   const finalesFisicos = await prisma.inventarioFinalFisico.findMany({
     where: { fecha: endDateAtMidnight, articuloId: { in: articuloIds } },
   });
-  // Puede haber dos conteos por artículo (post-lanzamiento, 2026-10-05): se
-  // usa el 2 (definitivo) si existe y, si no, el 1 como dato provisional.
-  const conteosPorArticulo = new Map<string, typeof finalesFisicos>();
-  for (const f of finalesFisicos) {
-    const lista = conteosPorArticulo.get(f.articuloId) ?? [];
-    lista.push(f);
-    conteosPorArticulo.set(f.articuloId, lista);
-  }
+  // Puede haber dos conteos por artículo (post-lanzamiento, 2026-10-05): el
+  // CMV usa SOLO el conteo 2 (definitivo, ya reconteado y ajustado); el
+  // conteo 1 es solo para identificar diferencias.
+  const finalesFisicosMap = new Map(
+    finalesFisicos.filter((f) => f.conteo === 2).map((f) => [f.articuloId, f]),
+  );
 
   const detalle = articulos.map((articulo) => {
     const inventarioInicialValue = inicialesMap.get(articulo.id) ?? 0;
     const comprasValue = round2(comprasMap.get(articulo.id) ?? 0);
 
-    const finalFisico = elegirConteoVigente(conteosPorArticulo.get(articulo.id) ?? []);
+    const finalFisico = finalesFisicosMap.get(articulo.id);
     const inventarioFinalFisicoValue = finalFisico ? Number(finalFisico.value) : 0;
     const inventarioFinalFisicoQuantity = finalFisico ? Number(finalFisico.quantity) : 0;
 

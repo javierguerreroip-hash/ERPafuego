@@ -10,7 +10,6 @@ import { calcularCostoUnitarioPromedio } from '../eventos/evento.calculations.js
 import {
   calcularDesviacionInventario,
   calcularInventarioFinal,
-  elegirConteoVigente,
   fechaInicialDelMesSiguiente,
   plazoCierreMes,
 } from './inventario.calculations.js';
@@ -114,8 +113,9 @@ export async function getInventarioReporte(startDate: Date, endDate: Date) {
     const conteos = finalesFisicosPorArticulo.get(articulo.id) ?? [];
     const conteo1 = conteos.find((c) => c.conteo === 1);
     const conteo2 = conteos.find((c) => c.conteo === 2);
-    // Vigente: el conteo 2 (definitivo) si existe; si no, el 1 (provisional).
-    const finalFisico = elegirConteoVigente(conteos);
+    // Solo el conteo 2 (definitivo) cuenta como inventario final físico; el
+    // conteo 1 es únicamente para identificar diferencias contra el teórico.
+    const finalFisico = conteo2;
     const inventarioFinalFisicoQuantity = finalFisico ? Number(finalFisico.quantity) : 0;
     const inventarioFinalFisicoValue = finalFisico ? Number(finalFisico.value) : 0;
 
@@ -137,9 +137,14 @@ export async function getInventarioReporte(startDate: Date, endDate: Date) {
       inventarioFinalFisicoQuantity,
       inventarioFinalFisicoValue,
       inventarioFinalFisicoRegistrado: Boolean(finalFisico),
-      conteoFisicoVigente: finalFisico ? (finalFisico.conteo === 2 ? (2 as const) : (1 as const)) : null,
       conteo1Quantity: conteo1 ? Number(conteo1.quantity) : null,
       conteo1Value: conteo1 ? Number(conteo1.value) : null,
+      conteo1DesviacionQuantity: conteo1
+        ? calcularDesviacionInventario(Number(conteo1.quantity), inventarioFinalTeoricoQuantity)
+        : null,
+      conteo1DesviacionValue: conteo1
+        ? calcularDesviacionInventario(Number(conteo1.value), inventarioFinalTeoricoValue)
+        : null,
       conteo2Quantity: conteo2 ? Number(conteo2.quantity) : null,
       conteo2Value: conteo2 ? Number(conteo2.value) : null,
       desviacionQuantity: calcularDesviacionInventario(
