@@ -110,7 +110,12 @@ export function EventosPage() {
   const activeOpciones = opcionesMenu.filter((o) => o.active);
   const activeTaxRates = taxRates.filter((t) => t.active);
 
+  // El mismo filtro de período del ranking controla la tabla (antes la tabla
+  // mostraba ventas de todos los meses). fecha viene como ISO a medianoche
+  // UTC; se compara solo la parte de fecha, igual que Agenda.
   const filteredEventos = eventos.filter((ev) => {
+    const dia = ev.fecha.slice(0, 10);
+    if (dia < rankingStart || dia > rankingEnd) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -191,11 +196,12 @@ export function EventosPage() {
         )}
       </div>
 
+      <PeriodPickerControls filter={rankingFilter} />
+
       <div className="mb-4 rounded-lg border bg-white p-4">
         <h2 className="mb-3 text-sm font-medium text-neutral-700">
           Ranking de opciones vendidas
         </h2>
-        <PeriodPickerControls filter={rankingFilter} />
 
         {rankingLoading || !ranking ? (
           <p className="py-6 text-center text-sm text-neutral-400">Cargando…</p>
@@ -246,6 +252,9 @@ export function EventosPage() {
           placeholder="Buscar por cliente, opción de menú o vendedor…"
           className={`${inputClass} max-w-sm`}
         />
+        <p className="mt-2 text-xs text-neutral-500">
+          {filteredEventos.length} venta(s) en el período seleccionado.
+        </p>
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-white">
@@ -276,7 +285,7 @@ export function EventosPage() {
                 <td colSpan={10} className="px-4 py-6 text-center text-neutral-400">
                   {eventos.length === 0
                     ? 'Todavía no hay eventos registrados.'
-                    : 'Ningún evento coincide con la búsqueda.'}
+                    : 'No hay ventas en este período o que coincidan con la búsqueda.'}
                 </td>
               </tr>
             ) : (
