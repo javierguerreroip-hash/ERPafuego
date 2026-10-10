@@ -21,6 +21,9 @@ export interface CotizacionPdfData {
   vendedorNombre: string;
   taxRateNombre: string | null;
   icono?: CotizacionIcono | null;
+  // Texto del bloque DESCRIPCIÓN; si viene vacío (cotizaciones anteriores) se
+  // usan los nombres de los ítems, como antes.
+  descripcion?: string;
 }
 
 const COLOR_KRAFT: [number, number, number] = [240, 230, 210];
@@ -145,7 +148,9 @@ export async function generateCotizacionPDF(data: CotizacionPdfData): Promise<vo
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...COLOR_INK);
-  const descripcionTexto = data.items.map((i) => i.descripcion).join('. ');
+  const descripcionTexto = data.descripcion?.trim()
+    ? data.descripcion.trim()
+    : data.items.map((i) => i.descripcion).join('. ');
   const descLines = doc.splitTextToSize(descripcionTexto, leftW);
   doc.text(descLines, leftX, leftY);
   leftY += descLines.length * 4.5;

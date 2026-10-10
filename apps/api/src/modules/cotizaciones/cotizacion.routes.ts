@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../../middleware/auth.middleware.js';
-import { createHandler, getHandler, listHandler } from './cotizacion.controller.js';
+import { createHandler, getHandler, listHandler, updateHandler } from './cotizacion.controller.js';
 
 export const cotizacionRouter = Router();
 
@@ -11,3 +11,4 @@ cotizacionRouter.use(requireAuth, requireRole('ADMINISTRADOR', 'OPERACION', 'VEN
 cotizacionRouter.get('/', listHandler);
 cotizacionRouter.get('/:id', getHandler);
 cotizacionRouter.post('/', createHandler);
+cotizacionRouter.put('/:id', updateHandler);

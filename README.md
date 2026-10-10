@@ -661,6 +661,28 @@ Acceso restringido a los roles Administrador y Operación.
      No fue necesario ningún cambio de esquema para esto: `items` sigue
      guardándose como el mismo JSON de siempre, la restricción es solo
      de interfaz.
+- **Editar cotizaciones y descripción automática (post-lanzamiento,
+  2026-10-10):**
+  - **Editar:** cada cotización del listado tiene "Editar" (`PUT
+    /cotizaciones/:id`). Si su negocio del CRM sigue **Cotizado** (o no
+    tiene negocio), se edita todo y el negocio se sincroniza en la misma
+    transacción (cliente, nombre del evento = asunto, fecha, valor antes
+    de impuestos = subtotal y vendedor). Si el negocio ya fue **Ganado o
+    Perdido**, solo se edita el documento — fecha, lugar, ítems,
+    descripción, condiciones, ilustración — y NO se tocan el negocio, la
+    venta ni la agenda; el cliente y el vendedor quedan bloqueados (el
+    servidor lo exige) para no romper la trazabilidad. Los cambios a una
+    venta ya ganada se hacen desde el CRM ("editar negocio ganado"), que
+    sí actualiza Ventas y Agenda.
+  - **Descripción:** la cotización tiene un campo `descripcion` (el
+    bloque "DESCRIPCIÓN" del PDF) que se llena sola con la descripción
+    de Opciones de Menú del menú elegido; con varios menús, cada
+    descripción va precedida por el nombre del menú. Es editable; en
+    cuanto se escribe a mano deja de sobrescribirse al cambiar de menú
+    (botón "Restaurar desde Opciones de Menú"). Las cotizaciones
+    anteriores no tenían este campo: al editarlas se precarga desde sus
+    ítems, y su PDF sigue usando los nombres de los ítems mientras no se
+    guarde una descripción.
 
 ## Eliminar ventas y artículos (post-lanzamiento, 2026-09-10)
 

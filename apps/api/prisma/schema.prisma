@@ -667,6 +667,11 @@ model Cotizacion {
   logistica              Json
   taxRateId              String?
   taxRate                TaxRate?    @relation(fields: [taxRateId], references: [id])
+  // Texto del bloque "DESCRIPCIÓN" del PDF (post-lanzamiento, 2026-10-10):
+  // se precarga con la descripción de las opciones de menú elegidas y se
+  // puede editar. Vacío en cotizaciones anteriores (el PDF usa entonces los
+  // nombres de los ítems, como antes).
+  descripcion            String      @default("")
   condicionesComerciales String      @default("")
   vendedorNombre         String
   vendedorId              String?

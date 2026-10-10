@@ -1,5 +1,5 @@
 import type { Cliente, Cotizacion, TaxRate, User } from '@prisma/client';
-import type { CotizacionInput, CotizacionLineaInput } from '@erp-afuego/shared';
+import type { CotizacionInput, CotizacionLineaInput, EtapaNegocio } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import { calcularTotalesCotizacion } from './cotizacion.calculations.js';
@@ -7,7 +7,14 @@ import { calcularTotalesCotizacion } from './cotizacion.calculations.js';
 type CotizacionWithRelations = Cotizacion & {
   taxRate: TaxRate | null;
   registeredBy: Pick<User, 'name'>;
+  negocio: { etapa: EtapaNegocio } | null;
 };
+
+const includeRelations = {
+  taxRate: true,
+  registeredBy: { select: { name: true } },
+  negocio: { select: { etapa: true } },
+} as const;
 
 function serialize(cotizacion: CotizacionWithRelations) {
   const items = cotizacion.items as unknown as CotizacionLineaInput[];
@@ -28,11 +35,13 @@ function serialize(cotizacion: CotizacionWithRelations) {
     logistica,
     taxRateId: cotizacion.taxRateId,
     taxRateNombre: cotizacion.taxRate?.name ?? null,
+    descripcion: cotizacion.descripcion,
     condicionesComerciales: cotizacion.condicionesComerciales,
     vendedorId: cotizacion.vendedorId,
     vendedorNombre: cotizacion.vendedorNombre,
     icono: cotizacion.icono as CotizacionInput['icono'],
     negocioId: cotizacion.negocioId,
+    negocioEtapa: cotizacion.negocio?.etapa ?? null,
     totales: calcularTotalesCotizacion(items, logistica, impuestoPorcentaje),
     registeredByName: cotizacion.registeredBy.name,
     createdAt: cotizacion.createdAt.toISOString(),
@@ -42,7 +51,7 @@ function serialize(cotizacion: CotizacionWithRelations) {
 
 export async function listCotizaciones() {
   const cotizaciones = await prisma.cotizacion.findMany({
-    include: { taxRate: true, registeredBy: { select: { name: true } } },
+    include: includeRelations,
     orderBy: { createdAt: 'desc' },
   });
   return cotizaciones.map(serialize);
@@ -51,7 +60,7 @@ export async function listCotizaciones() {
 export async function getCotizacion(id: string) {
   const cotizacion = await prisma.cotizacion.findUnique({
     where: { id },
-    include: { taxRate: true, registeredBy: { select: { name: true } } },
+    include: includeRelations,
   });
   if (!cotizacion) {
     throw new HttpError(404, 'Cotización no encontrada');
@@ -132,6 +141,7 @@ export async function createCotizacion(input: CotizacionInput, registeredById: s
         items: input.items,
         logistica: input.logistica,
         taxRateId: input.taxRateId ?? null,
+        descripcion: input.descripcion,
         condicionesComerciales: input.condicionesComerciales,
         vendedorId: vendedor.id,
         vendedorNombre: vendedor.name,
@@ -139,9 +149,102 @@ export async function createCotizacion(input: CotizacionInput, registeredById: s
         negocioId: negocio.id,
         registeredById,
       },
-      include: { taxRate: true, registeredBy: { select: { name: true } } },
+      include: includeRelations,
     });
   });
 
   return serialize(cotizacion);
+}
+
+// Edición de una cotización ya hecha (post-lanzamiento, 2026-10-10).
+// - Si su negocio del CRM sigue "Cotizado" (o no tiene negocio), se edita
+//   todo y el negocio se sincroniza en la misma transacción (cliente,
+//   evento, fecha, valor antes de impuestos y vendedor) — igual que al
+//   crearla, para que CRM y cotización no se contradigan.
+// - Si el negocio ya fue Ganado o Perdido, solo se edita el DOCUMENTO
+//   (fecha, lugar, ítems, descripción, condiciones...): el cliente y el
+//   vendedor no se pueden cambiar y el negocio/venta NO se tocan — los
+//   cambios de una venta ya ganada se hacen desde el CRM ("editar negocio
+//   ganado"), que sí actualiza Ventas y Agenda.
+export async function updateCotizacion(id: string, input: CotizacionInput) {
+  const existing = await prisma.cotizacion.findUnique({
+    where: { id },
+    include: includeRelations,
+  });
+  if (!existing) {
+    throw new HttpError(404, 'Cotización no encontrada');
+  }
+
+  if (input.taxRateId) {
+    const taxRate = await prisma.taxRate.findUnique({ where: { id: input.taxRateId } });
+    if (!taxRate) {
+      throw new HttpError(404, 'Tarifa de impuesto no encontrada');
+    }
+  }
+
+  const etapa = existing.negocio?.etapa ?? null;
+  const negocioCerrado = etapa !== null && etapa !== 'COTIZADO';
+
+  if (negocioCerrado) {
+    const cambioCliente = existing.clienteId !== null && input.clienteId !== existing.clienteId;
+    const cambioVendedor = existing.vendedorId !== null && input.vendedorId !== existing.vendedorId;
+    if (cambioCliente || cambioVendedor) {
+      throw new HttpError(
+        409,
+        'Esta cotización ya fue ganada o perdida en el CRM: no se puede cambiar el cliente ni el vendedor.',
+      );
+    }
+  }
+
+  const cliente = negocioCerrado ? null : await findClienteOrThrow(input.clienteId);
+  const vendedor = negocioCerrado ? null : await findVendedorOrThrow(input.vendedorId);
+
+  const totales = calcularTotalesCotizacion(input.items, input.logistica, 0);
+
+  const actualizada = await prisma.$transaction(async (tx) => {
+    if (cliente && vendedor && existing.negocioId) {
+      await tx.negocio.update({
+        where: { id: existing.negocioId },
+        data: {
+          clienteId: cliente.id,
+          clienteNombre: cliente.name,
+          clienteIdentificacion: cliente.identificacion,
+          telefono: cliente.telefono,
+          nombreEvento: input.asunto,
+          fechaEvento: new Date(input.fecha),
+          valorAntesImpuestos: totales.subtotal,
+          vendedorId: vendedor.id,
+        },
+      });
+    }
+
+    return tx.cotizacion.update({
+      where: { id },
+      data: {
+        fecha: new Date(input.fecha),
+        asunto: input.asunto,
+        lugar: input.lugar,
+        numeroPersonas: input.numeroPersonas,
+        ...(cliente && vendedor
+          ? {
+              clienteId: cliente.id,
+              clienteNombre: cliente.name,
+              clienteIdentificacion: cliente.identificacion,
+              telefono: cliente.telefono,
+              vendedorId: vendedor.id,
+              vendedorNombre: vendedor.name,
+            }
+          : {}),
+        items: input.items,
+        logistica: input.logistica,
+        taxRateId: input.taxRateId ?? null,
+        descripcion: input.descripcion,
+        condicionesComerciales: input.condicionesComerciales,
+        icono: input.icono ?? null,
+      },
+      include: includeRelations,
+    });
+  });
+
+  return serialize(actualizada);
 }

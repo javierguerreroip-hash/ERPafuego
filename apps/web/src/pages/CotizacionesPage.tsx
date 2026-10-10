@@ -3,6 +3,7 @@ import {
   COTIZACION_CONDICIONES_DEFAULT,
   COTIZACION_ICONOS,
   COTIZACION_ICONO_LABELS,
+  ETAPA_NEGOCIO_LABELS,
   cotizacionSchema,
   type ClienteDTO,
   type CotizacionDTO,
@@ -33,10 +34,29 @@ function emptyForm(): CotizacionInput {
     items: [emptyLinea()],
     logistica: [],
     taxRateId: null,
+    descripcion: '',
     condicionesComerciales: COTIZACION_CONDICIONES_DEFAULT,
     vendedorId: '',
     icono: null,
   };
+}
+
+// Descripción por defecto de la cotización: la de las opciones de menú
+// elegidas (Opciones de Menú → descripción). Con un solo menú es su
+// descripción tal cual; con varios, cada una va precedida por el nombre.
+function componerDescripcion(items: CotizacionLineaInput[], opciones: OpcionMenuDTO[]): string {
+  const vistas = new Set<string>();
+  const partes: { nombre: string; descripcion: string }[] = [];
+  for (const item of items) {
+    const opcion = opciones.find((o) => o.name === item.descripcion);
+    if (!opcion || vistas.has(opcion.id)) continue;
+    vistas.add(opcion.id);
+    if (opcion.description.trim()) {
+      partes.push({ nombre: opcion.name, descripcion: opcion.description.trim() });
+    }
+  }
+  if (partes.length === 1) return partes[0].descripcion;
+  return partes.map((p) => `${p.nombre}: ${p.descripcion}`).join('\n\n');
 }
 
 function round2(value: number): number {
@@ -59,6 +79,11 @@ export function CotizacionesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<CotizacionInput>(emptyForm());
+  // null = cotización nueva; si no, la que se está editando.
+  const [editing, setEditing] = useState<CotizacionDTO | null>(null);
+  // Una vez que la persona escribe en la descripción, dejamos de
+  // sobrescribirla al cambiar de menú (hay un botón para restaurarla).
+  const [descripcionEditada, setDescripcionEditada] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -94,16 +119,49 @@ export function CotizacionesPage() {
   }, []);
 
   function openNueva() {
+    setEditing(null);
+    setDescripcionEditada(false);
     setForm(emptyForm());
     setFormError(null);
     setView('form');
   }
 
-  function updateItem(index: number, patch: Partial<CotizacionLineaInput>) {
+  function openEditar(c: CotizacionDTO) {
+    setEditing(c);
+    // Las cotizaciones anteriores no tienen descripción guardada: se
+    // precarga desde los menús de sus ítems (se puede editar o dejar así).
+    const descripcion = c.descripcion || componerDescripcion(c.items, opcionesMenu);
+    setDescripcionEditada(Boolean(c.descripcion));
+    setForm({
+      fecha: c.fecha.slice(0, 10),
+      asunto: c.asunto,
+      lugar: c.lugar,
+      numeroPersonas: c.numeroPersonas,
+      clienteId: c.clienteId ?? '',
+      items: c.items,
+      logistica: c.logistica,
+      taxRateId: c.taxRateId,
+      descripcion,
+      condicionesComerciales: c.condicionesComerciales,
+      vendedorId: c.vendedorId ?? '',
+      icono: c.icono,
+    });
+    setFormError(null);
+    setView('form');
+  }
+
+  // Cambia los ítems y, si la descripción no se ha editado a mano, la
+  // recompone con la de los menús elegidos.
+  function applyItems(items: CotizacionLineaInput[]) {
     setForm({
       ...form,
-      items: form.items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+      items,
+      descripcion: descripcionEditada ? form.descripcion : componerDescripcion(items, opcionesMenu),
     });
+  }
+
+  function updateItem(index: number, patch: Partial<CotizacionLineaInput>) {
+    applyItems(form.items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
 
   function updateLogistica(index: number, patch: Partial<CotizacionLineaInput>) {
@@ -139,7 +197,11 @@ export function CotizacionesPage() {
     }
     setSubmitting(true);
     try {
-      await apiFetch('/cotizaciones', { method: 'POST', body: parsed.data, token });
+      if (editing) {
+        await apiFetch(`/cotizaciones/${editing.id}`, { method: 'PUT', body: parsed.data, token });
+      } else {
+        await apiFetch('/cotizaciones', { method: 'POST', body: parsed.data, token });
+      }
       setView('list');
       await loadAll();
     } catch (err) {
@@ -172,6 +234,7 @@ export function CotizacionesPage() {
       vendedorNombre: vendedorSeleccionado?.name || '',
       taxRateNombre: taxRateSeleccionada?.name ?? null,
       icono: form.icono,
+      descripcion: form.descripcion,
     });
   }
 
@@ -191,20 +254,32 @@ export function CotizacionesPage() {
         vendedorNombre: cotizacion.vendedorNombre,
         taxRateNombre: cotizacion.taxRateNombre,
         icono: cotizacion.icono,
+        descripcion: cotizacion.descripcion,
       });
     } finally {
       setDownloadingId(null);
     }
   }
 
+  // Con el negocio ya ganado/perdido solo se edita el documento (ver backend).
+  const negocioCerrado = Boolean(
+    editing && editing.negocioEtapa !== null && editing.negocioEtapa !== 'COTIZADO',
+  );
+
   if (view === 'form') {
     return (
       <div>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-neutral-900">Nueva cotización</h1>
+            <h1 className="text-xl font-semibold text-neutral-900">
+              {editing ? 'Editar cotización' : 'Nueva cotización'}
+            </h1>
             <p className="text-sm text-neutral-500">
-              Al guardar, se crea automáticamente un negocio "Cotizado" en el CRM.
+              {editing
+                ? negocioCerrado
+                  ? `El negocio ya está "${ETAPA_NEGOCIO_LABELS[editing.negocioEtapa!]}" en el CRM: los cambios solo modifican este documento (no la venta ni el CRM), y no se puede cambiar el cliente ni el vendedor. Para cambiar una venta ganada, edítala desde el CRM.`
+                  : 'Al guardar, también se actualiza el negocio "Cotizado" del CRM (cliente, evento, fecha, valor y vendedor).'
+                : 'Al guardar, se crea automáticamente un negocio "Cotizado" en el CRM.'}
             </p>
           </div>
           <button
@@ -261,7 +336,8 @@ export function CotizacionesPage() {
                 <select
                   value={form.clienteId}
                   onChange={(e) => setForm({ ...form, clienteId: e.target.value })}
-                  className={inputClass}
+                  disabled={negocioCerrado}
+                  className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                 >
                   <option value="" disabled>
                     Selecciona un cliente…
@@ -284,7 +360,7 @@ export function CotizacionesPage() {
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-medium text-neutral-700">Ítems del menú</h2>
                 <button
-                  onClick={() => setForm({ ...form, items: [...form.items, emptyLinea()] })}
+                  onClick={() => applyItems([...form.items, emptyLinea()])}
                   className="text-sm text-orange-600 hover:underline"
                 >
                   + Agregar ítem
@@ -340,9 +416,7 @@ export function CotizacionesPage() {
                     </div>
                     <div className="col-span-1 text-right">
                       <button
-                        onClick={() =>
-                          setForm({ ...form, items: form.items.filter((_, i) => i !== index) })
-                        }
+                        onClick={() => applyItems(form.items.filter((_, i) => i !== index))}
                         disabled={form.items.length === 1}
                         className="text-neutral-400 hover:text-red-600 disabled:opacity-30"
                       >
@@ -434,6 +508,34 @@ export function CotizacionesPage() {
             </div>
 
             <div className="rounded-lg border bg-white p-4">
+              <div className="mb-1 flex items-center justify-between">
+                <h2 className="text-sm font-medium text-neutral-700">Descripción</h2>
+                <button
+                  onClick={() => {
+                    setDescripcionEditada(false);
+                    setForm({ ...form, descripcion: componerDescripcion(form.items, opcionesMenu) });
+                  }}
+                  className="text-xs text-orange-600 hover:underline"
+                >
+                  Restaurar desde Opciones de Menú
+                </button>
+              </div>
+              <p className="mb-2 text-xs text-neutral-400">
+                Aparece en el PDF. Se llena sola con la descripción de las opciones de menú que elijas;
+                puedes editarla.
+              </p>
+              <textarea
+                value={form.descripcion}
+                onChange={(e) => {
+                  setDescripcionEditada(true);
+                  setForm({ ...form, descripcion: e.target.value });
+                }}
+                rows={4}
+                className={inputClass}
+              />
+            </div>
+
+            <div className="rounded-lg border bg-white p-4">
               <h2 className="mb-3 text-sm font-medium text-neutral-700">Condiciones comerciales</h2>
               <textarea
                 value={form.condicionesComerciales}
@@ -452,7 +554,8 @@ export function CotizacionesPage() {
                   <select
                     value={form.vendedorId}
                     onChange={(e) => setForm({ ...form, vendedorId: e.target.value })}
-                    className={inputClass}
+                    disabled={negocioCerrado}
+                    className={`${inputClass} disabled:bg-neutral-100 disabled:text-neutral-500`}
                   >
                     <option value="" disabled>
                       Selecciona un vendedor…
@@ -534,7 +637,7 @@ export function CotizacionesPage() {
                 disabled={submitting}
                 className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
               >
-                {submitting ? 'Guardando…' : 'Guardar cotización'}
+                {submitting ? 'Guardando…' : editing ? 'Guardar cambios' : 'Guardar cotización'}
               </button>
             </div>
           </div>
@@ -609,7 +712,10 @@ export function CotizacionesPage() {
                   <td className="px-4 py-2">{c.asunto}</td>
                   <td className="px-4 py-2">{c.vendedorNombre}</td>
                   <td className="px-4 py-2 font-medium">{formatCOP(c.totales.total)}</td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="space-x-3 px-4 py-2 text-right">
+                    <button onClick={() => openEditar(c)} className="text-orange-600 hover:underline">
+                      Editar
+                    </button>
                     <button
                       onClick={() => handleDownloadSaved(c)}
                       disabled={downloadingId === c.id}

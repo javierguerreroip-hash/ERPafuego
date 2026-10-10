@@ -27,3 +27,12 @@ export async function createHandler(req: Request, res: Response, next: NextFunct
     next(error);
   }
 }
+
+export async function updateHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const input = cotizacionSchema.parse(req.body);
+    res.json(await cotizacionService.updateCotizacion(req.params.id, input));
+  } catch (error) {
+    next(error);
+  }
+}

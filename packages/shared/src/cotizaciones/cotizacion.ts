@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { EtapaNegocio } from '../crm/negocio.js';
 
 // Módulo — Cotizaciones (post-lanzamiento, 2026-09-10). Genera el
 // documento comercial exportable a PDF con el diseño de la plantilla de
@@ -53,6 +54,9 @@ export const cotizacionSchema = z.object({
   items: z.array(cotizacionLineaSchema).min(1, 'Agrega al menos un ítem'),
   logistica: z.array(cotizacionLineaSchema).default([]),
   taxRateId: z.string().nullable().optional(),
+  // Bloque "DESCRIPCIÓN" del PDF: se precarga con la descripción de las
+  // opciones de menú elegidas (editable).
+  descripcion: z.string().max(3000).default(''),
   condicionesComerciales: z.string().max(2000).default(COTIZACION_CONDICIONES_DEFAULT),
   vendedorId: z.string().min(1, 'Selecciona un vendedor'),
   icono: z.enum(COTIZACION_ICONOS).nullable().optional(),
@@ -85,12 +89,15 @@ export interface CotizacionDTO {
   logistica: CotizacionLineaInput[];
   taxRateId: string | null;
   taxRateNombre: string | null;
+  descripcion: string;
   condicionesComerciales: string;
   vendedorId: string | null;
   vendedorNombre: string;
   icono: CotizacionIcono | null;
   totales: CotizacionTotales;
   negocioId: string | null;
+  // Etapa del negocio del CRM ligado a la cotización (null si no tiene).
+  negocioEtapa: EtapaNegocio | null;
   registeredByName: string;
   createdAt: string;
   updatedAt: string;
