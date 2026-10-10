@@ -165,7 +165,7 @@ export async function updateAgendaEvento(id: string, input: AgendaEventoUpdateIn
 
 export async function listVendedores() {
   return prisma.user.findMany({
-    where: { role: 'VENTAS' },
+    where: { OR: [{ role: 'VENTAS' }, { esVendedor: true }] },
     select: { id: true, name: true },
     orderBy: { name: 'asc' },
   });

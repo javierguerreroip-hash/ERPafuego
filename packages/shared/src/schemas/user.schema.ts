@@ -12,6 +12,8 @@ export const userCreateSchema = z.object({
   email: z.string().email('Correo inválido'),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
   role: z.enum(USER_ROLES),
+  // Aparece en las listas de vendedores aunque su rol no sea Ventas.
+  esVendedor: z.boolean().default(false),
 });
 
 export type UserCreateInput = z.infer<typeof userCreateSchema>;
@@ -19,6 +21,7 @@ export type UserCreateInput = z.infer<typeof userCreateSchema>;
 export const userUpdateSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(200),
   role: z.enum(USER_ROLES),
+  esVendedor: z.boolean().default(false),
 });
 
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
@@ -29,6 +32,7 @@ export interface UserDTO {
   email: string;
   role: (typeof USER_ROLES)[number];
   active: boolean;
+  esVendedor: boolean;
   createdAt: string;
   updatedAt: string;
 }

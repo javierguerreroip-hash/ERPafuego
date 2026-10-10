@@ -50,7 +50,10 @@ function serialize(negocio: NegocioWithRelations) {
 // Administrador o Ventas — Operación y Cocina/Nómina no venden.
 export async function listVendedoresDisponibles() {
   return prisma.user.findMany({
-    where: { active: true, role: { in: ['ADMINISTRADOR', 'VENTAS'] } },
+    where: {
+      active: true,
+      OR: [{ role: { in: ['ADMINISTRADOR', 'VENTAS'] } }, { esVendedor: true }],
+    },
     select: { id: true, name: true },
     orderBy: { name: 'asc' },
   });

@@ -10,14 +10,22 @@ interface CreateForm {
   email: string;
   password: string;
   role: UserRole;
+  esVendedor: boolean;
 }
 
 interface EditForm {
   name: string;
   role: UserRole;
+  esVendedor: boolean;
 }
 
-const EMPTY_CREATE: CreateForm = { name: '', email: '', password: '', role: 'OPERACION' };
+const EMPTY_CREATE: CreateForm = {
+  name: '',
+  email: '',
+  password: '',
+  role: 'OPERACION',
+  esVendedor: false,
+};
 
 export function UsuariosPage() {
   const { token, user: currentUser } = useAuth();
@@ -32,7 +40,11 @@ export function UsuariosPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [editing, setEditing] = useState<UserDTO | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ name: '', role: 'OPERACION' });
+  const [editForm, setEditForm] = useState<EditForm>({
+    name: '',
+    role: 'OPERACION',
+    esVendedor: false,
+  });
   const [editError, setEditError] = useState<string | null>(null);
 
   async function refresh() {
@@ -74,7 +86,7 @@ export function UsuariosPage() {
 
   function openEdit(item: UserDTO) {
     setEditing(item);
-    setEditForm({ name: item.name, role: item.role });
+    setEditForm({ name: item.name, role: item.role, esVendedor: item.esVendedor });
     setEditError(null);
   }
 
@@ -169,7 +181,14 @@ export function UsuariosPage() {
                 <tr key={item.id} className="border-t">
                   <td className="px-4 py-2">{item.name}</td>
                   <td className="px-4 py-2">{item.email}</td>
-                  <td className="px-4 py-2">{USER_ROLE_LABELS[item.role]}</td>
+                  <td className="px-4 py-2">
+                    {USER_ROLE_LABELS[item.role]}
+                    {item.esVendedor && item.role !== 'VENTAS' && (
+                      <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
+                        También vendedor
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-2">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${
@@ -240,6 +259,14 @@ export function UsuariosPage() {
                 ))}
               </select>
             </Field>
+            <label className="flex items-center gap-2 text-sm text-neutral-700">
+              <input
+                type="checkbox"
+                checked={createForm.esVendedor}
+                onChange={(e) => setCreateForm({ ...createForm, esVendedor: e.target.checked })}
+              />
+              Puede ser seleccionado como vendedor
+            </label>
 
             {createError && <p className="text-sm text-red-600">{createError}</p>}
 
@@ -285,6 +312,14 @@ export function UsuariosPage() {
                 ))}
               </select>
             </Field>
+            <label className="flex items-center gap-2 text-sm text-neutral-700">
+              <input
+                type="checkbox"
+                checked={editForm.esVendedor}
+                onChange={(e) => setEditForm({ ...editForm, esVendedor: e.target.checked })}
+              />
+              Puede ser seleccionado como vendedor (Cotizaciones, CRM, Ventas y Agenda)
+            </label>
 
             {editError && <p className="text-sm text-red-600">{editError}</p>}
 

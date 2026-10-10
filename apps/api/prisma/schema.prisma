@@ -55,6 +55,10 @@ model User {
   passwordHash       String
   role               UserRole
   active             Boolean  @default(true)
+  // Permite elegir a este usuario como vendedor (Cotizaciones, CRM, Ventas,
+  // Agenda) aunque su rol no sea Ventas/Administrador — ej. una persona de
+  // Operación que también vende (post-lanzamiento, 2026-10-10).
+  esVendedor         Boolean  @default(false)
   // Notificaciones (post-lanzamiento, 2026-09-23): marca de tiempo hasta
   // donde este usuario ya revisó — no leído/no leído por notificación
   // individual, alcanza con un solo timestamp por usuario y es mucho

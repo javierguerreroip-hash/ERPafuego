@@ -683,6 +683,13 @@ Acceso restringido a los roles Administrador y Operación.
     anteriores no tenían este campo: al editarlas se precarga desde sus
     ítems, y su PDF sigue usando los nombres de los ítems mientras no se
     guarde una descripción.
+- **Usuario que también es vendedor (post-lanzamiento, 2026-10-10):** un
+  usuario puede marcarse "Puede ser seleccionado como vendedor"
+  (`User.esVendedor`, en Usuarios → Editar) sin cambiar su rol — pensado
+  para quien tiene rol Operación (u otro) pero también vende. Aparece
+  en las listas de vendedores de Cotizaciones, CRM, Ventas y Agenda con
+  el nombre que tenga el usuario, y conserva el acceso de su rol (el rol
+  Ventas y Administrador siguen siendo vendedores automáticamente).
 
 ## Eliminar ventas y artículos (post-lanzamiento, 2026-09-10)
 

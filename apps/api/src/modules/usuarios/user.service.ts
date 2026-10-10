@@ -13,6 +13,7 @@ function serialize(user: User) {
     email: user.email,
     role: user.role,
     active: user.active,
+    esVendedor: user.esVendedor,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };
@@ -26,7 +27,13 @@ export async function listUsers() {
 export async function createUser(input: UserCreateInput, userId: string) {
   const passwordHash = await bcrypt.hash(input.password, 10);
   const user = await prisma.user.create({
-    data: { name: input.name, email: input.email, role: input.role, passwordHash },
+    data: {
+      name: input.name,
+      email: input.email,
+      role: input.role,
+      esVendedor: input.esVendedor,
+      passwordHash,
+    },
   });
   // Nunca la contraseña en el detalle del log de auditoría, ni siquiera hasheada.
   await registrarCambio({
@@ -34,7 +41,7 @@ export async function createUser(input: UserCreateInput, userId: string) {
     registroId: user.id,
     registroNombre: `${user.name} (${user.email})`,
     accion: 'CREATE',
-    detalle: { name: input.name, email: input.email, role: input.role },
+    detalle: { name: input.name, email: input.email, role: input.role, esVendedor: input.esVendedor },
     userId,
   });
   return serialize(user);
@@ -44,7 +51,7 @@ export async function updateUser(id: string, input: UserUpdateInput, userId: str
   await findUserOrThrow(id);
   const user = await prisma.user.update({
     where: { id },
-    data: { name: input.name, role: input.role },
+    data: { name: input.name, role: input.role, esVendedor: input.esVendedor },
   });
   await registrarCambio({
     modelo: 'User',
