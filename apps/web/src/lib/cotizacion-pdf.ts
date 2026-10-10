@@ -68,17 +68,31 @@ export async function generateCotizacionPDF(data: CotizacionPdfData): Promise<vo
   let cursorY = margin + 4;
 
   // --- Encabezado: logo + datos del evento ---
+  const headerLabelX = pageW - margin - 80;
+  const headerValueX = pageW - margin - 55;
+
+  // El logo ocupa todo el hueco del encabezado: desde el margen izquierdo
+  // hasta antes de las etiquetas FECHA/ASUNTO/LUGAR/INVITADOS (headerLabelX,
+  // con 8 mm de respiro), y de alto hasta 3 mm antes de la línea que lo
+  // separa del contenido (cursorY + 28). Se escala conservando la
+  // proporción real de la imagen, así que nunca se deforma ni invade nada.
   const logoDataUrl = await urlToDataUrl('/logo-black.png');
   if (logoDataUrl) {
     try {
-      doc.addImage(logoDataUrl, 'PNG', margin, cursorY, 26, 12);
+      const logoBoxX = margin;
+      const logoBoxY = cursorY - 2;
+      const logoBoxW = headerLabelX - 8 - logoBoxX;
+      const logoBoxH = cursorY + 28 - 3 - logoBoxY;
+      const props = doc.getImageProperties(logoDataUrl);
+      const scale = Math.min(logoBoxW / props.width, logoBoxH / props.height);
+      const logoW = props.width * scale;
+      const logoH = props.height * scale;
+      doc.addImage(logoDataUrl, 'PNG', logoBoxX, logoBoxY + (logoBoxH - logoH) / 2, logoW, logoH);
     } catch {
       // si la imagen no carga, seguimos sin logo — nunca bloquea el PDF
     }
   }
 
-  const headerLabelX = pageW - margin - 80;
-  const headerValueX = pageW - margin - 55;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLOR_ORANGE);
