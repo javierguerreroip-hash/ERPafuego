@@ -6,6 +6,7 @@ import {
   calcularSubtotalConsumo,
   calcularUtilidadOperacional,
   calcularValorDespuesImpuestos,
+  elegirCostoUnitario,
 } from './evento.calculations.js';
 
 describe('calcularCostoTotal', () => {
@@ -105,5 +106,37 @@ describe('calcularCostoUnitarioPromedio', () => {
 
   it('usa el costo del inventario inicial tal cual si el artículo nunca tuvo compras (no promedia con $0)', () => {
     expect(calcularCostoUnitarioPromedio(0, 396000)).toBe(396000);
+  });
+});
+
+describe('elegirCostoUnitario', () => {
+  it('ignora un inventario reciente con costo $0 y usa el último que sí tiene costo', () => {
+    expect(
+      elegirCostoUnitario({ lastPurchasePrice: 0, costosInventario: [0, 0, 48990], costosConsumo: [] }),
+    ).toBe(48990);
+  });
+
+  it('promedia la compra con el inventario más reciente que tenga costo', () => {
+    expect(
+      elegirCostoUnitario({ lastPurchasePrice: 10000, costosInventario: [0, 12000], costosConsumo: [] }),
+    ).toBe(11000);
+  });
+
+  it('sin compras ni inventario con costo, usa el último costo con que se cargó un consumo', () => {
+    expect(
+      elegirCostoUnitario({ lastPurchasePrice: 0, costosInventario: [0], costosConsumo: [48990, 40000] }),
+    ).toBe(48990);
+  });
+
+  it('devuelve 0 solo cuando no hay ningún dato de costo', () => {
+    expect(
+      elegirCostoUnitario({ lastPurchasePrice: 0, costosInventario: [], costosConsumo: [] }),
+    ).toBe(0);
+  });
+
+  it('con compra y sin inventario usa solo el precio de compra', () => {
+    expect(
+      elegirCostoUnitario({ lastPurchasePrice: 9000, costosInventario: [0], costosConsumo: [5000] }),
+    ).toBe(9000);
   });
 });

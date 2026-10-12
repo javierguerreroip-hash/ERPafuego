@@ -6,7 +6,7 @@ import {
 } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
-import { calcularCostoUnitarioPromedio } from '../eventos/evento.calculations.js';
+import { costoUnitarioDeArticulo } from '../../lib/costo-unitario.js';
 import {
   calcularDesviacionInventario,
   calcularInventarioFinal,
@@ -185,7 +185,13 @@ export async function setInventarioInicial(input: InventarioInicialInput, regist
     throw new HttpError(404, 'Artículo no encontrado');
   }
 
-  const unitCost = input.unitCost ?? Number(articulo.lastPurchasePrice);
+  // Sin costo digitado: el último precio de compra y, si nunca se compró,
+  // el último dato de costo registrado (nunca $0 si existe alguno).
+  const unitCost =
+    input.unitCost ??
+    (Number(articulo.lastPurchasePrice) > 0
+      ? Number(articulo.lastPurchasePrice)
+      : await costoUnitarioDeArticulo(articulo));
   const value = round2(input.quantity * unitCost);
   // UTC explícito (ver comentario en inventario.controller.ts): debe
   // coincidir exactamente con cómo el reporte busca por fecha de inicio.
@@ -249,14 +255,7 @@ export async function setInventarioFinalFisico(
   // $97.980, solo porque el artículo nunca se había comprado).
   let unitCost = input.unitCost;
   if (unitCost === undefined) {
-    const ultimoInventario = await prisma.inventarioInicial.findFirst({
-      where: { articuloId: input.articuloId },
-      orderBy: { fecha: 'desc' },
-    });
-    unitCost = calcularCostoUnitarioPromedio(
-      Number(articulo.lastPurchasePrice),
-      ultimoInventario ? Number(ultimoInventario.unitCost) : null,
-    );
+    unitCost = await costoUnitarioDeArticulo(articulo);
   }
   const value = round2(input.quantity * unitCost);
 

@@ -70,3 +70,26 @@ export function calcularCostoUnitarioPromedio(
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
+
+// Costo unitario de un artículo cuando se carga un consumo, un conteo o un
+// inventario inicial sin costo (post-lanzamiento, 2026-10-12): nunca debe
+// quedar en $0 si existe CUALQUIER dato de costo registrado. Orden:
+//  1. Último precio de compra, promediado con el costo del inventario más
+//     reciente QUE TENGA COSTO (un registro de inventario con costo $0 se
+//     ignora en vez de tomarse como "el más reciente") — misma regla de
+//     calcularCostoUnitarioPromedio.
+//  2. Si nada de eso tiene costo, el último costo unitario con el que ya se
+//     cargó un consumo de ese artículo en algún evento.
+//  3. $0 solo si de verdad no hay ningún dato.
+// `costosInventario` y `costosConsumo` deben venir del más reciente al más
+// antiguo.
+export function elegirCostoUnitario(fuentes: {
+  lastPurchasePrice: number;
+  costosInventario: number[];
+  costosConsumo: number[];
+}): number {
+  const costoInventario = fuentes.costosInventario.find((c) => c > 0) ?? null;
+  const base = calcularCostoUnitarioPromedio(fuentes.lastPurchasePrice, costoInventario);
+  if (base > 0) return base;
+  return round2(fuentes.costosConsumo.find((c) => c > 0) ?? 0);
+}

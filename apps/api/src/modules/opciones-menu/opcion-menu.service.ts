@@ -8,10 +8,8 @@ import type {
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import { registrarCambio } from '../auditoria/auditoria.service.js';
-import {
-  calcularCostoPorcentaje,
-  calcularCostoUnitarioPromedio,
-} from '../eventos/evento.calculations.js';
+import { costosUnitariosPorArticulo } from '../../lib/costo-unitario.js';
+import { calcularCostoPorcentaje } from '../eventos/evento.calculations.js';
 import { calcularCostoMenu, sugerirIngredientes } from './opcion-menu.calculations.js';
 
 interface CostoMenu {
@@ -36,34 +34,6 @@ function serialize(opcion: OpcionMenu, costoMenu?: CostoMenu) {
     createdAt: opcion.createdAt.toISOString(),
     updatedAt: opcion.updatedAt.toISOString(),
   };
-}
-
-// Costo unitario de cada artículo con el MISMO patrón que usa un consumo de
-// evento (evento.service.ts → addConsumo): promedio entre el último precio
-// de compra y el costo del inventario inicial más reciente.
-async function costosUnitariosPorArticulo(
-  articulos: { id: string; lastPurchasePrice: { toString(): string } }[],
-) {
-  const ids = articulos.map((a) => a.id);
-  const inventarios = ids.length
-    ? await prisma.inventarioInicial.findMany({
-        where: { articuloId: { in: ids } },
-        orderBy: { fecha: 'desc' },
-        select: { articuloId: true, unitCost: true },
-      })
-    : [];
-  const ultimoInventario = new Map<string, number>();
-  for (const inv of inventarios) {
-    if (!ultimoInventario.has(inv.articuloId)) {
-      ultimoInventario.set(inv.articuloId, Number(inv.unitCost));
-    }
-  }
-  return new Map(
-    articulos.map((a) => [
-      a.id,
-      calcularCostoUnitarioPromedio(Number(a.lastPurchasePrice), ultimoInventario.get(a.id) ?? null),
-    ]),
-  );
 }
 
 async function costosPorMenu(menuIds: string[]) {

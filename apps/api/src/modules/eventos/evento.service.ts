@@ -1,11 +1,11 @@
 import type { Prisma } from '@prisma/client';
 import { CATEGORIAS_MONITOREO, type EventoConsumoInput, type EventoInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
+import { costoUnitarioDeArticulo } from '../../lib/costo-unitario.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import {
   calcularCostoPorcentaje,
   calcularCostoTotal,
-  calcularCostoUnitarioPromedio,
   calcularSubtotalConsumo,
   calcularUtilidadOperacional,
   calcularValorDespuesImpuestos,
@@ -213,17 +213,12 @@ export async function addConsumo(eventoId: string, input: EventoConsumoInput) {
     );
   }
 
-  // Costo del consumo = promedio entre el último precio de compra y el
-  // costo del inventario inicial más reciente ingresado para el artículo
-  // (pedido por el negocio, ver evento.calculations.ts).
-  const ultimoInventario = await prisma.inventarioInicial.findFirst({
-    where: { articuloId: input.articuloId },
-    orderBy: { fecha: 'desc' },
-  });
-  const unitCost = calcularCostoUnitarioPromedio(
-    Number(articulo.lastPurchasePrice),
-    ultimoInventario ? Number(ultimoInventario.unitCost) : null,
-  );
+  // Costo del consumo (pedido por el negocio, ver elegirCostoUnitario en
+  // evento.calculations.ts): promedio entre el último precio de compra y el
+  // costo del inventario más reciente que tenga costo; si no hay ninguno,
+  // el último costo con el que ya se cargó este artículo — nunca $0 si hay
+  // algún dato registrado.
+  const unitCost = await costoUnitarioDeArticulo(articulo);
   const subtotal = calcularSubtotalConsumo(input.quantity, unitCost);
 
   const consumo = await prisma.eventoConsumo.create({

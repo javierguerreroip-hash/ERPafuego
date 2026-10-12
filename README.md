@@ -214,6 +214,20 @@ Acceso restringido a los roles Administrador y Operación.
     fórmula ya arreglada para el costo de consumo de un evento, ver
     Módulo 3): sin compras, usa el costo del inventario inicial tal cual
     en vez de asumir $0.
+  - **El costo nunca debe quedar en $0 si hay algún dato (post-
+    lanzamiento, 2026-10-12):** la regla anterior tomaba el inventario
+    inicial MÁS RECIENTE aunque su costo fuera $0 (p. ej. uno creado sin
+    costo para un artículo nunca comprado), y el inicial sin costo usaba
+    solo el último precio de compra ($0 si nunca se compró). Ahora una
+    sola regla (`elegirCostoUnitario` + `lib/costo-unitario.ts`) sirve a
+    los consumos de evento, el conteo físico, el inventario inicial sin
+    costo y el costo de los menús: (1) último precio de compra promediado
+    con el costo del inventario más reciente QUE TENGA COSTO (se ignoran
+    los registros con $0; inicial primero, luego conteos físicos); (2) si
+    no hay nada, el último costo con el que ya se cargó un consumo de ese
+    artículo; (3) $0 solo si no existe ningún dato. Los registros ya
+    guardados con $0 no cambian solos: se corrigen quitando y volviendo a
+    agregar el consumo, o volviendo a guardar el inventario sin costo.
   - **Cierre de un mes = apertura del siguiente (post-lanzamiento,
     2026-10-05):** cuando se guarda un inventario final físico cuya fecha
     es el ÚLTIMO día de un mes (en el modal de uno por uno y también en
