@@ -344,6 +344,8 @@ export function ComprasPage() {
               <div className="space-y-2">
                 {items.map((item, index) => {
                   const subtotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+                  const articuloSeleccionado = activeArticulos.find((a) => a.id === item.articuloId);
+                  const unidad = articuloSeleccionado?.unit;
                   const articulosDeCategoria = item.category
                     ? activeArticulos.filter((a) => a.category === item.category)
                     : activeArticulos;
@@ -378,7 +380,7 @@ export function ComprasPage() {
                           <option value="">Artículo…</option>
                           {articulosDeCategoria.map((a) => (
                             <option key={a.id} value={a.id}>
-                              {a.name} ({a.code})
+                              {a.name} ({a.code}) — {a.unit}
                             </option>
                           ))}
                         </select>
@@ -386,7 +388,7 @@ export function ComprasPage() {
                           type="number"
                           min={0}
                           step="any"
-                          placeholder="Cantidad"
+                          placeholder={unidad ? `Cantidad (${unidad})` : 'Cantidad'}
                           value={item.quantity}
                           onChange={(e) => updateItem(index, { quantity: e.target.value })}
                           className={`${inputClass} col-span-2`}
@@ -395,7 +397,7 @@ export function ComprasPage() {
                           type="number"
                           min={0}
                           step="any"
-                          placeholder="Precio unitario"
+                          placeholder={unidad ? `Precio por ${unidad}` : 'Precio unitario'}
                           value={item.unitPrice}
                           onChange={(e) => updateItem(index, { unitPrice: e.target.value })}
                           className={`${inputClass} col-span-2`}
@@ -409,9 +411,19 @@ export function ComprasPage() {
                           ✕
                         </button>
                       </div>
-                      <p className="mt-1 text-right text-xs text-neutral-500">
-                        Subtotal: {formatCOP(subtotal)}
-                      </p>
+                      <div className="mt-1 flex items-center justify-between text-xs text-neutral-500">
+                        <span>
+                          {unidad ? (
+                            <>
+                              Unidad de medida: <span className="font-medium text-neutral-700">{unidad}</span>{' '}
+                              — la cantidad y el precio unitario son por {unidad}.
+                            </>
+                          ) : (
+                            'Selecciona un artículo para ver su unidad de medida.'
+                          )}
+                        </span>
+                        <span>Subtotal: {formatCOP(subtotal)}</span>
+                      </div>
                     </div>
                   );
                 })}
