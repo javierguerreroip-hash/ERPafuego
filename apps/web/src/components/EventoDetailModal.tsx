@@ -62,6 +62,9 @@ export function EventoDetailModal({
     (a) => a.active && !CATEGORIAS_MONITOREO.includes(a.category),
   );
 
+  const articuloNuevo = activeArticulos.find((a) => a.id === newArticuloId);
+  const unidadNueva = articuloNuevo?.unit;
+
   async function handleAddConsumo() {
     setAddError(null);
     const quantity = Number(newQuantity);
@@ -251,7 +254,7 @@ export function EventoDetailModal({
                     <option value="">Artículo…</option>
                     {activeArticulos.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.name} ({a.code})
+                        {a.name} ({a.code}) — {a.unit}
                       </option>
                     ))}
                   </select>
@@ -259,7 +262,7 @@ export function EventoDetailModal({
                     type="number"
                     min={0}
                     step="any"
-                    placeholder="Cantidad"
+                    placeholder={unidadNueva ? `Cantidad (${unidadNueva})` : 'Cantidad'}
                     value={newQuantity}
                     onChange={(e) => setNewQuantity(e.target.value)}
                     className={`${inputClass} col-span-3`}
@@ -272,6 +275,17 @@ export function EventoDetailModal({
                     Agregar
                   </button>
                 </div>
+                <p className="mt-1 text-xs text-neutral-500">
+                  {unidadNueva ? (
+                    <>
+                      Unidad de medida:{' '}
+                      <span className="font-medium text-neutral-700">{unidadNueva}</span> — la cantidad
+                      se registra en {unidadNueva}.
+                    </>
+                  ) : (
+                    'Selecciona un artículo para ver su unidad de medida.'
+                  )}
+                </p>
                 {addError && <p className="mt-1 text-sm text-red-600">{addError}</p>}
               </>
             )}
