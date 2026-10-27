@@ -163,6 +163,24 @@ Acceso restringido a los roles Administrador y Operación.
   `valorDespuesImpuestos` con la tasa elegida. En eventos creados antes
   de exigir vendedor (anteriores al 2026-09-22, con `vendedorId: null`),
   el selector obliga a elegir uno antes de poder guardar la edición.
+- **Varias opciones de menú por venta (post-lanzamiento, 2026-10-27):**
+  un evento puede llevar varias opciones (ej. Chuzo de Res + Paella),
+  cada una con su propio número de personas (`EventoOpcionMenu`). En
+  "Nuevo/Editar evento" hay "+ Agregar otra opción de menú"; con una
+  sola opción, sus personas son las del evento, y con varias aparece un
+  campo de personas junto a cada una (no se obliga a que sumen el total,
+  porque un invitado puede comer dos opciones). La primera opción es la
+  **principal** (`Evento.opcionMenuId`, se conserva para no romper lo que
+  ya la leía); Agenda, Cartera y las tablas de Ventas muestran los
+  nombres de todas unidas con " + ". El **valor antes de impuestos sigue
+  digitándose a mano** como total de la venta (no se suma de los precios
+  de lista). En el **ranking de opciones vendidas**, cada opción de un
+  evento cuenta como 1 unidad vendida y suma las personas de SU línea; el
+  "total de personas atendidas" sigue siendo la suma de personas de los
+  eventos (sin duplicar). La migración crea una línea por cada evento
+  existente con su opción y personas actuales. Ganar un negocio desde el
+  CRM sigue pidiendo una sola opción; para agregar más se edita la venta
+  en Ventas y Costos.
 
 ## Módulo 4 — Inventario en tiempo real (Fase 4)
 

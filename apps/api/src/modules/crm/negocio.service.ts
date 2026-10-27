@@ -271,6 +271,9 @@ export async function ganarNegocio(id: string, input: GanarNegocioInput, registe
         fecha: negocio.fechaEvento,
         clienteId: cliente.id,
         opcionMenuId: input.opcionMenuId,
+        opciones: {
+          create: [{ opcionMenuId: input.opcionMenuId, numeroPersonas: input.numeroPersonas }],
+        },
         numeroPersonas: input.numeroPersonas,
         valorAntesImpuestos,
         taxRateId: input.taxRateId ?? null,

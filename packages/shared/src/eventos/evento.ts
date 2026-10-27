@@ -8,10 +8,25 @@ import { z } from 'zod';
 // (parámetro configurable). La utilidad operacional se calcula sobre el
 // valor ANTES de impuestos (el IVA/impoconsumo cobrado no es ingreso real
 // de la empresa).
+// Opciones de menú de la venta (post-lanzamiento, 2026-10-27): un evento
+// puede llevar varias, cada una con su propio número de personas/unidades.
+// La primera es la opción "principal".
+export const eventoOpcionSchema = z.object({
+  opcionMenuId: z.string().min(1, 'Selecciona una opción de menú'),
+  numeroPersonas: z.number().int().positive('Las personas de cada opción deben ser mayor a 0'),
+});
+
+export type EventoOpcionInput = z.infer<typeof eventoOpcionSchema>;
+
 export const eventoSchema = z.object({
   fecha: z.string().min(1, 'La fecha es requerida'),
   clienteId: z.string().min(1, 'Selecciona un cliente'),
-  opcionMenuId: z.string().min(1, 'Selecciona una opción de menú'),
+  opciones: z
+    .array(eventoOpcionSchema)
+    .min(1, 'Agrega al menos una opción de menú')
+    .refine((ops) => new Set(ops.map((o) => o.opcionMenuId)).size === ops.length, {
+      message: 'Hay una opción de menú repetida',
+    }),
   numeroPersonas: z.number().int().positive('El número de personas debe ser mayor a 0'),
   valorAntesImpuestos: z.number().nonnegative('El valor no puede ser negativo'),
   taxRateId: z.string().nullable().optional(),
@@ -20,13 +35,22 @@ export const eventoSchema = z.object({
 
 export type EventoInput = z.infer<typeof eventoSchema>;
 
+export interface EventoOpcionDTO {
+  opcionMenuId: string;
+  opcionMenuNombre: string;
+  numeroPersonas: number;
+}
+
 export interface EventoDTO {
   id: string;
   fecha: string;
   clienteId: string;
   clienteNombre: string;
+  // Opción principal (la primera) y, en opcionMenuNombre, los nombres de
+  // TODAS las opciones unidos con " + " para mostrarlos en tablas.
   opcionMenuId: string;
   opcionMenuNombre: string;
+  opciones: EventoOpcionDTO[];
   numeroPersonas: number;
   valorAntesImpuestos: number;
   valorDespuesImpuestos: number;

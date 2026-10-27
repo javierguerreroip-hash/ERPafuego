@@ -23,7 +23,7 @@ function emptyForm(): EventoInput {
   return {
     fecha: new Date().toISOString().slice(0, 10),
     clienteId: '',
-    opcionMenuId: '',
+    opciones: [{ opcionMenuId: '', numeroPersonas: 1 }],
     numeroPersonas: 1,
     valorAntesImpuestos: 0,
     taxRateId: null,
@@ -137,7 +137,12 @@ export function EventosPage() {
     setForm({
       fecha: evento.fecha.slice(0, 10),
       clienteId: evento.clienteId,
-      opcionMenuId: evento.opcionMenuId,
+      opciones: evento.opciones.length
+        ? evento.opciones.map((o) => ({
+            opcionMenuId: o.opcionMenuId,
+            numeroPersonas: o.numeroPersonas,
+          }))
+        : [{ opcionMenuId: evento.opcionMenuId, numeroPersonas: evento.numeroPersonas }],
       numeroPersonas: evento.numeroPersonas,
       valorAntesImpuestos: evento.valorAntesImpuestos,
       taxRateId: evento.taxRateId,
@@ -152,7 +157,15 @@ export function EventosPage() {
 
   async function handleSubmit() {
     setFormError(null);
-    const parsed = eventoSchema.safeParse(form);
+    // Con una sola opción, sus personas son siempre las del evento.
+    const payload: EventoInput = {
+      ...form,
+      opciones:
+        form.opciones.length === 1
+          ? [{ ...form.opciones[0], numeroPersonas: form.numeroPersonas }]
+          : form.opciones,
+    };
+    const parsed = eventoSchema.safeParse(payload);
     if (!parsed.success) {
       setFormError(parsed.error.issues[0]?.message ?? 'Datos inválidos');
       return;
@@ -384,19 +397,92 @@ export function EventosPage() {
                 ))}
               </select>
             </Field>
-            <Field label="Opción de menú vendida">
-              <select
-                value={form.opcionMenuId}
-                onChange={(e) => setForm({ ...form, opcionMenuId: e.target.value })}
-                className={inputClass}
-              >
-                <option value="">Selecciona…</option>
-                {activeOpciones.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name} ({formatCOP(o.price)})
-                  </option>
+            <Field label="Opciones de menú vendidas">
+              <div className="space-y-2">
+                {form.opciones.map((opcion, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <select
+                      value={opcion.opcionMenuId}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          opciones: form.opciones.map((o, i) =>
+                            i === index ? { ...o, opcionMenuId: e.target.value } : o,
+                          ),
+                        })
+                      }
+                      className={inputClass}
+                    >
+                      <option value="">Selecciona…</option>
+                      {activeOpciones.map((o) => (
+                        <option
+                          key={o.id}
+                          value={o.id}
+                          disabled={
+                            o.id !== opcion.opcionMenuId &&
+                            form.opciones.some((x) => x.opcionMenuId === o.id)
+                          }
+                        >
+                          {o.name} ({formatCOP(o.price)})
+                        </option>
+                      ))}
+                    </select>
+                    {form.opciones.length > 1 && (
+                      <input
+                        type="number"
+                        min={1}
+                        value={opcion.numeroPersonas}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            opciones: form.opciones.map((o, i) =>
+                              i === index ? { ...o, numeroPersonas: Number(e.target.value) } : o,
+                            ),
+                          })
+                        }
+                        title="Personas de esta opción"
+                        className={`${inputClass} w-24`}
+                      />
+                    )}
+                    {form.opciones.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            opciones: form.opciones.filter((_, i) => i !== index),
+                          })
+                        }
+                        className="text-neutral-400 hover:text-red-600"
+                        aria-label="Quitar opción"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 ))}
-              </select>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setForm({
+                    ...form,
+                    opciones: [
+                      ...form.opciones,
+                      { opcionMenuId: '', numeroPersonas: form.numeroPersonas },
+                    ],
+                  })
+                }
+                className="mt-2 text-sm text-orange-600 hover:underline"
+              >
+                + Agregar otra opción de menú
+              </button>
+              {form.opciones.length > 1 && (
+                <p className="mt-1 text-xs text-neutral-400">
+                  Indica a cuántas personas corresponde cada opción (el campo junto a cada una). El
+                  valor antes de impuestos sigue siendo el total de la venta.
+                </p>
+              )}
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Valor antes de impuestos">

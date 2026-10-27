@@ -1,4 +1,5 @@
 import type { Abono, User } from '@prisma/client';
+import { nombreOpcionesEvento } from '../eventos/evento-opciones.js';
 import type { AbonoInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
@@ -32,6 +33,7 @@ export async function listCxC(filters: {
     include: {
       cliente: true,
       opcionMenu: true,
+      opciones: { include: { opcionMenu: true } },
       agenda: true,
       abonos: { include: { registeredBy: true }, orderBy: { fecha: 'desc' } },
     },
@@ -48,7 +50,7 @@ export async function listCxC(filters: {
     return {
       eventoId: evento.id,
       clienteNombre: evento.cliente.name,
-      opcionMenuNombre: evento.opcionMenu.name,
+      opcionMenuNombre: nombreOpcionesEvento(evento),
       fechaEvento: evento.fecha.toISOString(),
       valorTotalFacturado,
       anticipo,

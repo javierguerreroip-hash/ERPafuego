@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import type { AgendaEventoInput, AgendaEventoUpdateInput } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { nombreOpcionesEvento } from '../eventos/evento-opciones.js';
 import { calcularEstadoAnticipo, calcularSaldoPendiente } from './agenda.calculations.js';
 import { crearNotificacion } from '../notificaciones/notificacion.service.js';
 
@@ -18,7 +19,7 @@ function formatFechaCorta(fecha: Date): string {
 }
 
 const includeRelations = {
-  evento: { include: { cliente: true, opcionMenu: true } },
+  evento: { include: { cliente: true, opcionMenu: true, opciones: { include: { opcionMenu: true } } } },
   vendedor: true,
 } satisfies Prisma.AgendaEventoInclude;
 
@@ -33,7 +34,7 @@ function serialize(agenda: AgendaEventoWithRelations) {
     eventoId: agenda.eventoId,
     fecha: agenda.evento.fecha.toISOString(),
     clienteNombre: agenda.evento.cliente.name,
-    opcionMenuNombre: agenda.evento.opcionMenu.name,
+    opcionMenuNombre: nombreOpcionesEvento(agenda.evento),
     numeroPersonas: agenda.evento.numeroPersonas,
     valorAntesImpuestos,
     personaContacto: agenda.personaContacto,
@@ -78,14 +79,19 @@ export async function listAgenda(filters: {
 export async function listEventosDisponibles() {
   const eventos = await prisma.evento.findMany({
     where: { agenda: null },
-    include: { cliente: true, opcionMenu: true, vendedor: true },
+    include: {
+      cliente: true,
+      opcionMenu: true,
+      opciones: { include: { opcionMenu: true } },
+      vendedor: true,
+    },
     orderBy: { fecha: 'desc' },
   });
   return eventos.map((e) => ({
     id: e.id,
     fecha: e.fecha.toISOString(),
     clienteNombre: e.cliente.name,
-    opcionMenuNombre: e.opcionMenu.name,
+    opcionMenuNombre: nombreOpcionesEvento(e),
     numeroPersonas: e.numeroPersonas,
     valorAntesImpuestos: Number(e.valorAntesImpuestos),
     vendedorId: e.vendedorId,

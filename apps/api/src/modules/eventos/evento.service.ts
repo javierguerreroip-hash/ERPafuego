@@ -3,6 +3,7 @@ import { CATEGORIAS_MONITOREO, type EventoConsumoInput, type EventoInput } from 
 import { prisma } from '../../lib/prisma.js';
 import { costoUnitarioDeArticulo } from '../../lib/costo-unitario.js';
 import { HttpError } from '../../middleware/error.middleware.js';
+import { nombreOpcionesEvento, opcionesOrdenadas } from './evento-opciones.js';
 import {
   calcularCostoPorcentaje,
   calcularCostoTotal,
@@ -14,6 +15,7 @@ import {
 const includeSummary = {
   cliente: true,
   opcionMenu: true,
+  opciones: { include: { opcionMenu: true }, orderBy: { createdAt: 'asc' as const } },
   taxRate: true,
   vendedor: true,
   registeredBy: true,
@@ -42,7 +44,12 @@ function serializeSummary(evento: EventoWithSummary) {
     clienteId: evento.clienteId,
     clienteNombre: evento.cliente.name,
     opcionMenuId: evento.opcionMenuId,
-    opcionMenuNombre: evento.opcionMenu.name,
+    opcionMenuNombre: nombreOpcionesEvento(evento),
+    opciones: opcionesOrdenadas(evento).map((o) => ({
+      opcionMenuId: o.opcionMenuId,
+      opcionMenuNombre: o.opcionMenu.name,
+      numeroPersonas: o.numeroPersonas,
+    })),
     numeroPersonas: evento.numeroPersonas,
     valorAntesImpuestos,
     valorDespuesImpuestos: Number(evento.valorDespuesImpuestos),
@@ -129,10 +136,7 @@ export async function createEvento(input: EventoInput, registeredById: string) {
   if (!cliente) {
     throw new HttpError(404, 'Cliente no encontrado');
   }
-  const opcionMenu = await prisma.opcionMenu.findUnique({ where: { id: input.opcionMenuId } });
-  if (!opcionMenu) {
-    throw new HttpError(404, 'Opción de menú no encontrada');
-  }
+  await assertOpcionesExisten(input.opciones.map((o) => o.opcionMenuId));
   const vendedor = await findVendedorOrThrow(input.vendedorId);
 
   const { valorDespuesImpuestos, taxRateId } = await resolveValorDespuesImpuestos(
@@ -144,7 +148,9 @@ export async function createEvento(input: EventoInput, registeredById: string) {
     data: {
       fecha: new Date(input.fecha),
       clienteId: input.clienteId,
-      opcionMenuId: input.opcionMenuId,
+      // La primera opción es la principal.
+      opcionMenuId: input.opciones[0].opcionMenuId,
+      opciones: { create: input.opciones },
       numeroPersonas: input.numeroPersonas,
       valorAntesImpuestos: input.valorAntesImpuestos,
       taxRateId,
@@ -164,10 +170,7 @@ export async function updateEvento(id: string, input: EventoInput) {
   if (!cliente) {
     throw new HttpError(404, 'Cliente no encontrado');
   }
-  const opcionMenu = await prisma.opcionMenu.findUnique({ where: { id: input.opcionMenuId } });
-  if (!opcionMenu) {
-    throw new HttpError(404, 'Opción de menú no encontrada');
-  }
+  await assertOpcionesExisten(input.opciones.map((o) => o.opcionMenuId));
   const vendedor = await findVendedorOrThrow(input.vendedorId);
 
   const { valorDespuesImpuestos, taxRateId } = await resolveValorDespuesImpuestos(
@@ -175,20 +178,31 @@ export async function updateEvento(id: string, input: EventoInput) {
     input.taxRateId,
   );
 
-  const evento = await prisma.evento.update({
-    where: { id },
-    data: {
-      fecha: new Date(input.fecha),
-      clienteId: input.clienteId,
-      opcionMenuId: input.opcionMenuId,
-      numeroPersonas: input.numeroPersonas,
-      valorAntesImpuestos: input.valorAntesImpuestos,
-      taxRateId,
-      valorDespuesImpuestos,
-      vendedorId: vendedor.id,
+  // Las opciones de menú se reemplazan completas (deleteMany + createMany)
+  // en la misma transacción que la actualización del evento.
+  const evento = await prisma.$transaction(
+    async (tx) => {
+      await tx.eventoOpcionMenu.deleteMany({ where: { eventoId: id } });
+      await tx.eventoOpcionMenu.createMany({
+        data: input.opciones.map((o) => ({ eventoId: id, ...o })),
+      });
+      return tx.evento.update({
+        where: { id },
+        data: {
+          fecha: new Date(input.fecha),
+          clienteId: input.clienteId,
+          opcionMenuId: input.opciones[0].opcionMenuId,
+          numeroPersonas: input.numeroPersonas,
+          valorAntesImpuestos: input.valorAntesImpuestos,
+          taxRateId,
+          valorDespuesImpuestos,
+          vendedorId: vendedor.id,
+        },
+        include: includeSummary,
+      });
     },
-    include: includeSummary,
-  });
+    { timeout: 20000 },
+  );
 
   // Trazabilidad: si cambia el vendedor de la venta, la Agenda lo sigue.
   // updateMany porque la venta puede no tener registro de Agenda.
@@ -285,16 +299,20 @@ export async function deleteEvento(id: string) {
   });
 }
 
-// Ranking de opciones de menú vendidas: un evento = una unidad vendida
-// de la opción elegida, agrupado por opcionMenuId dentro del período
-// (mismo criterio de fecha que el resto del ERP), de mayor a menor.
+// Ranking de opciones de menú vendidas: cada línea de opción de un evento
+// cuenta como una unidad vendida de esa opción (un evento con 2 opciones suma
+// 1 a cada una), con las personas de ESA línea. El total de personas
+// atendidas sigue siendo la suma de personas de los eventos (no de las líneas,
+// para no duplicar a quien come dos opciones). Mismo criterio de fecha que el
+// resto del ERP, de mayor a menor.
 export async function getRankingOpciones(start: Date, end: Date) {
   const eventos = await prisma.evento.findMany({
     where: { fecha: { gte: start, lte: end } },
     select: {
-      opcionMenuId: true,
       numeroPersonas: true,
+      opcionMenuId: true,
       opcionMenu: { select: { name: true } },
+      opciones: { select: { opcionMenuId: true, numeroPersonas: true, opcionMenu: { select: { name: true } } } },
     },
   });
 
@@ -303,14 +321,22 @@ export async function getRankingOpciones(start: Date, end: Date) {
     { opcionMenuNombre: string; unidadesVendidas: number; personasAtendidas: number }
   >();
   for (const evento of eventos) {
-    const actual = porOpcion.get(evento.opcionMenuId) ?? {
-      opcionMenuNombre: evento.opcionMenu.name,
-      unidadesVendidas: 0,
-      personasAtendidas: 0,
-    };
-    actual.unidadesVendidas += 1;
-    actual.personasAtendidas += evento.numeroPersonas;
-    porOpcion.set(evento.opcionMenuId, actual);
+    // Eventos sin líneas (no debería pasar tras la migración): se cuenta la
+    // opción principal con las personas del evento.
+    const lineas =
+      evento.opciones.length > 0
+        ? evento.opciones
+        : [{ opcionMenuId: evento.opcionMenuId, numeroPersonas: evento.numeroPersonas, opcionMenu: evento.opcionMenu }];
+    for (const linea of lineas) {
+      const actual = porOpcion.get(linea.opcionMenuId) ?? {
+        opcionMenuNombre: linea.opcionMenu.name,
+        unidadesVendidas: 0,
+        personasAtendidas: 0,
+      };
+      actual.unidadesVendidas += 1;
+      actual.personasAtendidas += linea.numeroPersonas;
+      porOpcion.set(linea.opcionMenuId, actual);
+    }
   }
 
   const ranking = Array.from(porOpcion.entries())
@@ -325,6 +351,14 @@ export async function getRankingOpciones(start: Date, end: Date) {
     totalPersonasAtendidas,
     ranking,
   };
+}
+
+async function assertOpcionesExisten(ids: string[]) {
+  const unicos = [...new Set(ids)];
+  const encontradas = await prisma.opcionMenu.count({ where: { id: { in: unicos } } });
+  if (encontradas !== unicos.length) {
+    throw new HttpError(404, 'Opción de menú no encontrada');
+  }
 }
 
 async function findEventoOrThrow(id: string) {
