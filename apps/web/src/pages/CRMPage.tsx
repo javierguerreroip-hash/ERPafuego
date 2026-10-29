@@ -251,11 +251,12 @@ export function CRMPage() {
         />
       </div>
 
+      <PeriodPickerControls filter={resumenFilter} />
+
       <div className="mb-4 rounded-lg border bg-white p-4">
         <h2 className="mb-3 text-sm font-medium text-neutral-700">
           Resumen comercial — Cotizado, Ganado y Perdido
         </h2>
-        <PeriodPickerControls filter={resumenFilter} />
 
         {resumenLoading || !resumen ? (
           <p className="py-6 text-center text-sm text-neutral-400">Cargando…</p>
@@ -324,6 +325,10 @@ export function CRMPage() {
             const q = search.trim().toLowerCase();
             const items = negocios.filter((n) => {
               if (n.etapa !== etapa) return false;
+              // El mismo período del resumen filtra las columnas, por la fecha
+              // del evento (antes mostraban negocios de todos los meses).
+              const dia = n.fechaEvento.slice(0, 10);
+              if (dia < resumenStart || dia > resumenEnd) return false;
               if (!q) return true;
               return (
                 n.clienteNombre.toLowerCase().includes(q) ||
@@ -339,7 +344,7 @@ export function CRMPage() {
                 <div className="space-y-2">
                   {items.length === 0 && (
                     <p className="text-xs text-neutral-400">
-                      {q ? 'Ninguno coincide con la búsqueda.' : 'Sin negocios en esta etapa.'}
+                      {q ? 'Ninguno coincide con la búsqueda.' : 'Sin negocios en esta etapa en el período.'}
                     </p>
                   )}
                   {items.map((n) => (
