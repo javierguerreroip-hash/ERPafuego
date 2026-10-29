@@ -35,7 +35,7 @@ export const COTIZACION_ICONO_LABELS: Record<CotizacionIcono, string> = {
 export const COTIZACION_CONDICIONES_DEFAULT =
   'Forma de pago: 50% de anticipo y 50% el día del evento.\n' +
   'El servicio se realiza en menaje biodegradable.\n' +
-  'Consignar a la cuenta de ahorros No. 00715370042 de Bancolombia, a nombre de Afuego Eventos S.A.S. - NIT 901.530.094-4.';
+  'Consignar a la cuenta de ahorros Bancolombia No. 43600001941, a nombre de Afuego Eventos S.A.S. - NIT 901530094-4.';
 
 export const cotizacionLineaSchema = z.object({
   descripcion: z.string().min(1, 'La descripción es requerida').max(500),
