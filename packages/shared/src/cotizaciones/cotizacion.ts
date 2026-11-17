@@ -19,6 +19,8 @@ export const COTIZACION_ICONOS = [
   'canapes',
   'sandwich',
   'desayuno',
+  'mexicano',
+  'asado',
 ] as const;
 
 export type CotizacionIcono = (typeof COTIZACION_ICONOS)[number];
@@ -30,6 +32,8 @@ export const COTIZACION_ICONO_LABELS: Record<CotizacionIcono, string> = {
   canapes: 'Canapés',
   sandwich: 'Sándwich',
   desayuno: 'Desayuno',
+  mexicano: 'Mexicano',
+  asado: 'Plato fuerte asado',
 };
 
 // Texto por defecto tomado literalmente de la plantilla de referencia —
