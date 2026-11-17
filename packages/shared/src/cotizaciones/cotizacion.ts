@@ -62,7 +62,7 @@ export const cotizacionSchema = z.object({
   taxRateId: z.string().nullable().optional(),
   // Bloque "DESCRIPCIÓN" del PDF: se precarga con la descripción de las
   // opciones de menú elegidas (editable).
-  descripcion: z.string().max(3000).default(''),
+  descripcion: z.string().max(10000, 'La descripción es demasiado larga (máximo 10.000 caracteres)').default(''),
   condicionesComerciales: z.string().max(2000).default(COTIZACION_CONDICIONES_DEFAULT),
   vendedorId: z.string().min(1, 'Selecciona un vendedor'),
   icono: z.enum(COTIZACION_ICONOS).nullable().optional(),

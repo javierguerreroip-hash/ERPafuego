@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   COTIZACION_CONDICIONES_DEFAULT,
   COTIZACION_ICONOS,
@@ -85,6 +85,7 @@ export function CotizacionesPage() {
   // sobrescribirla al cambiar de menú (hay un botón para restaurarla).
   const [descripcionEditada, setDescripcionEditada] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const formErrorRef = useRef<HTMLParagraphElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -112,6 +113,12 @@ export function CotizacionesPage() {
       setLoading(false);
     }
   }
+
+  // El error de guardado sale al final del formulario: se lleva a la
+  // vista para que no pase desapercibido.
+  useEffect(() => {
+    if (formError) formErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [formError]);
 
   useEffect(() => {
     loadAll();
@@ -623,7 +630,15 @@ export function CotizacionesPage() {
               </div>
             </div>
 
-            {formError && <p className="text-sm text-red-600">{formError}</p>}
+            {formError && (
+              <p
+                ref={formErrorRef}
+                role="alert"
+                className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              >
+                {formError}
+              </p>
+            )}
 
             <div className="flex flex-col gap-2">
               <button
