@@ -16,9 +16,22 @@ cobrar y por pagar).
 
 La especificación funcional completa (todos los módulos, campos,
 fórmulas y el catálogo semilla del menú "Carta 2026") está en
-`docs/spec_erp_afuego.md`. **Ese documento es la fuente de verdad.**
-Ante cualquier duda de negocio, consúltalo antes de inventar un
-comportamiento.
+`docs/spec_erp_afuego.md`. Ese documento es la especificación
+**original** (histórica). **Desde 2026-11-18 la fuente de verdad vigente
+son las fichas de `docs/specs/`** (una por módulo; índice en
+`docs/specs/README.md`). Ante cualquier duda de negocio, consúltalas
+antes de inventar un comportamiento. Si una ficha contradice a la
+especificación original, gana la ficha.
+
+**Método de trabajo (spec-driven):** para todo cambio funcional,
+primero se actualiza la ficha correspondiente (reglas, permisos,
+criterios de aceptación) y se la muestra al usuario; solo después se
+cambia el código, y al final se anota en
+`docs/specs/registro-cambios.md`. Excepción: correcciones evidentes de
+errores, que se arreglan directo y se anotan después. Las diferencias
+entre la documentación y el sistema se registran en
+`docs/specs/diferencias-por-confirmar.md`; no se resuelven sin
+preguntar.
 
 ## Stack técnico recomendado
 
