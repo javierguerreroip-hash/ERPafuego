@@ -93,10 +93,19 @@ export interface CrmResumenDTO {
 
 // Datos que faltan para poder crear el Evento del Módulo 3 al ganar un
 // negocio — el CRM no los captura (ver decisión documentada en el README).
-export const ganarNegocioSchema = z.object({
-  opcionMenuId: z.string().min(1, 'Selecciona una opción de menú'),
-  numeroPersonas: z.number().int().positive('El número de personas debe ser mayor a 0'),
-  taxRateId: z.string().nullable().optional(),
-});
+// Propuesta 001 · entrega 2 (2026-11-23): "Ganar" ya no pregunta nada cuando el
+// negocio nació de una cotización: opciones de menú, personas e impuesto salen
+// de ella. Estos datos solo se envían como RESPALDO, para negocios históricos
+// sin cotización (o sin opción de menú reconocible).
+export const ganarNegocioSchema = z
+  .object({
+    opcionMenuId: z.string().min(1, 'Selecciona una opción de menú').optional(),
+    numeroPersonas: z.number().int().positive('El número de personas debe ser mayor a 0').optional(),
+    taxRateId: z.string().nullable().optional(),
+  })
+  .refine((d) => !d.opcionMenuId || d.numeroPersonas !== undefined, {
+    message: 'El número de personas es requerido',
+    path: ['numeroPersonas'],
+  });
 
 export type GanarNegocioInput = z.infer<typeof ganarNegocioSchema>;

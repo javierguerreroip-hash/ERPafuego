@@ -610,6 +610,7 @@ export function CRMPage() {
       {ganarFor && (
         <GanarNegocioModal
           negocio={ganarFor}
+          cotizacion={cotizacionPorNegocio.get(ganarFor.id) ?? null}
           opcionesMenu={opcionesMenu}
           taxRates={taxRates}
           onClose={() => setGanarFor(null)}

@@ -1,7 +1,7 @@
 # Propuesta 001 · Todo negocio nace de una cotización
 
 **Fecha:** 2026-11-23 (versión 2, con la decisión del dueño) · **Módulos:** Cotizaciones, CRM, Ventas, Agenda, Dashboard
-**Estado:** APROBADA el 2026-11-23 (todas las preguntas respondidas). **Entrega 1: construida, pendiente de verificar.** Entregas 2, 3 y 4: pendientes.
+**Estado:** APROBADA el 2026-11-23 (todas las preguntas respondidas). **Entrega 1: publicada y en uso. Entrega 2: construida, pendiente de verificar.** Entregas 3 y 4: pendientes.
 *(Reemplaza la versión 1 con tres opciones; la decisión del dueño fue construir esta arquitectura.)*
 
 ## Decisión del dueño (2026-11-23)

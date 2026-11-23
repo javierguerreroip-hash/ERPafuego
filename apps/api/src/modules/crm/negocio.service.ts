@@ -1,6 +1,7 @@
 import type { AgendaEvento, Evento, Negocio, Prisma, User } from '@prisma/client';
 import {
   ETAPAS_NEGOCIO,
+  type CotizacionItemInput,
   type GanarNegocioInput,
   type NegocioGanadoUpdateInput,
   type NegocioInput,
@@ -226,6 +227,43 @@ async function resolverOCrearCliente(
   });
 }
 
+// Datos de la venta que salen de la cotización del negocio (propuesta 001 ·
+// entrega 2, 2026-11-23): cada ítem de menú pasa como una opción de la venta
+// con la cantidad de su ítem (personas o unidades); si una misma opción está
+// en varios ítems, se suman. Las cotizaciones anteriores no traen el
+// identificador de la opción: se reconoce por el nombre. Los ítems que no son
+// una opción de menú se ignoran. Devuelve null si no se reconoce ninguna.
+async function datosDeLaCotizacion(negocioId: string) {
+  const cotizacion = await prisma.cotizacion.findUnique({ where: { negocioId } });
+  if (!cotizacion) return null;
+
+  const opciones = await prisma.opcionMenu.findMany({ select: { id: true, name: true } });
+  const idPorNombre = new Map(opciones.map((o) => [o.name.trim().toLowerCase(), o.id]));
+  const idsValidos = new Set(opciones.map((o) => o.id));
+
+  const items = cotizacion.items as unknown as CotizacionItemInput[];
+  const cantidadPorOpcion = new Map<string, number>();
+  for (const item of items) {
+    const id =
+      item.opcionMenuId && idsValidos.has(item.opcionMenuId)
+        ? item.opcionMenuId
+        : idPorNombre.get(item.descripcion.trim().toLowerCase());
+    if (!id) continue;
+    cantidadPorOpcion.set(id, (cantidadPorOpcion.get(id) ?? 0) + item.cantidad);
+  }
+  if (cantidadPorOpcion.size === 0) return null;
+
+  return {
+    opciones: [...cantidadPorOpcion.entries()].map(([opcionMenuId, cantidad]) => ({
+      opcionMenuId,
+      numeroPersonas: Math.max(1, Math.round(cantidad)),
+    })),
+    numeroPersonas: cotizacion.numeroPersonas,
+    taxRateId: cotizacion.taxRateId,
+    lugar: cotizacion.lugar,
+  };
+}
+
 // Al ganar: toma el Cliente ya vinculado (clienteId), crea el Evento del
 // Módulo 3 con los campos que sí trae el CRM + los 2 que faltan (opción
 // de menú, número de personas — ver decisión documentada en el README),
@@ -235,6 +273,23 @@ async function resolverOCrearCliente(
 // evento/agenda (o registros huérfanos) si algo falla a mitad de camino.
 export async function ganarNegocio(id: string, input: GanarNegocioInput, registeredById: string) {
   const negocio = await findNegocioCotizadoOrThrow(id);
+
+  // Sin preguntar nada: opciones de menú, personas e impuesto salen de la
+  // cotización. Los datos del cuerpo de la petición son solo el respaldo para
+  // negocios históricos sin cotización reconocible.
+  const deCotizacion = await datosDeLaCotizacion(id);
+  const lineasOpciones = input.opcionMenuId
+    ? [{ opcionMenuId: input.opcionMenuId, numeroPersonas: input.numeroPersonas ?? 1 }]
+    : deCotizacion?.opciones;
+  if (!lineasOpciones || lineasOpciones.length === 0) {
+    throw new HttpError(
+      422,
+      'Este negocio no tiene una opción de menú reconocible en su cotización: elígela para poder ganarlo.',
+    );
+  }
+  const numeroPersonasEvento = input.numeroPersonas ?? deCotizacion?.numeroPersonas ?? lineasOpciones[0].numeroPersonas;
+  const taxRateIdEvento =
+    input.taxRateId === undefined ? (deCotizacion?.taxRateId ?? null) : input.taxRateId;
 
   const actualizado = await prisma.$transaction(async (tx) => {
     // negocio.clienteId puede ser null solo en negocios que ya existían
@@ -251,15 +306,16 @@ export async function ganarNegocio(id: string, input: GanarNegocioInput, registe
       throw new HttpError(404, 'Cliente no encontrado');
     }
 
-    const opcionMenu = await tx.opcionMenu.findUnique({ where: { id: input.opcionMenuId } });
-    if (!opcionMenu) {
+    const idsOpciones = lineasOpciones.map((l) => l.opcionMenuId);
+    const opcionesExistentes = await tx.opcionMenu.count({ where: { id: { in: idsOpciones } } });
+    if (opcionesExistentes !== new Set(idsOpciones).size) {
       throw new HttpError(404, 'Opción de menú no encontrada');
     }
 
     const valorAntesImpuestos = Number(negocio.valorAntesImpuestos);
     let valorDespuesImpuestos = valorAntesImpuestos;
-    if (input.taxRateId) {
-      const taxRate = await tx.taxRate.findUnique({ where: { id: input.taxRateId } });
+    if (taxRateIdEvento) {
+      const taxRate = await tx.taxRate.findUnique({ where: { id: taxRateIdEvento } });
       if (!taxRate) {
         throw new HttpError(404, 'Tarifa de impuesto no encontrada');
       }
@@ -270,13 +326,12 @@ export async function ganarNegocio(id: string, input: GanarNegocioInput, registe
       data: {
         fecha: negocio.fechaEvento,
         clienteId: cliente.id,
-        opcionMenuId: input.opcionMenuId,
-        opciones: {
-          create: [{ opcionMenuId: input.opcionMenuId, numeroPersonas: input.numeroPersonas }],
-        },
-        numeroPersonas: input.numeroPersonas,
+        // La primera opción es la principal (Evento.opcionMenuId).
+        opcionMenuId: lineasOpciones[0].opcionMenuId,
+        opciones: { create: lineasOpciones },
+        numeroPersonas: numeroPersonasEvento,
         valorAntesImpuestos,
-        taxRateId: input.taxRateId ?? null,
+        taxRateId: taxRateIdEvento,
         valorDespuesImpuestos,
         vendedorId: negocio.vendedorId,
         registeredById,
@@ -287,6 +342,12 @@ export async function ganarNegocio(id: string, input: GanarNegocioInput, registe
       data: {
         eventoId: evento.id,
         vendedorId: negocio.vendedorId,
+        // La agenda llega casi llena (propuesta 001): contacto y teléfono
+        // del cliente y el lugar de la cotización como nota. Solo faltan la
+        // hora y la dirección.
+        personaContacto: cliente.name,
+        telefonoContacto: cliente.telefono,
+        observaciones: deCotizacion?.lugar ? `Lugar según la cotización: ${deCotizacion.lugar}` : '',
       },
     });
 

@@ -47,7 +47,8 @@ Cotización ──crea──▶ Negocio (CRM, "Cotizado") ──ganar──▶ V
 - Tablero tipo Kanban con 3 etapas: **Cotizado / Ganado / Perdido**.
 - **Cliente:** solo se pueden elegir clientes ya creados (2026-09-21). Vendedor: de la lista de vendedores.
 - **Solo se edita mientras está "Cotizado".** "Perdido" queda congelado como histórico.
-- **Marcar Ganado** pide dos datos que el CRM no captura: **opción de menú** y **número de personas**. Con eso crea, en **una sola transacción**: la Venta (cliente/fecha/valor precargados) y el registro de **Agenda** (vendedor precargado). Si algo falla a medias, no queda nada.
+- **Marcar Ganado (propuesta 001 · entrega 2, 2026-11-23 · construida, pendiente de verificar) ya no pregunta nada** cuando el negocio nació de una cotización: muestra un resumen (fecha del evento, valor, impuesto, invitados, vendedor y opciones de menú con su cantidad) y se confirma con un clic. Se crea, en **una sola transacción**: la **Venta** con **fecha = fecha del evento** (no la fecha en que se gana), cada ítem de menú como una opción de la venta con su cantidad (si una opción se repite, se suman), el impuesto y los invitados de la cotización, y el registro de **Agenda**. Si algo falla a medias, no queda nada.
+  - **Respaldo:** si el negocio es histórico (sin cotización) o ningún ítem corresponde a una opción de menú, el sistema pide la opción de menú, las personas y el impuesto, como antes.
 - **Editar un negocio ganado:** actualiza a la vez el negocio, la venta (recalculando el valor después de impuestos con la tarifa ya asignada) y la agenda, en una transacción.
 - **Eliminar un negocio** solo si **no** está ganado. Para corregir uno ganado por error: primero se elimina la venta en Ventas (eso lo regresa a "Cotizado") y luego se puede eliminar.
 - **Resumen y columnas** respetan el **mismo filtro de período** y se filtran por la **fecha del evento** (corregido 2026-10-29: antes las columnas mostraban negocios de otros meses).
@@ -67,6 +68,7 @@ Cotización ──crea──▶ Negocio (CRM, "Cotizado") ──ganar──▶ V
 - Vista de **Lista** y de **Calendario** (mensual/semanal) del mismo conjunto de datos. Filtros: fecha, vendedor, estado del anticipo (sin anticipo / saldo pendiente / anticipo pagado).
 - Es una **extensión 1 a 1 de la Venta, no una copia:** fecha, cliente, opción(es) de menú, personas y valor antes de impuestos se **leen en vivo** de la venta. Solo se guardan los datos logísticos propios: persona de contacto, teléfono, dirección, hora de servicio, anticipo, observaciones y vendedor.
 - **Saldo pendiente = valor antes de impuestos − anticipo** (calculado).
+- **Al ganar un negocio (entrega 2, construida, pendiente de verificar)** la agenda nace con **persona de contacto = nombre del cliente**, **teléfono = el del cliente** y, en observaciones, **"Lugar según la cotización: …"**. Solo faltan la **hora** y la **dirección** (y, si aplica, el anticipo).
 - Se puede crear a mano para una venta que no vino del CRM (selector de "eventos disponibles"; los que ya tienen agenda no aparecen). Al elegirla se **precarga el vendedor de la venta**.
 - **Vendedor, trazabilidad completa (2026-10-05):** la **venta manda**. Si la venta tiene vendedor, en la Agenda es **solo lectura** (el servidor lo impone aunque llegue otro valor), y si se cambia el vendedor desde Ventas, la Agenda lo sigue. Solo las ventas antiguas sin vendedor permiten elegirlo a mano.
 - **Adjuntos de la venta** visibles y gestionables desde la edición de la Agenda para que Logística vea lo vendido.

@@ -10,6 +10,7 @@ Desde 2026-11-18, cada fila nueva debe enlazar a su ficha.
 
 | Fecha | Cambio | Hash |
 |---|---|---|
+| 2026-11-23 | Entrega 2 de la propuesta 001: "Marcar Ganado" sin preguntas (todo sale de la cotización, venta con fecha del evento) y agenda con contacto y teléfono del cliente. Ficha 06 | - |
 | 2026-11-23 | Propuesta 002: el CMV del Dashboard sale del Juego de Inventarios cuando hay conteo #2; antes del cierre muestra un parcial de consumos de eventos. Ficha 04 | - |
 | 2026-11-23 | Entrega 1 de la propuesta 001: la cotización exige al menos una opción de menú enlazada (cantidad editable) y el CRM muestra "Ver cotización" en cada negocio. Ficha 06 | — |
 | 2026-11-23 | Decisiones del dueño registradas: permisos se mantienen; el CMV del Dashboard saldrá del Juego de Inventarios (propuesta 002); todo negocio nacerá de una cotización (propuesta 001). Solo documentación | — |
