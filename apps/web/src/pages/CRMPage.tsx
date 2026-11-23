@@ -6,6 +6,7 @@ import {
   negocioGanadoUpdateSchema,
   negocioSchema,
   type ClienteDTO,
+  type CotizacionDTO,
   type CrmResumenDTO,
   type EtapaNegocio,
   type NegocioDTO,
@@ -22,6 +23,7 @@ import { PeriodPickerControls } from '../components/PeriodPickerControls';
 import { Modal } from '../components/Modal';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { GanarNegocioModal } from '../components/GanarNegocioModal';
+import { CotizacionDetalleModal } from '../components/CotizacionDetalleModal';
 import { KpiCard } from '../components/KpiCard';
 import { Field, inputClass } from '../components/Field';
 import { formatCOP, formatDateOnly } from '../lib/format';
@@ -55,6 +57,10 @@ export function CRMPage() {
   const [opcionesMenu, setOpcionesMenu] = useState<OpcionMenuDTO[]>([]);
   const [taxRates, setTaxRates] = useState<TaxRateDTO[]>([]);
   const [vendedores, setVendedores] = useState<VendedorDisponibleDTO[]>([]);
+  // Cotizaciones por negocio (propuesta 001): cada negocio nace de una
+  // cotización y desde aquí se puede ver completa.
+  const [cotizacionPorNegocio, setCotizacionPorNegocio] = useState<Map<string, CotizacionDTO>>(new Map());
+  const [verCotizacion, setVerCotizacion] = useState<CotizacionDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,15 +108,23 @@ export function CRMPage() {
     setLoading(true);
     setError(null);
     try {
-      const [negociosData, clientesData, opcionesData, taxRatesData, vendedoresData] =
+      const [negociosData, clientesData, opcionesData, taxRatesData, vendedoresData, cotizacionesData] =
         await Promise.all([
           apiFetch<NegocioDTO[]>('/negocios', { token }),
           apiFetch<ClienteDTO[]>('/clientes', { token }),
           apiFetch<OpcionMenuDTO[]>('/opciones-menu', { token }),
           apiFetch<TaxRateDTO[]>('/tax-rates', { token }),
           apiFetch<VendedorDisponibleDTO[]>('/negocios/vendedores', { token }),
+          apiFetch<CotizacionDTO[]>('/cotizaciones', { token }),
         ]);
       setNegocios(negociosData);
+      setCotizacionPorNegocio(
+        new Map(
+          cotizacionesData
+            .filter((c): c is CotizacionDTO & { negocioId: string } => c.negocioId !== null)
+            .map((c): [string, CotizacionDTO] => [c.negocioId, c]),
+        ),
+      );
       setClientes(clientesData.filter((c) => c.active));
       setOpcionesMenu(opcionesData.filter((o) => o.active));
       setTaxRates(taxRatesData.filter((t) => t.active));
@@ -356,6 +370,16 @@ export function CRMPage() {
                         {formatCOP(n.valorAntesImpuestos)}
                       </p>
                       <p className="text-xs text-neutral-400">Vendedor: {n.vendedorNombre}</p>
+                      {cotizacionPorNegocio.get(n.id) ? (
+                        <button
+                          onClick={() => setVerCotizacion(cotizacionPorNegocio.get(n.id) ?? null)}
+                          className="mt-1 text-xs text-neutral-600 underline hover:text-orange-600"
+                        >
+                          Ver cotización
+                        </button>
+                      ) : (
+                        <p className="mt-1 text-xs text-neutral-300">Sin cotización (histórico)</p>
+                      )}
 
                       {etapa === 'COTIZADO' && (
                         <div className="mt-2 flex flex-wrap gap-3 text-xs">
@@ -405,6 +429,10 @@ export function CRMPage() {
             );
           })}
         </div>
+      )}
+
+      {verCotizacion && (
+        <CotizacionDetalleModal cotizacion={verCotizacion} onClose={() => setVerCotizacion(null)} />
       )}
 
       {showForm && (

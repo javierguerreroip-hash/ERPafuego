@@ -51,13 +51,29 @@ export const cotizacionLineaSchema = z.object({
 
 export type CotizacionLineaInput = z.infer<typeof cotizacionLineaSchema>;
 
+// Ítem de menú (propuesta 001, 2026-11-23): además de la descripción, guarda
+// QUÉ opción de menú es (su identificador) para que al ganar el negocio la
+// venta y la agenda se armen solas, sin volver a preguntar. La cantidad es
+// editable (personas o unidades, según el menú). Cotizaciones anteriores no
+// lo tienen (opcional) y se enlazan por nombre al editarlas.
+export const cotizacionItemSchema = cotizacionLineaSchema.extend({
+  opcionMenuId: z.string().min(1).nullable().optional(),
+});
+
+export type CotizacionItemInput = z.infer<typeof cotizacionItemSchema>;
+
 export const cotizacionSchema = z.object({
   fecha: z.string().min(1, 'La fecha es requerida'),
   asunto: z.string().min(1, 'El asunto es requerido').max(200),
   lugar: z.string().min(1, 'El lugar es requerido').max(200),
   numeroPersonas: z.number().int().positive('El número de invitados debe ser mayor a 0'),
   clienteId: z.string().min(1, 'Selecciona un cliente'),
-  items: z.array(cotizacionLineaSchema).min(1, 'Agrega al menos un ítem'),
+  items: z
+    .array(cotizacionItemSchema)
+    .min(1, 'Agrega al menos un ítem')
+    .refine((items) => items.some((i) => Boolean(i.opcionMenuId)), {
+      message: 'Elige al menos una opción de menú en los ítems',
+    }),
   logistica: z.array(cotizacionLineaSchema).default([]),
   taxRateId: z.string().nullable().optional(),
   // Bloque "DESCRIPCIÓN" del PDF: se precarga con la descripción de las
@@ -91,7 +107,7 @@ export interface CotizacionDTO {
   clienteNombre: string;
   clienteIdentificacion: string;
   telefono: string;
-  items: CotizacionLineaInput[];
+  items: CotizacionItemInput[];
   logistica: CotizacionLineaInput[];
   taxRateId: string | null;
   taxRateNombre: string | null;

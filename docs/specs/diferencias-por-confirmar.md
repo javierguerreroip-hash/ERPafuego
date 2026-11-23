@@ -42,7 +42,13 @@ Descubierto el 2026-11-20 con datos reales de noviembre: $42.387.793 contra
 $40.595.793 (diferencia $1.792.000). Cada módulo suma su propia copia de
 valor y fecha, y editar una venta no actualiza su negocio del CRM.
 
-- [x] **DECIDIDA 2026-11-23:** que todo negocio nazca de una cotización y no se puedan crear ventas ni negocios por otra vía. Detalle y preguntas abiertas en la [propuesta 001](propuestas/001-todo-negocio-nace-de-una-cotizacion.md).
+- [x] **DECIDIDA y APROBADA 2026-11-23:** que todo negocio nazca de una cotización y no se puedan crear ventas ni negocios por otra vía. Ver [propuesta 001](propuestas/001-todo-negocio-nace-de-una-cotizacion.md).
+
+**Resultado de la consulta de diagnóstico (noviembre, 11 ventas):**
+- Ninguna venta sin negocio en el CRM.
+- **Dos ventas con valor distinto al de su negocio:** *Lina Ricaurte* (venta $2.590.000 vs CRM $2.190.000, diferencia $400.000) y *Ana María Rico* (venta $2.532.000 vs CRM $2.040.000, diferencia $492.000). Suman $892.000, que es exactamente lo que separa hoy "Ventas totales" del "Total ganado".
+- Una venta ganada de *Juan Pablo de los Ríos* tiene valor $0 (venta y negocio).
+- **Pendiente del dueño:** decir cuál valor es el correcto en cada una de las dos y corregirlo desde el CRM ("Editar cambios del cliente"), que actualiza negocio, venta y agenda a la vez.
 
 ## Otras observaciones
 
@@ -51,4 +57,4 @@ valor y fecha, y editar una venta no actualiza su negocio del CRM.
 3. **Decisión de la Fase 10 en el README** dice que el cliente del CRM es texto libre; se revirtió el 2026-09-21 (hoy se elige de Clientes). Quedó en el README como texto histórico, con la nota de reversión debajo.
 4. **Sin pruebas de integración:** solo hay pruebas unitarias de las fórmulas. Los criterios de aceptación de las fichas marcados con casillas **aún no se han convertido en pruebas automáticas ni se han recorrido uno por uno**.
 5. **Datos de prueba pendientes de limpieza (de tu lado):** el consumo de prueba de *Aceite de Oliva* (0,09 L) en un evento; los registros con costo $0 anteriores a la corrección del 2026-10-12.
-6. **Mensaje de error de guardado de Cotizaciones:** el 2026-11-17 se hizo visible el error y el 2026-11-23 el dueño confirmó que ya está desplegado; falta saber si ahora guarda o qué dice el mensaje en rojo.
+6. **Mensaje de error de guardado de Cotizaciones:** el 2026-11-17 se hizo visible el error y el 2026-11-23 el dueño confirmó que **ya guarda sin problema** (resuelto).

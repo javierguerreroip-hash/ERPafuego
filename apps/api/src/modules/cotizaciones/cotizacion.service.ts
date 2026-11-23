@@ -1,5 +1,10 @@
 import type { Cliente, Cotizacion, TaxRate, User } from '@prisma/client';
-import type { CotizacionInput, CotizacionLineaInput, EtapaNegocio } from '@erp-afuego/shared';
+import type {
+  CotizacionInput,
+  CotizacionItemInput,
+  CotizacionLineaInput,
+  EtapaNegocio,
+} from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import { calcularTotalesCotizacion } from './cotizacion.calculations.js';
@@ -17,7 +22,7 @@ const includeRelations = {
 } as const;
 
 function serialize(cotizacion: CotizacionWithRelations) {
-  const items = cotizacion.items as unknown as CotizacionLineaInput[];
+  const items = cotizacion.items as unknown as CotizacionItemInput[];
   const logistica = cotizacion.logistica as unknown as CotizacionLineaInput[];
   const impuestoPorcentaje = cotizacion.taxRate ? Number(cotizacion.taxRate.rate) : 0;
 
@@ -90,6 +95,17 @@ async function findVendedorOrThrow(vendedorId: string): Promise<User> {
   return vendedor;
 }
 
+// Las opciones de menú enlazadas en los ítems deben existir (propuesta 001):
+// de ellas se arma la venta al ganar el negocio.
+async function assertOpcionesMenuExisten(items: CotizacionItemInput[]) {
+  const ids = [...new Set(items.map((i) => i.opcionMenuId).filter((id): id is string => Boolean(id)))];
+  if (ids.length === 0) return;
+  const encontradas = await prisma.opcionMenu.count({ where: { id: { in: ids } } });
+  if (encontradas !== ids.length) {
+    throw new HttpError(404, 'Una de las opciones de menú elegidas ya no existe. Vuelve a elegirla.');
+  }
+}
+
 // Crea la cotización y, en la misma transacción, un Negocio en etapa
 // COTIZADO vinculado a ella — así toda cotización queda visible de
 // inmediato en el CRM (integración pedida por el negocio, 2026-09-10).
@@ -98,6 +114,7 @@ async function findVendedorOrThrow(vendedorId: string): Promise<User> {
 // registraba en el sistema) — así la trazabilidad del CRM muestra al
 // vendedor real, no a quien digitó la cotización.
 export async function createCotizacion(input: CotizacionInput, registeredById: string) {
+  await assertOpcionesMenuExisten(input.items);
   if (input.taxRateId) {
     const taxRate = await prisma.taxRate.findUnique({ where: { id: input.taxRateId } });
     if (!taxRate) {
@@ -167,6 +184,7 @@ export async function createCotizacion(input: CotizacionInput, registeredById: s
 //   cambios de una venta ya ganada se hacen desde el CRM ("editar negocio
 //   ganado"), que sí actualiza Ventas y Agenda.
 export async function updateCotizacion(id: string, input: CotizacionInput) {
+  await assertOpcionesMenuExisten(input.items);
   const existing = await prisma.cotizacion.findUnique({
     where: { id },
     include: includeRelations,

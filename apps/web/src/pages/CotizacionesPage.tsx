@@ -9,6 +9,7 @@ import {
   type CotizacionDTO,
   type CotizacionIcono,
   type CotizacionInput,
+  type CotizacionItemInput,
   type CotizacionLineaInput,
   type OpcionMenuDTO,
   type TaxRateDTO,
@@ -44,11 +45,20 @@ function emptyForm(): CotizacionInput {
 // Descripción por defecto de la cotización: la de las opciones de menú
 // elegidas (Opciones de Menú → descripción). Con un solo menú es su
 // descripción tal cual; con varios, cada una va precedida por el nombre.
-function componerDescripcion(items: CotizacionLineaInput[], opciones: OpcionMenuDTO[]): string {
+// Opción de menú de un ítem: primero por su identificador guardado; si es
+// una cotización anterior (sin identificador), por el nombre.
+function opcionDelItem(item: CotizacionItemInput, opciones: OpcionMenuDTO[]): OpcionMenuDTO | undefined {
+  return (
+    (item.opcionMenuId ? opciones.find((o) => o.id === item.opcionMenuId) : undefined) ??
+    opciones.find((o) => o.name === item.descripcion)
+  );
+}
+
+function componerDescripcion(items: CotizacionItemInput[], opciones: OpcionMenuDTO[]): string {
   const vistas = new Set<string>();
   const partes: { nombre: string; descripcion: string }[] = [];
   for (const item of items) {
-    const opcion = opciones.find((o) => o.name === item.descripcion);
+    const opcion = opcionDelItem(item, opciones);
     if (!opcion || vistas.has(opcion.id)) continue;
     vistas.add(opcion.id);
     if (opcion.description.trim()) {
@@ -145,7 +155,12 @@ export function CotizacionesPage() {
       lugar: c.lugar,
       numeroPersonas: c.numeroPersonas,
       clienteId: c.clienteId ?? '',
-      items: c.items,
+      // Cotizaciones anteriores: enlaza cada ítem con su opción de menú por
+      // nombre (si el menú ya no existe, queda sin enlazar y hay que elegirlo).
+      items: c.items.map((it) => ({
+        ...it,
+        opcionMenuId: it.opcionMenuId ?? opcionDelItem(it, opcionesMenu)?.id ?? null,
+      })),
       logistica: c.logistica,
       taxRateId: c.taxRateId,
       descripcion,
@@ -159,7 +174,7 @@ export function CotizacionesPage() {
 
   // Cambia los ítems y, si la descripción no se ha editado a mano, la
   // recompone con la de los menús elegidos.
-  function applyItems(items: CotizacionLineaInput[]) {
+  function applyItems(items: CotizacionItemInput[]) {
     setForm({
       ...form,
       items,
@@ -167,7 +182,7 @@ export function CotizacionesPage() {
     });
   }
 
-  function updateItem(index: number, patch: Partial<CotizacionLineaInput>) {
+  function updateItem(index: number, patch: Partial<CotizacionItemInput>) {
     applyItems(form.items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
 
@@ -375,7 +390,7 @@ export function CotizacionesPage() {
               </div>
               <div className="space-y-2">
                 {form.items.map((item, index) => {
-                  const opcionSeleccionada = opcionesMenu.find((o) => o.name === item.descripcion);
+                  const opcionSeleccionada = opcionDelItem(item, opcionesMenu);
                   return (
                   <div key={index} className="grid grid-cols-12 items-end gap-2">
                     <div className="col-span-6">
@@ -384,7 +399,11 @@ export function CotizacionesPage() {
                         onChange={(e) => {
                           const opcion = opcionesMenu.find((o) => o.id === e.target.value);
                           if (opcion) {
-                            updateItem(index, { descripcion: opcion.name, valorUnitario: opcion.price });
+                            updateItem(index, {
+                              descripcion: opcion.name,
+                              valorUnitario: opcion.price,
+                              opcionMenuId: opcion.id,
+                            });
                           }
                         }}
                         className={inputClass}

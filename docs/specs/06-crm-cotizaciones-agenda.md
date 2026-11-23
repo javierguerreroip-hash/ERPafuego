@@ -17,6 +17,7 @@ Cotización ──crea──▶ Negocio (CRM, "Cotizado") ──ganar──▶ V
 ### Reglas
 - Genera el documento comercial en **PDF** con el diseño de A Fuego (papel kraft, ilustración, tabla de ítems de menú + logística, subtotal/impuesto/total, condiciones comerciales y firma). Se descarga desde el formulario (vista previa) y desde el listado.
 - **Cliente:** se elige entre los ya creados en Clientes (2026-09-21).
+- **Opción de menú obligatoria (2026-11-23, propuesta 001 · entrega 1):** la cotización exige **al menos una opción de menú** enlazada y acepta todas las que se necesiten, cada una con su **cantidad (personas o unidades) editable**. Cada ítem guarda el identificador de su opción de menú (no solo el nombre). Al editar una cotización antigua, sus ítems se enlazan solos por nombre; si un menú ya no existe, hay que volver a elegirlo. *Estado: construida, pendiente de verificar.*
 - **Vendedor:** se elige entre los vendedores del sistema (mismos del CRM). Es quien firma el PDF y el vendedor del negocio.
 - **Ítems de menú:** se eligen de **Opciones de Menú**; al elegir, el valor unitario se llena con el precio (editable por si se negocia). La **logística** (cocinero, transporte, meseros, plato, cubiertos…) es texto libre. `items` y `logistica` se guardan como líneas libres de la cotización, no como catálogo.
 - **Total = subtotal de ítems + subtotal de logística + impuesto** (tasa configurable).
@@ -50,6 +51,7 @@ Cotización ──crea──▶ Negocio (CRM, "Cotizado") ──ganar──▶ V
 - **Editar un negocio ganado:** actualiza a la vez el negocio, la venta (recalculando el valor después de impuestos con la tarifa ya asignada) y la agenda, en una transacción.
 - **Eliminar un negocio** solo si **no** está ganado. Para corregir uno ganado por error: primero se elimina la venta en Ventas (eso lo regresa a "Cotizado") y luego se puede eliminar.
 - **Resumen y columnas** respetan el **mismo filtro de período** y se filtran por la **fecha del evento** (corregido 2026-10-29: antes las columnas mostraban negocios de otros meses).
+- **Ver cotización (2026-11-23, propuesta 001 · entrega 1):** cada tarjeta del CRM con cotización tiene "Ver cotización", que muestra todo su detalle (ítems, logística, totales, descripción, condiciones) en solo lectura y permite descargar el PDF. Los negocios históricos sin cotización dicen "Sin cotización (histórico)". *Estado: construida, pendiente de verificar.*
 - **Eficiencia comercial** = valor ganado ÷ valor total cotizado.
 - Un negocio cuyo evento cae en otro mes **no aparece** al filtrar el mes actual.
 

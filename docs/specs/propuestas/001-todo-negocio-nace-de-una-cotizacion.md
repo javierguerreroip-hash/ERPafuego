@@ -1,7 +1,7 @@
 # Propuesta 001 · Todo negocio nace de una cotización
 
 **Fecha:** 2026-11-23 (versión 2, con la decisión del dueño) · **Módulos:** Cotizaciones, CRM, Ventas, Agenda, Dashboard
-**Estado:** PROPUESTA — esperando que confirmes las preguntas de la sección final. No se ha tocado código.
+**Estado:** APROBADA el 2026-11-23 (todas las preguntas respondidas). **Entrega 1: construida, pendiente de verificar.** Entregas 2, 3 y 4: pendientes.
 *(Reemplaza la versión 1 con tres opciones; la decisión del dueño fue construir esta arquitectura.)*
 
 ## Decisión del dueño (2026-11-23)
@@ -80,15 +80,15 @@ COTIZACIÓN ──(se guarda)──▶ NEGOCIO en CRM "Cotizado"
 - **Cotizaciones antiguas con ítems de texto libre:** no tienen la opción enlazada; se resuelve con la excepción de "una sola pregunta" al ganar.
 - **Datos históricos:** la corrección es solo de **agregar** negocios; se aprueba lista por lista. No toca consumos, costos ni cartera.
 
-## Preguntas abiertas (recomendación entre paréntesis)
-1. **Varias opciones de menú:** pediste "una opción de menú"; hoy una venta admite varias. ¿Cada ítem de menú de la cotización pasa como una opción de la venta, cada una con las personas de la cotización, editable después en el CRM? *(Sí.)*
-2. **CRM sin "Nuevo negocio":** ¿lo quitamos también del CRM, como lo entiendo de "todos los negocios inician desde la cotización"? *(Sí.)*
-3. **Edición comercial de una venta ganada:** ¿solo desde el CRM, y Ventas queda solo para costos y adjuntos? *(Sí.)*
-4. **Agenda:** ¿anticipo y observaciones quedan opcionales además de hora y dirección? *(Sí.)*
-5. **Ventas históricas sin negocio:** ¿creamos su negocio "Ganado" histórico? Para decidir cuántas son, necesito el resultado de la consulta de diagnóstico de noviembre (la que te pasé el 2026-11-20). *(Sí, con lista aprobada por ti.)*
+## Respuestas del dueño (2026-11-23)
+1. **Varias opciones de menú:** la cotización acepta **todas las opciones de menú que sean necesarias, con la cantidad de personas o unidades editable, como hoy.** Cada ítem de menú pasa como una opción de la venta, con la cantidad de su ítem (editable después en el CRM).
+2. **CRM sin "Nuevo negocio":** de acuerdo.
+3. **Edición comercial de una venta ganada solo desde el CRM:** de acuerdo.
+4. **Agenda:** hora y dirección obligatorias; anticipo y observaciones opcionales: de acuerdo.
+5. **Ventas históricas sin negocio:** de acuerdo en crear su negocio Ganado histórico, con lista aprobada. *Verificado con la consulta de noviembre: hoy no hay ninguna venta sin negocio en ese mes; se repetirá la consulta para todos los meses antes de la entrega 4.*
 
 ## Prueba que la vigilaría
 Pruebas unitarias del mapeo cotización → venta/agenda y de la regla "fecha de la venta = fecha del evento", y recorrido manual de los criterios.
 
 ## Decisión del dueño
-- [ ] Apruebo con las recomendaciones  ·  [ ] Apruebo con cambios: ______________________
+- [x] **Aprobada con las recomendaciones, 2026-11-23.**

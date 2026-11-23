@@ -10,6 +10,7 @@ Desde 2026-11-18, cada fila nueva debe enlazar a su ficha.
 
 | Fecha | Cambio | Hash |
 |---|---|---|
+| 2026-11-23 | Entrega 1 de la propuesta 001: la cotización exige al menos una opción de menú enlazada (cantidad editable) y el CRM muestra "Ver cotización" en cada negocio. Ficha 06 | — |
 | 2026-11-23 | Decisiones del dueño registradas: permisos se mantienen; el CMV del Dashboard saldrá del Juego de Inventarios (propuesta 002); todo negocio nacerá de una cotización (propuesta 001). Solo documentación | — |
 | 2026-11-23 | Hoja de ruta de la organización por especificaciones. Solo documentación | `926bb4d` |
 | 2026-11-18 | Se organiza la documentación por especificaciones (`docs/specs/`): fichas 01–08, diferencias por confirmar y este registro. Solo documentación, sin cambios de código | — |

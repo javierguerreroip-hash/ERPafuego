@@ -16,9 +16,9 @@ Son decisiones de negocio; sin ellas el plano deja cosas "por confirmar".
 | # | Tema | Dónde | Qué hay que decidir |
 |---|---|---|---|
 | B1 | Quién ve Estado de Resultados, Cartera y nómina | [diferencias](diferencias-por-confirmar.md#quién-ve-qué) | **RESUELTA 2026-11-23:** se deja como está |
-| B2 | Dos "CMV" (Dashboard vs Juego de Inventarios) | [propuesta 002](propuestas/002-cmv-dashboard-desde-juego-inventarios.md) | **Decidida:** el Dashboard usa el CMV del Juego. Falta 1 pregunta (costos y utilidad del Dashboard) |
-| B3 | Ventas vs CRM no cuadran | [propuesta 001](propuestas/001-todo-negocio-nace-de-una-cotizacion.md) | **Decidida:** todo negocio nace de una cotización. Faltan 5 confirmaciones |
-| B4 | Error al guardar cotización | — | Ya desplegado; falta probar y reportar el resultado |
+| B2 | Dos "CMV" (Dashboard vs Juego de Inventarios) | [propuesta 002](propuestas/002-cmv-dashboard-desde-juego-inventarios.md) | **Aprobada.** Pendiente de construir |
+| B3 | Ventas vs CRM no cuadran | [propuesta 001](propuestas/001-todo-negocio-nace-de-una-cotizacion.md) | **Aprobada.** Entrega 1 construida (pendiente de verificar); faltan las entregas 2, 3 y 4 |
+| B4 | Error al guardar cotización | — | **RESUELTA 2026-11-23:** el dueño confirmó que ya guarda sin problema |
 
 ## Etapa C · Criterios de aceptación → pruebas automáticas — SIGUIENTE
 Convertir las casillas `[ ]` de las fichas en pruebas que corren solas, para que

@@ -1,6 +1,6 @@
 # Propuesta 002 · El CMV del Dashboard sale del Juego de Inventarios
 
-**Fecha:** 2026-11-23 · **Módulos:** Dashboard, Juego de Inventarios, Ventas · **Estado:** PROPUESTA — esperando confirmación. No se ha tocado código.
+**Fecha:** 2026-11-23 · **Módulos:** Dashboard, Juego de Inventarios, Ventas · **Estado:** APROBADA el 2026-11-23. Pendiente de construir.
 
 ## Decisión del dueño (2026-11-23)
 > El CMV del Dashboard debe salir del Juego de Inventarios. Se siguen registrando gastos y consumos de cada evento para analizar la rentabilidad y el resultado de cada evento por separado.
@@ -24,11 +24,11 @@ El Juego de Inventarios calcula el CMV de un período con el **inventario inicia
 - [ ] Costos totales y Utilidad operativa del Dashboard no cambian de valor respecto a hoy.
 - [ ] La utilidad de cada evento en Ventas no cambia.
 
-## Pregunta abierta
-1. **Costos totales y Utilidad operativa del Dashboard:** ¿se quedan con consumos de eventos (como propongo, para analizar rentabilidad), o prefieres que usen el CMV contable? Con el CMV contable, el mes en curso quedaría "pendiente" hasta el cierre. *(Dejarlos con consumos de eventos, rotulados.)*
+## Respuesta del dueño (2026-11-23)
+1. Costos totales y Utilidad operativa del Dashboard siguen con los consumos de eventos, rotulados: **de acuerdo**.
 
 ## Prueba que la vigilaría
 Prueba unitaria de la regla "con/sin conteo #2" y comparación manual de un mes cerrado contra el Juego de Inventarios.
 
 ## Decisión del dueño
-- [ ] Apruebo con la recomendación  ·  [ ] Apruebo con cambios: ______________________
+- [x] **Aprobada con la recomendación, 2026-11-23.**
