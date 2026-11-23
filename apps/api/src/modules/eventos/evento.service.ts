@@ -20,6 +20,7 @@ const includeSummary = {
   vendedor: true,
   registeredBy: true,
   consumos: true,
+  negocio: { select: { id: true } },
 } satisfies Prisma.EventoInclude;
 
 type EventoWithSummary = Prisma.EventoGetPayload<{ include: typeof includeSummary }>;
@@ -57,6 +58,7 @@ function serializeSummary(evento: EventoWithSummary) {
     taxRateNombre: evento.taxRate?.name ?? null,
     vendedorId: evento.vendedorId,
     vendedorNombre: evento.vendedor?.name ?? null,
+    tieneNegocio: evento.negocio !== null,
     costoTotal,
     costoTotalPorcentaje: calcularCostoPorcentaje(costoTotal, valorAntesImpuestos),
     utilidadOperacional: utilidad.valor,
@@ -131,6 +133,12 @@ async function resolveValorDespuesImpuestos(
   };
 }
 
+// Propuesta 001 · entrega 3 (2026-11-23): las ventas ya no se crean a mano.
+// Toda venta nace de un negocio del CRM al marcarlo "Ganado" (que se crea con
+// una cotización) — así Ventas, CRM y Dashboard no pueden contradecirse.
+export const MENSAJE_VENTA_SOLO_DESDE_CRM =
+  'Las ventas ya no se crean aquí: se crean automáticamente al marcar "Ganado" un negocio del CRM, que nace de una cotización.';
+
 export async function createEvento(input: EventoInput, registeredById: string) {
   const cliente = await prisma.cliente.findUnique({ where: { id: input.clienteId } });
   if (!cliente) {
@@ -165,6 +173,17 @@ export async function createEvento(input: EventoInput, registeredById: string) {
 
 export async function updateEvento(id: string, input: EventoInput) {
   await findEventoOrThrow(id);
+  // Los datos comerciales de una venta que viene de un negocio se editan solo
+  // desde el CRM ("Editar cambios del cliente"), que actualiza negocio, venta
+  // y agenda a la vez. Solo las ventas históricas sin negocio siguen
+  // editándose aquí.
+  const negocioLigado = await prisma.negocio.findUnique({ where: { eventoId: id }, select: { id: true } });
+  if (negocioLigado) {
+    throw new HttpError(
+      409,
+      'Esta venta viene de un negocio del CRM: sus datos comerciales (fecha, valor, opciones de menú, personas, impuesto y vendedor) se editan desde el CRM, en "Editar cambios del cliente".',
+    );
+  }
 
   const cliente = await prisma.cliente.findUnique({ where: { id: input.clienteId } });
   if (!cliente) {

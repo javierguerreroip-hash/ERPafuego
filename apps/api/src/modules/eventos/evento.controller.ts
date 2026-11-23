@@ -38,14 +38,10 @@ export async function getHandler(req: Request, res: Response, next: NextFunction
   }
 }
 
-export async function createHandler(req: Request, res: Response, next: NextFunction) {
-  try {
-    const input = eventoSchema.parse(req.body);
-    const registeredById = req.user!.sub;
-    res.status(201).json(await eventoService.createEvento(input, registeredById));
-  } catch (error) {
-    next(error);
-  }
+// Propuesta 001 · entrega 3: las ventas ya no se crean a mano (nacen de un
+// negocio ganado del CRM).
+export async function createHandler(_req: Request, _res: Response, next: NextFunction) {
+  next(new HttpError(409, eventoService.MENSAJE_VENTA_SOLO_DESDE_CRM));
 }
 
 export async function updateHandler(req: Request, res: Response, next: NextFunction) {

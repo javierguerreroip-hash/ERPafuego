@@ -125,13 +125,6 @@ export function EventosPage() {
     );
   });
 
-  function openCreate() {
-    setEditing(null);
-    setForm(emptyForm());
-    setFormError(null);
-    setShowForm(true);
-  }
-
   function openEdit(evento: EventoDTO) {
     setEditing(evento);
     setForm({
@@ -198,15 +191,11 @@ export function EventosPage() {
           <p className="text-sm text-neutral-500">
             Doble clic sobre un evento para cargar sus consumos de materia prima y servicios.
           </p>
+          <p className="text-xs text-neutral-400">
+            Las ventas se crean solas al marcar "Ganado" un negocio del CRM (que nace de una
+            cotización). Sus datos comerciales se editan desde el CRM.
+          </p>
         </div>
-        {!readOnly && (
-          <button
-            onClick={openCreate}
-            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-          >
-            Nuevo evento
-          </button>
-        )}
       </div>
 
       <PeriodPickerControls filter={rankingFilter} />
@@ -333,15 +322,21 @@ export function EventosPage() {
                   <td className="space-x-3 px-4 py-2 text-right">
                     {!readOnly && (
                       <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEdit(evento);
-                          }}
-                          className="text-orange-600 hover:underline"
-                        >
-                          Editar
-                        </button>
+                        {evento.tieneNegocio ? (
+                          <span className="text-xs text-neutral-400" title="Se edita desde el CRM">
+                            Editar en el CRM
+                          </span>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEdit(evento);
+                            }}
+                            className="text-orange-600 hover:underline"
+                          >
+                            Editar
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

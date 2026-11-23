@@ -22,6 +22,12 @@ Alimenta Inventario, Dashboard, CMV, Estado de Resultados, Agenda y Cartera.
 - **Eliminar** una venta (2026-09-10): solo con la contraseña de autorización y **si no tiene abonos en Cartera**. Borra su Agenda y sus consumos; si vino del CRM, ese negocio vuelve a "Cotizado" para poder corregirlo y volver a ganarlo.
 - **Filtro de período:** el resumen, el ranking **y la tabla** respetan el mismo período (corregido 2026-10-08; antes la tabla mostraba otros meses).
 
+### Entrega 3 (2026-11-23, construida, pendiente de verificar): Ventas recibe, no crea
+- **Ya no existe "Nuevo evento"**: la API rechaza crear una venta directa. Toda venta nace al marcar "Ganado" un negocio del CRM.
+- Una venta que **viene de un negocio** ya no se edita en Ventas: el botón dice "Editar en el CRM" y la API rechaza el cambio (409). Sus datos comerciales (cliente, fecha, valor, opciones de menú, personas, impuesto y vendedor) se editan en el CRM, en "Editar cambios del cliente", que actualiza negocio, venta y agenda a la vez.
+- Las ventas **históricas sin negocio** siguen pudiéndose editar aquí.
+- En Ventas se siguen cargando **consumos y costos**, adjuntos y se ve la utilidad de cada evento.
+
 ### Los consumos (costos del evento)
 - Se cargan artículo por artículo con cantidad y **costo unitario**. El formulario muestra la **unidad de medida** del artículo (2026-10-12).
 - **Costo total y utilidad operacional ($ y %) no se guardan**: se calculan siempre a partir de los consumos.

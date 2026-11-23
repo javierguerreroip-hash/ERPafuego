@@ -38,13 +38,15 @@ export async function getVendedoresHandler(_req: Request, res: Response, next: N
   }
 }
 
-export async function createHandler(req: Request, res: Response, next: NextFunction) {
-  try {
-    const input = negocioSchema.parse(req.body);
-    res.status(201).json(await negocioService.createNegocio(input));
-  } catch (error) {
-    next(error);
-  }
+// Propuesta 001 · entrega 3: los negocios ya no se crean a mano; nacen al
+// guardar una cotización (que los deja en "Cotizado").
+export async function createHandler(_req: Request, _res: Response, next: NextFunction) {
+  next(
+    new HttpError(
+      409,
+      'Los negocios ya no se crean aquí: nacen al guardar una cotización, desde el módulo de Cotizaciones.',
+    ),
+  );
 }
 
 export async function updateHandler(req: Request, res: Response, next: NextFunction) {

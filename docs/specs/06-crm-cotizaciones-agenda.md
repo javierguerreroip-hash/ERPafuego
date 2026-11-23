@@ -45,11 +45,12 @@ Cotización ──crea──▶ Negocio (CRM, "Cotizado") ──ganar──▶ V
 
 ### Reglas
 - Tablero tipo Kanban con 3 etapas: **Cotizado / Ganado / Perdido**.
+- **Los negocios ya no se crean en el CRM (entrega 3, 2026-11-23):** no existe "Nuevo negocio" y la API lo rechaza. Nacen únicamente al guardar una cotización. Un negocio "Cotizado" todavía se puede editar desde el CRM (ver pendiente abajo).
 - **Cliente:** solo se pueden elegir clientes ya creados (2026-09-21). Vendedor: de la lista de vendedores.
 - **Solo se edita mientras está "Cotizado".** "Perdido" queda congelado como histórico.
 - **Marcar Ganado (propuesta 001 · entrega 2, 2026-11-23 · construida, pendiente de verificar) ya no pregunta nada** cuando el negocio nació de una cotización: muestra un resumen (fecha del evento, valor, impuesto, invitados, vendedor y opciones de menú con su cantidad) y se confirma con un clic. Se crea, en **una sola transacción**: la **Venta** con **fecha = fecha del evento** (no la fecha en que se gana), cada ítem de menú como una opción de la venta con su cantidad (si una opción se repite, se suman), el impuesto y los invitados de la cotización, y el registro de **Agenda**. Si algo falla a medias, no queda nada.
   - **Respaldo:** si el negocio es histórico (sin cotización) o ningún ítem corresponde a una opción de menú, el sistema pide la opción de menú, las personas y el impuesto, como antes.
-- **Editar un negocio ganado:** actualiza a la vez el negocio, la venta (recalculando el valor después de impuestos con la tarifa ya asignada) y la agenda, en una transacción.
+- **Editar un negocio ganado ("Editar cambios del cliente"; entrega 3, 2026-11-23, construida, pendiente de verificar):** es el **único lugar** donde se cambian los datos comerciales de una venta ganada. Edita fecha, invitados, **opciones de menú (con su cantidad)**, **valor antes de impuestos**, **tasa de impuesto**, **vendedor**, hora y dirección, y actualiza a la vez el negocio, la venta (recalculando el valor después de impuestos) y la agenda, en una transacción. Junto al valor se muestra una **referencia a precio de lista** (suma de cantidad × precio de cada opción); el valor lo digita el usuario, no se aplica solo (opción B aprobada).
 - **Eliminar un negocio** solo si **no** está ganado. Para corregir uno ganado por error: primero se elimina la venta en Ventas (eso lo regresa a "Cotizado") y luego se puede eliminar.
 - **Resumen y columnas** respetan el **mismo filtro de período** y se filtran por la **fecha del evento** (corregido 2026-10-29: antes las columnas mostraban negocios de otros meses).
 - **Ver cotización (2026-11-23, propuesta 001 · entrega 1):** cada tarjeta del CRM con cotización tiene "Ver cotización", que muestra todo su detalle (ítems, logística, totales, descripción, condiciones) en solo lectura y permite descargar el PDF. Los negocios históricos sin cotización dicen "Sin cotización (histórico)". *Estado: construida, pendiente de verificar.*
@@ -92,4 +93,4 @@ Cotización ──crea──▶ Negocio (CRM, "Cotizado") ──ganar──▶ V
 **Vendedor sin cambiar de rol (2026-10-10):** un usuario puede marcarse **"Puede ser seleccionado como vendedor"** en Usuarios → Editar. Aparece en las listas de vendedores de Cotizaciones, CRM, Ventas y Agenda con su nombre y conserva el acceso de su rol (el caso de quien usa un usuario de Operación pero también vende). Los usuarios con rol Ventas o Administrador son vendedores automáticamente.
 
 ## Pendiente
-- Agregar el campo de opción de menú en la edición de un negocio ganado desde el CRM (hoy se cambia en Ventas).
+- Un negocio "Cotizado" editado desde el CRM cambia el negocio pero no su cotización (el documento). Conviene que se edite solo desde Cotizaciones; decidirlo con el dueño.

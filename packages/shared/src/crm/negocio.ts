@@ -27,6 +27,13 @@ export const negocioSchema = z.object({
 
 export type NegocioInput = z.infer<typeof negocioSchema>;
 
+export interface NegocioOpcionDTO {
+  opcionMenuId: string;
+  opcionMenuNombre: string;
+  // Personas o unidades de esta opción (como en la cotización).
+  numeroPersonas: number;
+}
+
 export interface NegocioDTO {
   id: string;
   // Null solo en negocios creados antes de exigir clienteId
@@ -45,6 +52,10 @@ export interface NegocioDTO {
   // Solo tienen valor cuando el negocio está Ganado (vienen de la Venta y
   // la Agenda vinculadas) — null en Cotizado/Perdido.
   numeroPersonas: number | null;
+  // Propuesta 001 · entrega 3: solo con valor cuando el negocio está Ganado
+  // (vienen de la Venta): opciones de menú con su cantidad e impuesto.
+  opciones: NegocioOpcionDTO[];
+  taxRateId: string | null;
   horaServicio: string | null;
   direccion: string | null;
   createdAt: string;
@@ -56,9 +67,27 @@ export interface NegocioDTO {
 // fecha, la hora o el lugar). Actualiza a la vez el Negocio, la Venta
 // (Evento del Módulo 3) y la Agenda operativa — igual que "ganar" un
 // negocio actualiza varios módulos en una sola transacción.
+// Propuesta 001 · entrega 3 (2026-11-23): también se editan desde aquí las
+// opciones de menú, el impuesto y el vendedor — el CRM es el único lugar
+// donde se cambian los datos comerciales de una venta ganada. Los tres campos
+// son opcionales (si no vienen, no se tocan).
+export const negocioGanadoOpcionSchema = z.object({
+  opcionMenuId: z.string().min(1, 'Selecciona una opción de menú'),
+  numeroPersonas: z.number().int().positive('La cantidad de cada opción debe ser mayor a 0'),
+});
+
 export const negocioGanadoUpdateSchema = z.object({
   valorAntesImpuestos: z.number().nonnegative('El valor no puede ser negativo'),
   numeroPersonas: z.number().int().positive('El número de personas debe ser mayor a 0'),
+  opciones: z
+    .array(negocioGanadoOpcionSchema)
+    .min(1, 'Deja al menos una opción de menú')
+    .refine((ops) => new Set(ops.map((o) => o.opcionMenuId)).size === ops.length, {
+      message: 'No repitas la misma opción de menú',
+    })
+    .optional(),
+  taxRateId: z.string().nullable().optional(),
+  vendedorId: z.string().min(1).optional(),
   fechaEvento: z.string().min(1, 'La fecha del evento es requerida'),
   horaServicio: z.string().max(20).default(''),
   direccion: z.string().max(300).default(''),

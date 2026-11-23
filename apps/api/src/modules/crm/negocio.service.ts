@@ -1,4 +1,4 @@
-import type { AgendaEvento, Evento, Negocio, Prisma, User } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import {
   ETAPAS_NEGOCIO,
   type CotizacionItemInput,
@@ -9,6 +9,7 @@ import {
 import { prisma } from '../../lib/prisma.js';
 import { HttpError } from '../../middleware/error.middleware.js';
 import { calcularValorDespuesImpuestos } from '../eventos/evento.calculations.js';
+import { opcionesOrdenadas } from '../eventos/evento-opciones.js';
 import { calcularEficienciaComercial } from './negocio.calculations.js';
 
 function round2(value: number): number {
@@ -17,13 +18,16 @@ function round2(value: number): number {
 
 const includeRelations = {
   vendedor: { select: { name: true } },
-  evento: { include: { agenda: true } },
+  evento: {
+    include: {
+      agenda: true,
+      opcionMenu: true,
+      opciones: { include: { opcionMenu: true }, orderBy: { createdAt: 'asc' as const } },
+    },
+  },
 } satisfies Prisma.NegocioInclude;
 
-type NegocioWithRelations = Negocio & {
-  vendedor: Pick<User, 'name'>;
-  evento: (Evento & { agenda: AgendaEvento | null }) | null;
-};
+type NegocioWithRelations = Prisma.NegocioGetPayload<{ include: typeof includeRelations }>;
 
 function serialize(negocio: NegocioWithRelations) {
   return {
@@ -40,6 +44,14 @@ function serialize(negocio: NegocioWithRelations) {
     vendedorId: negocio.vendedorId,
     vendedorNombre: negocio.vendedor.name,
     numeroPersonas: negocio.evento?.numeroPersonas ?? null,
+    opciones: negocio.evento
+      ? opcionesOrdenadas(negocio.evento).map((o) => ({
+          opcionMenuId: o.opcionMenuId,
+          opcionMenuNombre: o.opcionMenu.name,
+          numeroPersonas: o.numeroPersonas,
+        }))
+      : [],
+    taxRateId: negocio.evento?.taxRateId ?? null,
     horaServicio: negocio.evento?.agenda?.horaServicio ?? null,
     direccion: negocio.evento?.agenda?.direccion ?? null,
     createdAt: negocio.createdAt.toISOString(),
@@ -384,15 +396,26 @@ export async function updateNegocioGanado(id: string, input: NegocioGanadoUpdate
   }
 
   const fechaEvento = new Date(input.fechaEvento);
-  let valorDespuesImpuestos = input.valorAntesImpuestos;
-  if (evento.taxRateId) {
-    const taxRate = await prisma.taxRate.findUnique({ where: { id: evento.taxRateId } });
-    if (taxRate) {
-      valorDespuesImpuestos = calcularValorDespuesImpuestos(
-        input.valorAntesImpuestos,
-        Number(taxRate.rate),
-      );
+
+  // Propuesta 001 · entrega 3: opciones de menú, impuesto y vendedor también
+  // se cambian desde aquí (si no vienen, quedan como están).
+  if (input.opciones) {
+    const ids = input.opciones.map((o) => o.opcionMenuId);
+    const existentes = await prisma.opcionMenu.count({ where: { id: { in: ids } } });
+    if (existentes !== new Set(ids).size) {
+      throw new HttpError(404, 'Opción de menú no encontrada');
     }
+  }
+  const vendedorNuevo = input.vendedorId ? await findVendedorOrThrow(input.vendedorId) : null;
+  const taxRateIdNuevo = input.taxRateId === undefined ? evento.taxRateId : input.taxRateId;
+
+  let valorDespuesImpuestos = input.valorAntesImpuestos;
+  if (taxRateIdNuevo) {
+    const taxRate = await prisma.taxRate.findUnique({ where: { id: taxRateIdNuevo } });
+    if (!taxRate) {
+      throw new HttpError(404, 'Tarifa de impuesto no encontrada');
+    }
+    valorDespuesImpuestos = calcularValorDespuesImpuestos(input.valorAntesImpuestos, Number(taxRate.rate));
   }
 
   const eventoId = negocio.eventoId;
@@ -404,6 +427,15 @@ export async function updateNegocioGanado(id: string, input: NegocioGanadoUpdate
         numeroPersonas: input.numeroPersonas,
         valorAntesImpuestos: input.valorAntesImpuestos,
         valorDespuesImpuestos,
+        taxRateId: taxRateIdNuevo,
+        ...(vendedorNuevo ? { vendedorId: vendedorNuevo.id } : {}),
+        // La primera opción es la principal (Evento.opcionMenuId).
+        ...(input.opciones
+          ? {
+              opcionMenuId: input.opciones[0].opcionMenuId,
+              opciones: { deleteMany: {}, create: input.opciones },
+            }
+          : {}),
       },
     });
 
@@ -412,12 +444,20 @@ export async function updateNegocioGanado(id: string, input: NegocioGanadoUpdate
     // no hay nada que sincronizar ahí.
     await tx.agendaEvento.updateMany({
       where: { eventoId },
-      data: { horaServicio: input.horaServicio, direccion: input.direccion },
+      data: {
+        horaServicio: input.horaServicio,
+        direccion: input.direccion,
+        ...(vendedorNuevo ? { vendedorId: vendedorNuevo.id } : {}),
+      },
     });
 
     return tx.negocio.update({
       where: { id },
-      data: { fechaEvento, valorAntesImpuestos: input.valorAntesImpuestos },
+      data: {
+        fechaEvento,
+        valorAntesImpuestos: input.valorAntesImpuestos,
+        ...(vendedorNuevo ? { vendedorId: vendedorNuevo.id } : {}),
+      },
       include: includeRelations,
     });
   });

@@ -51,7 +51,7 @@ const COLUMN_STYLES: Record<EtapaNegocio, string> = {
 };
 
 export function CRMPage() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [negocios, setNegocios] = useState<NegocioDTO[]>([]);
   const [clientes, setClientes] = useState<ClienteDTO[]>([]);
   const [opcionesMenu, setOpcionesMenu] = useState<OpcionMenuDTO[]>([]);
@@ -150,12 +150,6 @@ export function CRMPage() {
     await Promise.all([loadAll(), loadResumen()]);
   }
 
-  function openCreate() {
-    setEditing(null);
-    setForm(emptyForm(user?.id ?? ''));
-    setFormError(null);
-    setShowForm(true);
-  }
 
   function openEdit(negocio: NegocioDTO) {
     setEditing(negocio);
@@ -172,6 +166,7 @@ export function CRMPage() {
 
   async function handleSubmit() {
     setFormError(null);
+    if (!editing) return;
     const parsed = negocioSchema.safeParse(form);
     if (!parsed.success) {
       setFormError(parsed.error.issues[0]?.message ?? 'Datos inválidos');
@@ -179,11 +174,7 @@ export function CRMPage() {
     }
     setSubmitting(true);
     try {
-      if (editing) {
-        await apiFetch(`/negocios/${editing.id}`, { method: 'PUT', body: parsed.data, token });
-      } else {
-        await apiFetch('/negocios', { method: 'POST', body: parsed.data, token });
-      }
+      await apiFetch(`/negocios/${editing.id}`, { method: 'PUT', body: parsed.data, token });
       setShowForm(false);
       await refresh();
     } catch (err) {
@@ -198,6 +189,12 @@ export function CRMPage() {
     setGanadoForm({
       valorAntesImpuestos: negocio.valorAntesImpuestos,
       numeroPersonas: negocio.numeroPersonas ?? 1,
+      opciones: negocio.opciones.map((o) => ({
+        opcionMenuId: o.opcionMenuId,
+        numeroPersonas: o.numeroPersonas,
+      })),
+      taxRateId: negocio.taxRateId,
+      vendedorId: negocio.vendedorId,
       fechaEvento: negocio.fechaEvento.slice(0, 10),
       horaServicio: negocio.horaServicio ?? '',
       direccion: negocio.direccion ?? '',
@@ -230,6 +227,13 @@ export function CRMPage() {
     }
   }
 
+  // Referencia (propuesta 001, opción B): suma de cantidad × precio de lista de
+  // las opciones elegidas. NO se aplica sola: el valor lo digita el usuario.
+  const valorSugeridoListaGanado = (ganadoForm?.opciones ?? []).reduce((suma, linea) => {
+    const opcion = opcionesMenu.find((o) => o.id === linea.opcionMenuId);
+    return suma + (opcion ? opcion.price * linea.numeroPersonas : 0);
+  }, 0);
+
   async function handlePerder(negocio: NegocioDTO) {
     try {
       await apiFetch(`/negocios/${negocio.id}/perder`, { method: 'PATCH', token });
@@ -247,13 +251,10 @@ export function CRMPage() {
           <p className="text-sm text-neutral-500">
             Cotizado → Ganado (crea el evento en Ventas y Costos) o Perdido.
           </p>
+          <p className="text-xs text-neutral-400">
+            Los negocios nacen al guardar una cotización (módulo de Cotizaciones).
+          </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          Nuevo negocio
-        </button>
       </div>
 
       <div className="mb-4">
@@ -436,7 +437,7 @@ export function CRMPage() {
       )}
 
       {showForm && (
-        <Modal title={editing ? 'Editar negocio' : 'Nuevo negocio'} onClose={() => setShowForm(false)}>
+        <Modal title="Editar negocio" onClose={() => setShowForm(false)}>
           <div className="space-y-3">
             <Field label="Cliente">
               <select
@@ -533,8 +534,8 @@ export function CRMPage() {
         >
           <div className="space-y-3">
             <p className="text-sm text-neutral-600">
-              Esto actualiza a la vez la Venta y la Agenda de "{editingGanado.clienteNombre}" — el
-              cliente pidió cambios después de aprobar.
+              Aquí se editan los datos comerciales de la venta de "{editingGanado.clienteNombre}":
+              se actualizan a la vez el negocio, la Venta y la Agenda.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Fecha del evento">
@@ -557,6 +558,76 @@ export function CRMPage() {
                 />
               </Field>
             </div>
+            <div>
+              <p className="mb-1 text-sm font-medium text-neutral-700">Opciones de menú vendidas</p>
+              <div className="space-y-2">
+                {(ganadoForm.opciones ?? []).map((linea, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <select
+                      value={linea.opcionMenuId}
+                      onChange={(e) =>
+                        setGanadoForm({
+                          ...ganadoForm,
+                          opciones: (ganadoForm.opciones ?? []).map((l, i) =>
+                            i === index ? { ...l, opcionMenuId: e.target.value } : l,
+                          ),
+                        })
+                      }
+                      className={`${inputClass} flex-1`}
+                    >
+                      <option value="">Selecciona…</option>
+                      {opcionesMenu.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name} ({formatCOP(o.price)})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={1}
+                      value={linea.numeroPersonas}
+                      onChange={(e) =>
+                        setGanadoForm({
+                          ...ganadoForm,
+                          opciones: (ganadoForm.opciones ?? []).map((l, i) =>
+                            i === index ? { ...l, numeroPersonas: Number(e.target.value) } : l,
+                          ),
+                        })
+                      }
+                      className={`${inputClass} w-24`}
+                      aria-label="Personas o unidades"
+                    />
+                    <button
+                      onClick={() =>
+                        setGanadoForm({
+                          ...ganadoForm,
+                          opciones: (ganadoForm.opciones ?? []).filter((_, i) => i !== index),
+                        })
+                      }
+                      disabled={(ganadoForm.opciones ?? []).length <= 1}
+                      className="text-neutral-400 hover:text-red-600 disabled:opacity-30"
+                      aria-label="Quitar opción"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() =>
+                  setGanadoForm({
+                    ...ganadoForm,
+                    opciones: [...(ganadoForm.opciones ?? []), { opcionMenuId: '', numeroPersonas: ganadoForm.numeroPersonas }],
+                  })
+                }
+                className="mt-2 text-sm text-orange-600 hover:underline"
+              >
+                + Agregar otra opción de menú
+              </button>
+              <p className="mt-1 text-xs text-neutral-400">
+                El número junto a cada opción son las personas o unidades de esa opción.
+              </p>
+            </div>
             <Field label="Valor antes de impuestos">
               <input
                 type="number"
@@ -567,7 +638,40 @@ export function CRMPage() {
                 }
                 className={inputClass}
               />
+              <p className="mt-1 text-xs text-neutral-400">
+                Referencia a precio de lista: {formatCOP(valorSugeridoListaGanado)}. El valor lo
+                defines tú (lo negociado con el cliente).
+              </p>
             </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Tasa de impuesto">
+                <select
+                  value={ganadoForm.taxRateId ?? ''}
+                  onChange={(e) => setGanadoForm({ ...ganadoForm, taxRateId: e.target.value || null })}
+                  className={inputClass}
+                >
+                  <option value="">Sin impuesto</option>
+                  {taxRates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Vendedor">
+                <select
+                  value={ganadoForm.vendedorId ?? ''}
+                  onChange={(e) => setGanadoForm({ ...ganadoForm, vendedorId: e.target.value })}
+                  className={inputClass}
+                >
+                  {vendedores.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Hora del servicio">
                 <input

@@ -60,6 +60,10 @@ export interface EventoDTO {
   // (2026-09-22) que aún no se han editado.
   vendedorId: string | null;
   vendedorNombre: string | null;
+  // Propuesta 001 · entrega 3: true si la venta nació de un negocio del CRM;
+  // sus datos comerciales (cliente, fecha, valor, opciones, personas,
+  // impuesto, vendedor) solo se editan desde el CRM.
+  tieneNegocio: boolean;
   costoTotal: number;
   costoTotalPorcentaje: number;
   utilidadOperacional: number;
