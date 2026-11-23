@@ -36,6 +36,15 @@ mermas, desperdicio y consumos que no se cargaron a ningún evento).
 
 - [ ] **Decisión del dueño:** dejar como está  /  que el Dashboard use el CMV del Juego de Inventarios  /  renombrar la tarjeta (por ejemplo "Costo de materia prima en eventos"): ______________________
 
+## Ventas totales (Dashboard) vs Total ganado (CRM)
+
+Descubierto el 2026-11-20 con datos reales de noviembre: $42.387.793 contra
+$40.595.793 (diferencia $1.792.000). Cada módulo suma su propia copia de
+valor y fecha, y editar una venta no actualiza su negocio del CRM. Detalle y
+opciones en la [propuesta 001](propuestas/001-conciliacion-ventas-crm.md).
+
+- [ ] **Decisión del dueño:** Opción A  /  B  /  C: ______________________
+
 ## Otras observaciones
 
 1. **Archivo `docs/spec_erp_afuego.md`:** conserva descripciones que ya cambiaron (por ejemplo, "CMV teórico vs real" dentro del Juego de Inventarios, cuando hoy es un solo CMV real). Se dejó intacto por ser histórico; manda `docs/specs/`.

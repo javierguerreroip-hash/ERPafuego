@@ -10,6 +10,7 @@ Desde 2026-11-18, cada fila nueva debe enlazar a su ficha.
 
 | Fecha | Cambio | Hash |
 |---|---|---|
+| 2026-11-23 | Hoja de ruta de la organización por especificaciones y propuesta 001 (conciliar Ventas del Dashboard con Total ganado del CRM). Solo documentación | — |
 | 2026-11-18 | Se organiza la documentación por especificaciones (`docs/specs/`): fichas 01–08, diferencias por confirmar y este registro. Solo documentación, sin cambios de código | — |
 | 2026-11-17 | Hace visible el error al guardar una cotizacion y amplia el limite de la descripcion | `739ce5d` |
 | 2026-11-17 | Agrega las ilustraciones Mexicano y Plato fuerte asado a las cotizaciones | `2dd256c` |

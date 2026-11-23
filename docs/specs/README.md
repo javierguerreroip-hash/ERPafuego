@@ -31,6 +31,8 @@ Si una ficha de aquí contradice al README o a la especificación original,
 | 08 | [Transversal](08-transversal.md) | Roles y permisos, auditoría, notificaciones, usuarios, búsqueda, celular, exportación |
 | — | [Registro de cambios](registro-cambios.md) | Qué se cambió y cuándo desde el lanzamiento |
 | — | [Diferencias por confirmar](diferencias-por-confirmar.md) | Cosas donde la documentación vieja y el código no coinciden |
+| — | [Hoja de ruta](hoja-de-ruta.md) | Etapas para terminar de organizar el sistema por especificaciones |
+| — | [Propuestas](propuestas/) | Cambios pedidos que esperan tu aprobación (una ficha por propuesta) |
 | — | [Plantilla](plantilla.md) | Formato para toda ficha o cambio nuevo |
 
 ## Cómo trabajamos a partir de ahora
