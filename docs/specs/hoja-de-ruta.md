@@ -19,6 +19,7 @@ Son decisiones de negocio; sin ellas el plano deja cosas "por confirmar".
 | B2 | Dos "CMV" (Dashboard vs Juego de Inventarios) | [propuesta 002](propuestas/002-cmv-dashboard-desde-juego-inventarios.md) | **Aprobada.** Construida, pendiente de verificar |
 | B3 | Ventas vs CRM no cuadran | [propuesta 001](propuestas/001-todo-negocio-nace-de-una-cotizacion.md) | **Aprobada.** Entregas 1-2 publicadas; entrega 3 construida (pendiente de verificar); falta la 4 |
 | B5 | Cómo modificar una cotización ya vendida con trazabilidad | [propuesta 003](propuestas/003-modificar-cotizacion-vendida.md) | **Propuesta escrita; esperando 6 decisiones del dueño** |
+| B6 | Cotización con hasta 5 opciones en un solo archivo | [propuesta 004](propuestas/004-cotizacion-con-varias-opciones.md) | **Propuesta escrita; esperando 6 decisiones del dueño** (se construiría antes que la 003) |
 | B4 | Error al guardar cotización | — | **RESUELTA 2026-11-23:** el dueño confirmó que ya guarda sin problema |
 
 ## Etapa C · Criterios de aceptación → pruebas automáticas — SIGUIENTE
