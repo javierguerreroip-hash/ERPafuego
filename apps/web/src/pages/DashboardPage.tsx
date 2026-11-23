@@ -72,6 +72,17 @@ export function DashboardPage() {
         ].filter((item) => item.value > 0)
       : [];
 
+  // CMV (propuesta 002): parcial (consumos de eventos) hasta que el período
+  // tenga conteo #2; después, el del Juego de Inventarios.
+  const cmvParcial = dashboard?.cmvFuente === 'CONSUMOS_EVENTOS';
+  const cmvNota = !dashboard
+    ? undefined
+    : cmvParcial
+      ? 'Según consumos de eventos. Se reemplaza por el CMV del Juego de Inventarios al cargar el conteo #2.'
+      : dashboard.cmvArticulosSinConteo > 0
+        ? `Juego de Inventarios (conteo #2). ${dashboard.cmvArticulosSinConteo} artículos con movimiento aún sin conteo #2.`
+        : 'Juego de Inventarios (conteo #2).';
+
   return (
     <div>
       <div className="mb-4 flex items-start justify-between">
@@ -101,7 +112,9 @@ export function DashboardPage() {
                 porcentaje: `${dashboard.utilidadOperativa.porcentaje.toFixed(1)}%`,
               },
               {
-                indicador: 'CMV (materia prima)',
+                indicador: cmvParcial
+                  ? 'CMV (materia prima) — parcial, según consumos de eventos'
+                  : 'CMV (materia prima) — Juego de Inventarios',
                 valor: formatCOP(dashboard.cmvMateriaPrima.valor),
                 porcentaje: `${dashboard.cmvMateriaPrima.porcentaje.toFixed(1)}%`,
               },
@@ -143,17 +156,20 @@ export function DashboardPage() {
               label="Costos totales"
               value={dashboard.costosTotales.valor}
               porcentaje={dashboard.costosTotales.porcentaje}
+              nota="Según consumos de eventos"
             />
             <KpiCard
               label="Utilidad operativa"
               value={dashboard.utilidadOperativa.valor}
               porcentaje={dashboard.utilidadOperativa.porcentaje}
+              nota="Según consumos de eventos"
               negative={dashboard.utilidadOperativa.valor < 0}
             />
             <KpiCard
-              label="CMV (materia prima)"
+              label={cmvParcial ? 'CMV (materia prima) — parcial' : 'CMV (materia prima)'}
               value={dashboard.cmvMateriaPrima.valor}
               porcentaje={dashboard.cmvMateriaPrima.porcentaje}
+              nota={cmvNota}
             />
             <KpiCard
               label="Mano de obra tercerizada"

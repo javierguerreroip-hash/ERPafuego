@@ -1,6 +1,6 @@
 # Propuesta 002 · El CMV del Dashboard sale del Juego de Inventarios
 
-**Fecha:** 2026-11-23 · **Módulos:** Dashboard, Juego de Inventarios, Ventas · **Estado:** APROBADA el 2026-11-23. Pendiente de construir.
+**Fecha:** 2026-11-23 · **Módulos:** Dashboard, Juego de Inventarios, Ventas · **Estado:** APROBADA el 2026-11-23. **Construida, pendiente de verificar.**
 
 ## Decisión del dueño (2026-11-23)
 > El CMV del Dashboard debe salir del Juego de Inventarios. Se siguen registrando gastos y consumos de cada evento para analizar la rentabilidad y el resultado de cada evento por separado.
@@ -13,14 +13,16 @@ El Juego de Inventarios calcula el CMV de un período con el **inventario inicia
 
 ## Reglas propuestas
 1. **Tarjeta "CMV (materia prima)" del Dashboard** = CMV del Juego de Inventarios del mismo período, en $ y % sobre la venta.
-2. **Si el período no tiene conteo #2 del último día**, la tarjeta dice **"Pendiente de cierre de inventario"** en vez de mostrar una cifra falsa, y muestra debajo como referencia: *"Consumos de materia prima cargados en eventos: $X"*.
+2. **Si el período aún no tiene conteo #2 en su último día** (mes en curso o conteo sin cargar), la tarjeta muestra un valor **PARCIAL**: lo cargado como consumo de materia prima en los eventos, rotulado "CMV — parcial" y con la nota de que se reemplaza al cargar el conteo #2. *(Precisión del dueño, 2026-11-23.)*
+   - Cuando ya hay conteo #2, muestra el del Juego de Inventarios y, si hay artículos con movimiento sin conteo #2, avisa cuántos.
 3. **Costos totales y Utilidad operativa del Dashboard** siguen calculándose con los **consumos por evento** (todas las categorías), porque son la herramienta para analizar cada evento. Se rotulan *"según consumos de eventos"* para no confundirlos con el resultado contable.
 4. **Estado de Resultados** no cambia: sigue usando CMV real del Juego de Inventarios (es el resultado oficial del negocio).
 5. En **Ventas**, la utilidad de cada evento sigue siendo ventas − consumos del evento (sin cambios).
 
 ## Criterios de aceptación
 - [ ] Para un mes con conteo #2 al cierre, el CMV del Dashboard es igual al del Juego de Inventarios y al del Estado de Resultados.
-- [ ] Para el mes en curso sin conteo #2, la tarjeta muestra "Pendiente de cierre" y el valor de referencia de consumos de eventos.
+- [ ] Para el mes en curso sin conteo #2, la tarjeta dice "parcial" y muestra el valor de los consumos de materia prima de los eventos.
+- [ ] Al cargar el conteo #2 del último día del mes, la tarjeta pasa sola al CMV del Juego de Inventarios.
 - [ ] Costos totales y Utilidad operativa del Dashboard no cambian de valor respecto a hoy.
 - [ ] La utilidad de cada evento en Ventas no cambia.
 

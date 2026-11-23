@@ -34,7 +34,7 @@ Resultados** se calcula como **inicial + compras − conteo físico #2**. Son do
 números distintos con el mismo nombre; pueden no coincidir (la diferencia son
 mermas, desperdicio y consumos que no se cargaron a ningún evento).
 
-- [x] **DECIDIDA 2026-11-23 — el Dashboard debe usar el CMV del Juego de Inventarios;** los consumos por evento se siguen registrando para la rentabilidad de cada evento. Falta cerrar detalles en la [propuesta 002](propuestas/002-cmv-dashboard-desde-juego-inventarios.md) (qué mostrar mientras el mes no tiene conteo #2). Mientras tanto, la ficha 04 describe el comportamiento actual.
+- [x] **DECIDIDA 2026-11-23 y construida:** el Dashboard usa el CMV del Juego de Inventarios cuando el período ya tiene conteo #2; antes del cierre muestra un parcial de consumos de eventos. Ver [propuesta 002](propuestas/002-cmv-dashboard-desde-juego-inventarios.md). *Pendiente de verificar.*
 
 ## Ventas totales (Dashboard) vs Total ganado (CRM)
 
@@ -48,7 +48,7 @@ valor y fecha, y editar una venta no actualiza su negocio del CRM.
 - Ninguna venta sin negocio en el CRM.
 - **Dos ventas con valor distinto al de su negocio:** *Lina Ricaurte* (venta $2.590.000 vs CRM $2.190.000, diferencia $400.000) y *Ana María Rico* (venta $2.532.000 vs CRM $2.040.000, diferencia $492.000). Suman $892.000, que es exactamente lo que separa hoy "Ventas totales" del "Total ganado".
 - Una venta ganada de *Juan Pablo de los Ríos* tiene valor $0 (venta y negocio).
-- **Pendiente del dueño:** decir cuál valor es el correcto en cada una de las dos y corregirlo desde el CRM ("Editar cambios del cliente"), que actualiza negocio, venta y agenda a la vez.
+- **Decisión del dueño (2026-11-23):** los valores correctos son los de la venta: Lina $2.590.000 y Ana María $2.532.000. Falta alinear el negocio del CRM a esos valores (consulta SQL entregada al dueño).
 
 ## Otras observaciones
 

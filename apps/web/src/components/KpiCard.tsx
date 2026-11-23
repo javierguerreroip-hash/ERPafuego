@@ -7,6 +7,7 @@ export function KpiCard({
   porcentajeSuffix = 'sobre la venta',
   highlight,
   negative,
+  nota,
 }: {
   label: string;
   value: number;
@@ -14,6 +15,7 @@ export function KpiCard({
   porcentajeSuffix?: string;
   highlight?: boolean;
   negative?: boolean;
+  nota?: string;
 }) {
   return (
     <div className={`rounded-lg border p-3 ${highlight ? 'border-orange-300 bg-orange-50' : 'bg-white'}`}>
@@ -26,6 +28,7 @@ export function KpiCard({
           {porcentaje.toFixed(1)}% {porcentajeSuffix}
         </p>
       )}
+      {nota && <p className="mt-1 text-[11px] leading-tight text-neutral-400">{nota}</p>}
     </div>
   );
 }

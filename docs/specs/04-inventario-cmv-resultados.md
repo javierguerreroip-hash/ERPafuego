@@ -62,7 +62,7 @@ diferencia existe.
 
 ### Criterios de aceptación
 - [ ] Con el mismo período, el CMV del Juego de Inventarios es igual al CMV del Estado de Resultados.
-- [ ] El CMV de la tarjeta del Dashboard **no** tiene por qué coincidir con ellos (ver sección Dashboard).
+- [ ] Con conteo #2 al cierre del período, el CMV del Dashboard coincide con el del Juego de Inventarios; sin conteo #2 es un parcial rotulado.
 - [ ] No existe forma de digitar el conteo físico desde esta pantalla.
 
 ### Prueba
@@ -75,7 +75,7 @@ diferencia existe.
 - Tarjetas (valor $ y % sobre la venta): ventas totales, costos totales, utilidad operativa, CMV (solo materia prima), mano de obra tercerizada, transporte, servicios artísticos. Una tarjeta aparte por cada categoría de **solo monitoreo**.
 - Gráfica de composición de costos y de tendencia diaria de ventas y utilidad.
 - **100 % derivado, sin datos propios.** Ventas = valor antes de impuestos de los eventos; costos = consumos de eventos.
-- **Ojo, dos "CMV" distintos (verificado en el código 2026-11-18):** la tarjeta **CMV del Dashboard** es la suma de los **consumos de materia prima cargados en los eventos** (el costo de lo que se registró como usado en cada venta). El **CMV del Juego de Inventarios y del Estado de Resultados** es **inicial + compras − final físico (conteo #2)**. Pueden dar cifras diferentes en el mismo período (la diferencia son mermas, desperdicios y consumos sin cargar). Ver [Por confirmar](diferencias-por-confirmar.md#dashboard-cmv).
+- **CMV del Dashboard (propuesta 002, 2026-11-23 · construida, pendiente de verificar):** cuando el período ya tiene **conteo #2 en su último día**, la tarjeta muestra el **CMV del Juego de Inventarios** (el mismo del Estado de Resultados). Antes del cierre muestra un valor **PARCIAL** = consumos de materia prima cargados en los eventos, rotulado "parcial". **Costos totales y Utilidad operativa** siguen saliendo de los consumos de eventos (rentabilidad evento por evento) y se rotulan así.
 
 ## 4. Gastos Administrativos
 

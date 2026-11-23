@@ -1,6 +1,7 @@
 import { CATEGORIAS_MONITOREO, type ArticuloCategoria } from '@erp-afuego/shared';
 import { prisma } from '../../lib/prisma.js';
 import { calcularCostoPorcentaje, calcularUtilidadOperacional } from '../eventos/evento.calculations.js';
+import { getJuegoInventariosReporte } from '../juego-inventarios/juego-inventarios.service.js';
 
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -81,6 +82,28 @@ export async function getDashboard(startDate: Date, endDate: Date) {
     return { valor: round2(valor), porcentaje: calcularCostoPorcentaje(valor, ventasTotales) };
   }
 
+  // CMV (propuesta 002, 2026-11-23): el CMV oficial es el del Juego de
+  // Inventarios (inicial + compras − conteo #2). Ese cálculo solo es válido
+  // cuando el período ya tiene conteo #2 en su último día; antes del cierre
+  // (mes en curso, conteo sin cargar) usarlo daría un valor inflado, así que
+  // se muestra un valor PARCIAL: lo cargado como consumo de materia prima
+  // en los eventos. Costos totales y utilidad operativa siguen saliendo de
+  // los consumos de eventos (rentabilidad evento por evento).
+  const juego = await getJuegoInventariosReporte(startDate, endDate);
+  const hayConteoDos = juego.detalle.some((d) => d.inventarioFinalFisicoRegistrado);
+  const cmvArticulosSinConteo = hayConteoDos
+    ? juego.detalle.filter(
+        (d) =>
+          !d.inventarioFinalFisicoRegistrado && (d.inventarioInicialValue > 0 || d.comprasValue > 0),
+      ).length
+    : 0;
+  const cmvMateriaPrima = hayConteoDos
+    ? {
+        valor: round2(juego.consolidado.cmv.valor),
+        porcentaje: juego.consolidado.cmv.porcentaje,
+      }
+    : indicador(categoriaTotales.MATERIA_PRIMA);
+
   const tendencia = Array.from(porDia.entries())
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([fecha, v]) => ({
@@ -95,7 +118,9 @@ export async function getDashboard(startDate: Date, endDate: Date) {
     ventasTotales: round2(ventasTotales),
     costosTotales: indicador(costosTotalesValor),
     utilidadOperativa: utilidad,
-    cmvMateriaPrima: indicador(categoriaTotales.MATERIA_PRIMA),
+    cmvMateriaPrima,
+    cmvFuente: hayConteoDos ? ('JUEGO_INVENTARIOS' as const) : ('CONSUMOS_EVENTOS' as const),
+    cmvArticulosSinConteo,
     manoDeObra: indicador(categoriaTotales.MANO_DE_OBRA),
     serviciosTransporte: indicador(categoriaTotales.SERVICIO_TRANSPORTE),
     serviciosArtisticos: indicador(categoriaTotales.SERVICIOS_ARTISTICOS),

@@ -33,13 +33,23 @@ export interface DashboardComprasMonitoreoItemDTO {
   valor: number;
 }
 
+export type DashboardCmvFuente = 'JUEGO_INVENTARIOS' | 'CONSUMOS_EVENTOS';
+
 export interface DashboardDTO {
   start: string;
   end: string;
   ventasTotales: number;
   costosTotales: DashboardIndicadorDTO;
   utilidadOperativa: DashboardIndicadorDTO;
+  // Propuesta 002 (2026-11-23): con conteo #2 en el último día del período es el CMV
+  // del Juego de Inventarios (cmvFuente = JUEGO_INVENTARIOS); antes del cierre es
+  // un valor PARCIAL tomado de los consumos de materia prima cargados en los
+  // eventos (cmvFuente = CONSUMOS_EVENTOS).
   cmvMateriaPrima: DashboardIndicadorDTO;
+  cmvFuente: DashboardCmvFuente;
+  // Artículos con inventario inicial o compras en el período que aún no tienen
+  // conteo #2 (solo informativo, cuando el CMV ya sale del Juego de Inventarios).
+  cmvArticulosSinConteo: number;
   manoDeObra: DashboardIndicadorDTO;
   serviciosTransporte: DashboardIndicadorDTO;
   serviciosArtisticos: DashboardIndicadorDTO;
