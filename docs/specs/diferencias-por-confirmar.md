@@ -24,7 +24,7 @@ nómina de todos los empleados son información sensible. Si el negocio quiere
 que sean solo del Administrador, hay que **cerrar el permiso** (es un cambio
 pequeño de código).
 
-- [ ] **Decisión del dueño:** dejar como está  /  restringir a solo Administrador: ______________________
+- [x] **RESUELTA 2026-11-23 — decisión del dueño: se deja como está.** Todos los roles actuales siguen viendo estos módulos. Las fichas 05, 07 y 08 ya describen ese comportamiento; no hay cambio de código.
 
 ## Dashboard: CMV
 
@@ -34,16 +34,15 @@ Resultados** se calcula como **inicial + compras − conteo físico #2**. Son do
 números distintos con el mismo nombre; pueden no coincidir (la diferencia son
 mermas, desperdicio y consumos que no se cargaron a ningún evento).
 
-- [ ] **Decisión del dueño:** dejar como está  /  que el Dashboard use el CMV del Juego de Inventarios  /  renombrar la tarjeta (por ejemplo "Costo de materia prima en eventos"): ______________________
+- [x] **DECIDIDA 2026-11-23 — el Dashboard debe usar el CMV del Juego de Inventarios;** los consumos por evento se siguen registrando para la rentabilidad de cada evento. Falta cerrar detalles en la [propuesta 002](propuestas/002-cmv-dashboard-desde-juego-inventarios.md) (qué mostrar mientras el mes no tiene conteo #2). Mientras tanto, la ficha 04 describe el comportamiento actual.
 
 ## Ventas totales (Dashboard) vs Total ganado (CRM)
 
 Descubierto el 2026-11-20 con datos reales de noviembre: $42.387.793 contra
 $40.595.793 (diferencia $1.792.000). Cada módulo suma su propia copia de
-valor y fecha, y editar una venta no actualiza su negocio del CRM. Detalle y
-opciones en la [propuesta 001](propuestas/001-conciliacion-ventas-crm.md).
+valor y fecha, y editar una venta no actualiza su negocio del CRM.
 
-- [ ] **Decisión del dueño:** Opción A  /  B  /  C: ______________________
+- [x] **DECIDIDA 2026-11-23:** que todo negocio nazca de una cotización y no se puedan crear ventas ni negocios por otra vía. Detalle y preguntas abiertas en la [propuesta 001](propuestas/001-todo-negocio-nace-de-una-cotizacion.md).
 
 ## Otras observaciones
 
@@ -52,4 +51,4 @@ opciones en la [propuesta 001](propuestas/001-conciliacion-ventas-crm.md).
 3. **Decisión de la Fase 10 en el README** dice que el cliente del CRM es texto libre; se revirtió el 2026-09-21 (hoy se elige de Clientes). Quedó en el README como texto histórico, con la nota de reversión debajo.
 4. **Sin pruebas de integración:** solo hay pruebas unitarias de las fórmulas. Los criterios de aceptación de las fichas marcados con casillas **aún no se han convertido en pruebas automáticas ni se han recorrido uno por uno**.
 5. **Datos de prueba pendientes de limpieza (de tu lado):** el consumo de prueba de *Aceite de Oliva* (0,09 L) en un evento; los registros con costo $0 anteriores a la corrección del 2026-10-12.
-6. **Mensaje de error de guardado de Cotizaciones:** el 2026-11-17 se hizo visible el error, pero aún no sabemos por qué "no deja guardar cambios" en la cotización que reportaste. Falta el texto del mensaje en rojo (ver [Registro de cambios](registro-cambios.md)).
+6. **Mensaje de error de guardado de Cotizaciones:** el 2026-11-17 se hizo visible el error y el 2026-11-23 el dueño confirmó que ya está desplegado; falta saber si ahora guarda o qué dice el mensaje en rojo.

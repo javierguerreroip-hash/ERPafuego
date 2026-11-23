@@ -15,10 +15,10 @@ Son decisiones de negocio; sin ellas el plano deja cosas "por confirmar".
 
 | # | Tema | Dónde | Qué hay que decidir |
 |---|---|---|---|
-| B1 | Quién ve Estado de Resultados, Cartera y nómina | [diferencias-por-confirmar](diferencias-por-confirmar.md#quién-ve-qué) | ¿Todos los roles actuales o solo el Administrador? |
-| B2 | Dos "CMV" (Dashboard vs Juego de Inventarios) | [diferencias-por-confirmar](diferencias-por-confirmar.md#dashboard-cmv) | Dejar, unificar o renombrar la tarjeta |
-| B3 | Ventas vs CRM no cuadran | [propuesta 001](propuestas/001-conciliacion-ventas-crm.md) | Opción A, B o C |
-| B4 | Error al guardar cotización | — | Falta el mensaje en rojo tras desplegar |
+| B1 | Quién ve Estado de Resultados, Cartera y nómina | [diferencias](diferencias-por-confirmar.md#quién-ve-qué) | **RESUELTA 2026-11-23:** se deja como está |
+| B2 | Dos "CMV" (Dashboard vs Juego de Inventarios) | [propuesta 002](propuestas/002-cmv-dashboard-desde-juego-inventarios.md) | **Decidida:** el Dashboard usa el CMV del Juego. Falta 1 pregunta (costos y utilidad del Dashboard) |
+| B3 | Ventas vs CRM no cuadran | [propuesta 001](propuestas/001-todo-negocio-nace-de-una-cotizacion.md) | **Decidida:** todo negocio nace de una cotización. Faltan 5 confirmaciones |
+| B4 | Error al guardar cotización | — | Ya desplegado; falta probar y reportar el resultado |
 
 ## Etapa C · Criterios de aceptación → pruebas automáticas — SIGUIENTE
 Convertir las casillas `[ ]` de las fichas en pruebas que corren solas, para que
