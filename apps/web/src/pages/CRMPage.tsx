@@ -560,9 +560,13 @@ export function CRMPage() {
             </div>
             <div>
               <p className="mb-1 text-sm font-medium text-neutral-700">Opciones de menú vendidas</p>
+              <div className="mb-1 grid grid-cols-12 gap-2 text-xs text-neutral-400">
+                <span className="col-span-8">Opción de menú</span>
+                <span className="col-span-3">Personas o unidades</span>
+              </div>
               <div className="space-y-2">
                 {(ganadoForm.opciones ?? []).map((linea, index) => (
-                  <div key={index} className="flex items-center gap-2">
+                  <div key={index} className="grid grid-cols-12 items-center gap-2">
                     <select
                       value={linea.opcionMenuId}
                       onChange={(e) =>
@@ -573,7 +577,7 @@ export function CRMPage() {
                           ),
                         })
                       }
-                      className={`${inputClass} flex-1`}
+                      className={`${inputClass} col-span-8`}
                     >
                       <option value="">Selecciona…</option>
                       {opcionesMenu.map((o) => (
@@ -594,7 +598,7 @@ export function CRMPage() {
                           ),
                         })
                       }
-                      className={`${inputClass} w-24`}
+                      className={`${inputClass} col-span-3`}
                       aria-label="Personas o unidades"
                     />
                     <button
@@ -605,7 +609,7 @@ export function CRMPage() {
                         })
                       }
                       disabled={(ganadoForm.opciones ?? []).length <= 1}
-                      className="text-neutral-400 hover:text-red-600 disabled:opacity-30"
+                      className="col-span-1 text-neutral-400 hover:text-red-600 disabled:opacity-30"
                       aria-label="Quitar opción"
                     >
                       ✕
